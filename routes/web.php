@@ -32,7 +32,23 @@ Route::get('/login', function () {
 
 Route::get('/contact', function () {
     return view('contact', [
-        'heroText' => 'Need Something? Contact Us!'
+        'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
         // tanpa 'showSearch', maka search tidak tampil
     ]);
 });
+
+Route::get('/register', function () {
+    return view('register', [
+        'heroText' => 'Halo!, Selamat Datang di VINSTORE'
+    ]);
+})->name('register');
+
+
+Route::get('/order', function () {
+    return view('order', [
+        'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
+    ]);
+})->name('order');
+
+
+

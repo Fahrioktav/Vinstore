@@ -1,5 +1,5 @@
 @section('heroText')
-    Need Something? Contact Us!
+    Butuh Sesuatu? Hubungi Kami!
 @endsection
 
 @extends('layouts.form')
@@ -33,7 +33,7 @@
 
         <div class="mt-6">
             <h4 class="font-semibold">Location</h4>
-            <p>777 Pamulang Ave, Thackerville, OK 73459,<br>United States</p>
+            <p>Institut Teknologi Indonesia, Setu, Tangerang Selatan 12345,<br>United States</p>
         </div>
     </div>
 
