@@ -16,6 +16,7 @@
         "vite": "^6.3.5"
     },
     "dependencies": {
-        "@heroicons/react": "^2.2.0"
+        "@heroicons/react": "^2.2.0",
+        "alpinejs": "^3.14.9"
     }
 }

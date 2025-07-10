@@ -1,19 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>@yield('title')</title>
-    @vite('resources/css/app.css')
+
+    {{-- Hanya panggil sekali --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
+
+
+<body class="bg-gray-50 text-gray-800">
+
+    {{-- Navbar --}}
+    <x-navbar />
+
+
+    {{-- Konten Utama --}}
     <main>
-        <head>
-            <x-navbar/>
-        </head>
         @yield('content')
     </main>
-    
+
 </body>
-</html> 
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userButton = document.getElementById('userButton');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        if (userButton && dropdownMenu) {
+            userButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('hidden');
+            });
+
+            // Tutup dropdown kalau klik di luar
+            document.addEventListener('click', function(e) {
+                if (!dropdownMenu.contains(e.target) && !userButton.contains(e.target)) {
+                    dropdownMenu.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>
+
+
+</html>

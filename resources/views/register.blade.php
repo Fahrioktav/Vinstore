@@ -3,14 +3,25 @@
 @section('title', 'register')
 
 @section('heroText')
-    Halo!, Selamat Datang Di VINSTORE
+Halo!, Selamat Datang Di VINSTORE
 @endsection
 
 @section('content')
 @parent
 <div class="flex justify-center mt-8 px-4">
-    <form action="{{ route('register') }}" method="POST" class="w-full max-w-2xl space-y-4">
+    <form action="{{ route('register.submit') }}" method="POST" class="w-full max-w-2xl space-y-4">
         @csrf
+
+        @if ($errors->any())
+        <div class="bg-red-100 text-red-700 border border-red-400 p-3 rounded mb-4">
+            <ul class="list-disc list-inside">
+                @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
+
 
         <h2 class="text-center text-2xl font-bold font-poppins mb-4">Daftarkan Dirimu</h2>
 
@@ -63,6 +74,5 @@
     <a href="#" class="underline">Terms</a> |
     <a href="#" class="underline">Pricing</a> |
     <a href="#" class="underline">Do not sell or share my personal info</a>
-</footer
-
+</footer>
 @endsection

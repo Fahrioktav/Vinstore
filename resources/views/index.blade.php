@@ -3,16 +3,15 @@
 @section('title', 'Home')
 
 @section('heroText')
-    Mau Cari Barang Antik? Di VINSTORE Aja!
+Mau Cari Barang Antik? Di VINSTORE Aja!
 @endsection
 
 @section('showSearch')
-    <span></span>
+<span></span>
 @endsection
 
 @section('content')
 @parent
-
 
 {{-- Kategori Section --}}
 <section class="px-6 md:px-16 mt-20">
@@ -30,32 +29,40 @@
 {{-- Produk Populer --}}
 <section class="px-6 md:px-16 mt-10">
     <h2 class="text-2xl font-bold mb-4">Barang Paling Populer</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        @php
-        $products = [
-        ['title' => 'Kamera Analog', 'price' => '175.000', 'img' => 'kameraproducts.jpg', 'desc' => 'Kamera analog klasik dengan desain retro, cocok untuk penggemar fotografi film.'],
-        ['title' => 'Gramofon', 'price' => '10.000.000', 'img' => 'gramofon.jpg', 'desc' => 'Pemutar piringan hitam bergaya antik dengan corong logam besar.'],
-        ['title' => 'Pemutar Kaset', 'price' => '200.000', 'img' => 'kaset.jpg', 'desc' => 'Walkman vintage dari era 90-an. Cocok bagi pecinta musik kaset.'],
-        ['title' => 'Jam Dinding Antik', 'price' => '75.000', 'img' => 'jam.jpg', 'desc' => 'Jam dinding klasik dengan angka romawi.'],
-        ['title' => 'Radio', 'price' => '135.000', 'img' => 'radio.jpg', 'desc' => 'Radio lawas bergaya retro.'],
-        ['title' => 'Konsol Game SEGA', 'price' => '450.000', 'img' => 'sega.jpg', 'desc' => 'Konsol game klasik SEGA lengkap dengan stik dan cartridge.'],
-        ];
-        @endphp
 
+    @if ($products->count() > 0)
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         @foreach ($products as $product)
-        <div class="bg-white shadow rounded-lg p-4">
-            <img src="/assets/products/{{ $product['img'] }}" class="w-full h-48 object-cover rounded-md mb-4 relative">
+        <div class="rounded-lg p-2">
+            <img src="{{ asset($product->image) }}" class="w-full h-48 object-contain rounded-md mb-4 relative">
             <div class="bg-cover z-10 p-2" style="background-image:url('assets/vector.png')">
-                <h3 class="font-semibold text-lg">{{ $product['title'] }}</h3>
-                <p class="text-sm text-gray-600 mb-2">{{ $product['desc'] }}</p>
+                <h3 class="font-semibold text-lg">{{ $product->name }}</h3>
+                <p class="text-sm text-gray-600 mb-2">{{ $product->description }}</p>
                 <div class="flex justify-between items-center mt-4">
-                    <span class="font-bold">Rp.{{ $product['price'] }}</span>
-                    <button class="border border-dashed border-red-400 text-red-600 px-3 py-1 rounded hover:bg-red-100 hover:cursor-pointer transition-all duration-200">Order Now</button>
+                    <span class="font-bold">Rp.{{ number_format($product->price, 0, ',', '.') }}</span>
+
+                    @auth
+                    <form action="{{ route('checkout.show', $product->id) }}" method="GET">
+                        <button type="submit"
+                            class="border border-dashed border-red-400 text-red-600 px-3 py-1 rounded hover:bg-red-100 transition-all duration-200">
+                            Order Now
+                        </button>
+                    </form>
+                    @else
+                    <a href="{{ route('login.form') }}"
+                        class="border border-dashed border-red-400 text-red-600 px-3 py-1 rounded hover:bg-red-100 transition-all duration-200">
+                        Order Now
+                    </a>
+                    @endauth
+
                 </div>
             </div>
         </div>
         @endforeach
     </div>
+    @else
+    <p class="text-gray-600">Belum ada produk yang tersedia.</p>
+    @endif
 </section>
 
 {{-- Footer --}}
