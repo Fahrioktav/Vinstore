@@ -28,8 +28,10 @@ class LoginController extends Controller
 
             $user = Auth::user();
 
-            // Cek role user
-            if ($user->role === 'seller') {
+            // Cek role user untuk redirect ke dashboard yang sesuai
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            } elseif ($user->role === 'seller') {
                 return redirect()->route('seller.dashboard');
             } else {
                 return redirect()->intended('/');

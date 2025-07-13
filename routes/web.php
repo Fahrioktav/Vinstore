@@ -11,6 +11,14 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Models\Product;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminSellerController;
+use App\Http\Controllers\Admin\AdminStoreController;
+use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminCategoryController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes (Tanpa Login)
@@ -78,6 +86,16 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard Seller
     Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
 
+    // Dashboard Admin
+
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Kelola Data Routes
+    Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
+    Route::get('/admin/sellers', [AdminController::class, 'sellers'])->name('admin.sellers');
+    Route::get('/admin/stores', [AdminController::class, 'stores'])->name('admin.stores');
+    Route::get('/admin/products', [AdminController::class, 'products'])->name('admin.products');
+
     // Produk - CRUD
     Route::get('/seller/products/create', fn() => view('seller.add_product'))->name('products.create');
     Route::post('/seller/products', [ProductController::class, 'store'])->name('products.store');
@@ -98,4 +116,33 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/order/{id}', [\App\Http\Controllers\OrderController::class, 'cancelOrder'])->middleware('auth')->name('order.cancel');
 
 });
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Kelola Users
+    Route::resource('users', AdminUserController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    // Kelola Sellers
+    Route::resource('sellers', AdminSellerController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    // Kelola Toko (Stores)
+    Route::resource('stores', AdminStoreController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    // Kelola Produk
+    Route::resource('products', AdminProductController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    Route::resource('orders', AdminOrderController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    Route::resource('categories', AdminCategoryController::class)->except(['show']);
+});
+
+
+// Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+//     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+//     Route::get('/sellers', [AdminSellerController::class, 'index'])->name('sellers.index');
+//     Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
+//     Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+//     // Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+//     // Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
+// });
+
 

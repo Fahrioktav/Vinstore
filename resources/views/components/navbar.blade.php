@@ -10,9 +10,22 @@
         <div>
             <ul class="flex text-md gap-10">
                 <li class="{{ Request::is('/') || Request::is('seller/dashboard') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
-                    <a href="{{ auth()->check() && auth()->user()->role === 'seller' ? route('seller.dashboard') : url('/') }}">
+                    <a href="
+                        @if(auth()->check())
+                            @if(auth()->user()->role === 'admin')
+                                {{ route('admin.dashboard') }}
+                            @elseif(auth()->user()->role === 'seller')
+                                {{ route('seller.dashboard') }}
+                            @else
+                                {{ url('/') }}
+                            @endif
+                        @else
+                            {{ url('/') }}
+                        @endif
+                    ">
                         Home
                     </a>
+
                 </li>
 
                 <li class="{{ Request::is('toko') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
