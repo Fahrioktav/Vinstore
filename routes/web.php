@@ -136,13 +136,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 });
 
 
-// Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-//     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
-//     Route::get('/sellers', [AdminSellerController::class, 'index'])->name('sellers.index');
-//     Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
-//     Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
-//     // Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-//     // Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
-// });
-
-
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/sellers', [AdminSellerController::class, 'index'])->name('sellers.index');
+    Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
+    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
+});

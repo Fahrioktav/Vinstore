@@ -2,45 +2,47 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User; // ✅ WAJIB ADA
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
     public function edit()
     {
-        return view('profile.edit', [
-            'user' => Auth::user()
-        ]);
+        $user = Auth::user();
+        return view('profile.edit', compact('user'));
     }
 
     public function update(Request $request)
     {
+        $user = Auth::user();
+
+        // Validasi input
         $request->validate([
-            'username' => 'required|string|max:255',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'email' => 'required|email',
-            'phone' => 'nullable|string',
-            'address' => 'nullable|string',
+            'username' => 'required|string|max:255|unique:users,username,' . $user->id,
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:6|confirmed'
         ]);
 
-        $user = Auth::user(); // ✅ Ini akan menjadi instance App\Models\User jika Auth disetting dengan benar
-
+        // Update data user
         $user->username = $request->username;
         $user->first_name = $request->first_name;
-        $user->last_name = $request->last_name;
-        $user->email = $request->email;
-        $user->phone = $request->phone;
-        $user->address = $request->address;
-        
-        dd(get_class($user));
+        $user->last_name  = $request->last_name;
+        $user->email      = $request->email;
+        $user->phone      = $request->phone;
+        $user->address    = $request->address;
 
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
 
-        $user->save(); // ✅ Harusnya sudah tidak error
+        $user->save();
 
-        return redirect()->route('profile.edit')->with('success', 'Profile updated!');
+        return redirect()->route('profile.edit')->with('success', 'Profil berhasil diperbarui.');
     }
 }

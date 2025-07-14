@@ -7,7 +7,6 @@
 @endsection
 
 @section('content')
-@parent
 
 <div class="max-w-5xl mx-auto mt-10 px-4">
     <h2 class="text-2xl font-bold font-poppins mb-6">Profile</h2>
@@ -16,7 +15,7 @@
     <div class="grid md:grid-cols-3 gap-6 items-start">
         <!-- Foto Profil -->
         <div class="text-center">
-            <img src="https://via.placeholder.com/150" alt="Profile Picture" class="rounded-full w-40 h-40 mx-auto object-cover">
+            <img src="https://via.placeholder.com/150" alt="" class="border border-md rounded-full w-40 h-40 mx-auto object-cover items-center">
             <div class="mt-4">
                 <a href="#" class="text-blue-600 font-semibold hover:underline flex justify-center items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
@@ -93,12 +92,4 @@
         </form>
     </div>
 </div>
-
-<footer class="bg-black text-white text-center py-6 mt-12 text-sm">
-    VINSTORE.id Copyright 2025, All Rights Reserved. |
-    <a href="#" class="underline">Privacy Policy</a> |
-    <a href="#" class="underline">Terms</a> |
-    <a href="#" class="underline">Pricing</a> |
-    <a href="#" class="underline">Do not sell or share my personal info</a>
-</footer>
 @endsection

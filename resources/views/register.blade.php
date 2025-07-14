@@ -27,35 +27,35 @@ Halo!, Selamat Datang Di VINSTORE
 
         <!-- Username -->
         <input type="text" name="username" placeholder="Username"
-            class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+            class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
 
         <!-- First & Last Name -->
         <div class="flex flex-col md:flex-row gap-4">
             <input type="text" name="first_name" placeholder="First Name"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
             <input type="text" name="last_name" placeholder="Last Name"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
         </div>
 
         <!-- Email & Phone -->
         <div class="flex flex-col md:flex-row gap-4">
             <input type="email" name="email" placeholder="Email Address"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
             <input type="tel" name="phone" placeholder="Phone Number"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
         </div>
 
         <!-- Password & Confirm -->
         <div class="flex flex-col md:flex-row gap-4">
             <input type="password" name="password" placeholder="Password"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
             <input type="password" name="password_confirmation" placeholder="Confirm Password"
-                class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
+                class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required>
         </div>
 
         <!-- Address -->
         <textarea name="address" placeholder="Your Address" rows="3"
-            class="w-full border border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required></textarea>
+            class="w-full border-2 border-gray-400 rounded-md px-4 py-2 font-poppins focus:outline-none focus:ring-2 focus:ring-[#E9E19E]" required></textarea>
 
         <!-- Submit Button -->
         <div class="text-center">
@@ -66,13 +66,4 @@ Halo!, Selamat Datang Di VINSTORE
         </div>
     </form>
 </div>
-
-{{-- Footer --}}
-<footer class="bg-black text-white text-center py-6 mt-12 text-sm">
-    VINSTORE.id Copyright 2025, All Rights Reserved. |
-    <a href="#" class="underline">Privacy Policy</a> |
-    <a href="#" class="underline">Terms</a> |
-    <a href="#" class="underline">Pricing</a> |
-    <a href="#" class="underline">Do not sell or share my personal info</a>
-</footer>
 @endsection

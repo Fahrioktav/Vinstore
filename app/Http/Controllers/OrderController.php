@@ -29,8 +29,20 @@ class OrderController extends Controller
         ]);
 
         $user = Auth::user();
+
+        // 🔒 Cek apakah stok mencukupi
+        if ($product->stock < $request->quantity) {
+            return back()->with('error', 'Stok produk tidak mencukupi atau sudah habis.');
+        }
+
+        // Hitung total harga
         $totalPrice = $product->price * $request->quantity;
 
+        // Kurangi stok produk
+        $product->stock -= $request->quantity;
+        $product->save();
+
+        // Simpan order ke database
         Order::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
@@ -43,10 +55,16 @@ class OrderController extends Controller
         return redirect()->route('order')->with('success', 'Pesanan berhasil dibuat!');
     }
 
+
     public function userOrders()
     {
-        $orders = \App\Models\Order::with('product')
-            ->where('user_id', auth()->id())
+        $user = Auth::user(); // ← Pasti ada method user()
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $orders = Order::with('product')
+            ->where('user_id', $user->id)
             ->latest()
             ->get();
 
@@ -55,9 +73,14 @@ class OrderController extends Controller
 
     public function cancelOrder($id)
     {
-        $order = \App\Models\Order::where('id', $id)
-            ->where('user_id', auth()->id())
-            ->whereIn('status', ['Waiting', 'On The Way']) // hanya bisa cancel jika belum delivered
+        $user = Auth::user(); // Pastikan pakai Auth::user()
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $order = Order::where('id', $id)
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['Waiting', 'On The Way'])
             ->firstOrFail();
 
         $order->status = 'Cancelled';

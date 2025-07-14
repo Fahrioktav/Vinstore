@@ -19,7 +19,7 @@
                     <p class="text-sm">Total User</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
@@ -34,7 +34,7 @@
                     <p class="text-sm">Total Seller</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
@@ -49,7 +49,7 @@
                     <p class="text-sm">Total Toko</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
@@ -64,7 +64,7 @@
                     <p class="text-sm">Total Barang</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
@@ -79,7 +79,7 @@
                     <p class="text-sm">Total Order</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
@@ -94,14 +94,12 @@
                     <p class="text-sm">Category</p>
                 </div>
             </div>
-            <div class="absolute bottom-2 right-3 text-xl text-[#53685B]">
+            <div class="absolute top-2 right-3 text-5xl text-[#53685B]">
                 &rsaquo;
             </div>
         </a>
 
     </div>
-
-
 
     {{-- Tabel Barang --}}
     <h2 class="text-xl font-bold mb-4">Daftar Barang</h2>
