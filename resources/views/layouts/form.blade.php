@@ -51,9 +51,10 @@
     @endif
 
     {{-- Konten Halaman Full Height --}}
-    <main class="flex-1 flex flex-col justify-center items-center w-full min-h-screen bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C]">
+    <main class="flex-1 flex justify-center items-center w-full min-h-screen bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] bg-cover bg-fixed bg-center">
         @yield('content')
     </main>
+
 
     {{-- Footer --}}
     <footer class="w-full bg-black text-white text-center py-6 text-sm">

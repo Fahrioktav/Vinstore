@@ -1,9 +1,10 @@
 <nav x-data="{ open: false, userMenu: false, scrolled: false }"
      x-init="window.addEventListener('scroll', () => scrolled = window.scrollY > 10)"
-     :class="scrolled ? 'bg-[#2F3E46] shadow-lg' : 'bg-transparent'"
-     class="fixed w-full top-0 left-0 z-50 transition-all duration-500">
+     :class="scrolled ? 'bg-[#2F3E46]/95 shadow-lg backdrop-blur-md' : 'bg-transparent'"
+     class="fixed w-screen top-0 left-0 z-50 transition-all duration-500">
 
-    <div class="max-w-7xl mx-auto flex justify-between items-center px-6 md:px-12 py-4">
+    {{-- WRAPPER TANPA MAX-W --}} 
+    <div class="w-full flex justify-between items-center px-6 md:px-12 lg:px-20 xl:px-32 py-4">
 
         {{-- LOGO --}}
         <a href="{{ url('/') }}" class="flex items-center gap-2">
@@ -12,7 +13,7 @@
         </a>
 
         {{-- MENU UTAMA --}}
-        <ul class="hidden md:flex items-center gap-8 font-semibold text-sm text-white">
+        <ul class="hidden md:flex items-center gap-10 font-semibold text-sm text-white">
             <li><a href="/" class="hover:text-[#E9E19E] transition">Home</a></li>
             <li><a href="{{ route('toko.index') }}" class="hover:text-[#E9E19E] transition">Toko</a></li>
             <li><a href="{{ route('order') }}" class="hover:text-[#E9E19E] transition">Order</a></li>
@@ -26,12 +27,13 @@
             @auth
             <div class="relative" @click.away="userMenu = false">
                 <button @click="userMenu = !userMenu"
-                    class="flex items-center gap-2 text-white font-semibold bg-[#B77C4C]/70 hover:bg-[#B77C4C] px-3 py-2 rounded-full transition">
+                    class="flex items-center gap-2 text-white font-semibold bg-[#B77C4C]/70 hover:bg-[#B77C4C] px-4 py-2 rounded-full transition">
                     <x-icon name="user" class="w-5 h-5" />
                     {{ Auth::user()->username }}
                     <x-icon name="chevron-down" class="w-4 h-4" />
                 </button>
 
+                {{-- DROPDOWN USER --}}
                 <div x-show="userMenu" x-transition
                     class="absolute right-0 mt-3 w-44 bg-white rounded-lg shadow-lg overflow-hidden z-50">
                     <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-gray-700 hover:bg-[#E9E19E] hover:text-black">👤 Profil</a>
@@ -61,7 +63,7 @@
 
     {{-- MENU MOBILE --}}
     <div x-show="open" x-transition
-        class="md:hidden bg-[#2F3E46] text-white py-4 space-y-3 text-center">
+        class="md:hidden bg-[#2F3E46]/95 backdrop-blur-md text-white py-4 space-y-3 text-center">
         <a href="/" class="block hover:text-[#E9E19E]">Home</a>
         <a href="{{ route('toko.index') }}" class="block hover:text-[#E9E19E]">Toko</a>
         <a href="{{ route('order') }}" class="block hover:text-[#E9E19E]">Order</a>

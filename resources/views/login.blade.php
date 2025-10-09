@@ -9,13 +9,18 @@
 @section('content')
 @parent
 
-{{-- Background Section --}}
-<section class="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 py-8 md:py-12 relative overflow-hidden">
+{{-- Background Full Layer --}}
+<section class="relative flex items-center justify-center w-full min-h-screen bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] overflow-hidden">
 
-    
+    {{-- Elemen Dekoratif --}}
+    <div class="absolute inset-0">
+        <div class="absolute top-0 left-0 w-72 h-72 bg-[#E9E19E]/20 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-[#B77C4C]/25 rounded-full blur-3xl"></div>
+    </div>
+
     {{-- Card Login --}}
-    <div class="relative w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 md:p-10 border border-gray-200">
-        
+    <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 md:p-10 border border-gray-200 mx-4">
+
         {{-- Logo --}}
         <div class="flex flex-col items-center mb-6">
             <img src="{{ asset('assets/Logo.png') }}" alt="VINSTORE" class="w-16 h-16 object-contain mb-3">
@@ -23,14 +28,14 @@
             <p class="text-gray-600 text-sm">Masuk untuk melanjutkan ke dunia barang antik eksklusif ✨</p>
         </div>
 
-        {{-- Notifikasi Error Login --}}
+        {{-- Notifikasi Error --}}
         @if (session('error'))
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm text-center">
                 {{ session('error') }}
             </div>
         @endif
 
-        {{-- FORM LOGIN --}}
+        {{-- Form Login --}}
         <form method="POST" action="{{ route('login.submit') }}" class="space-y-5">
             @csrf
 
@@ -74,9 +79,5 @@
             </p>
         </div>
     </div>
-
-    {{-- Background Decorative Element --}}
-    <div class="absolute top-0 left-0 w-64 h-64 bg-[#E9E19E]/20 rounded-full blur-3xl -z-10"></div>
-    <div class="absolute bottom-0 right-0 w-80 h-80 bg-[#B77C4C]/20 rounded-full blur-3xl -z-10"></div>
 </section>
 @endsection

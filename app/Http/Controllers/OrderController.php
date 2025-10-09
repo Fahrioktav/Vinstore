@@ -10,6 +10,11 @@ use App\Models\Product;
 class OrderController extends Controller
 {
 
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function showCheckout(Product $product)
     {
         return view('checkout', compact('product'));

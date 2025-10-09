@@ -114,7 +114,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Order Status
     Route::patch('/seller/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
-    Route::get('/order', [\App\Http\Controllers\OrderController::class, 'userOrders'])->middleware('auth')->name('order');
+    Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
+    Route::delete('/order/{id}/cancel', [OrderController::class, 'cancel'])->name('order.cancel');
 
     // Tambah ke keranjang
     Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
