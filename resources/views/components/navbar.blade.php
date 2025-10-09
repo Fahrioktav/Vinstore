@@ -1,119 +1,70 @@
-<nav class="flex flex-col justify-between items-center bg-cover bg-no-repeat bg-center min-h-[26rem] px-7 py-2"
-    style="background-image: url('/assets/background.jpg');">
-    <div class="h-40 flex justify-between items-center w-full">
-        {{-- Logo --}}
-        <div>
-            <img src="{{ asset('assets/Logo.png') }}" alt="Logo" class="w-full h-20">
-        </div>
+<nav x-data="{ open: false, userMenu: false, scrolled: false }"
+     x-init="window.addEventListener('scroll', () => scrolled = window.scrollY > 10)"
+     :class="scrolled ? 'bg-[#2F3E46] shadow-lg' : 'bg-transparent'"
+     class="fixed w-full top-0 left-0 z-50 transition-all duration-500">
 
-        {{-- Navigasi Menu --}}
-        <div>
-            <ul class="flex text-md gap-10">
-                <li class="{{ Request::is('/') || Request::is('seller/dashboard') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
-                    <a href="
-                        @if(auth()->check())
-                            @if(auth()->user()->role === 'admin')
-                                {{ route('admin.dashboard') }}
-                            @elseif(auth()->user()->role === 'seller')
-                                {{ route('seller.dashboard') }}
-                            @else
-                                {{ url('/') }}
-                            @endif
-                        @else
-                            {{ url('/') }}
-                        @endif
-                    ">
-                        Home
-                    </a>
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-6 md:px-12 py-4">
 
-                </li>
+        {{-- LOGO --}}
+        <a href="{{ url('/') }}" class="flex items-center gap-2">
+            <img src="{{ asset('assets/Logo.png') }}" alt="VINSTORE" class="w-12 h-12 object-contain">
+            <span class="text-2xl font-playfair font-bold tracking-wide text-[#E9E19E]">VINSTORE</span>
+        </a>
 
-                <li class="{{ Request::is('toko') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
-                    <a href="/toko">Toko</a>
-                </li>
-                <li class="{{ Request::is('order') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
-                    <a href="/order">Order</a>
-                </li>
-                <li class="{{ Request::is('contact') ? 'bg-[#E9E19E] text-black' : 'text-white' }} font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center">
-                    <a href="/contact">Contact</a>
-                </li>
-            </ul>
-        </div>
+        {{-- MENU UTAMA --}}
+        <ul class="hidden md:flex items-center gap-8 font-semibold text-sm text-white">
+            <li><a href="/" class="hover:text-[#E9E19E] transition">Home</a></li>
+            <li><a href="{{ route('toko.index') }}" class="hover:text-[#E9E19E] transition">Toko</a></li>
+            <li><a href="{{ route('order') }}" class="hover:text-[#E9E19E] transition">Order</a></li>
+            <li><a href="/contact" class="hover:text-[#E9E19E] transition">Contact</a></li>
+        </ul>
 
-        {{-- Tombol Login atau Username Dropdown --}}
-        <div class="relative flex items-center">
+        {{-- MENU KANAN --}}
+        <div class="flex items-center gap-4">
+
+            {{-- USER LOGIN --}}
             @auth
-            <button id="userButton"
-                class="text-white font-poppins font-semibold hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black transition-all duration-200 p-2 rounded-3xl w-32 flex justify-center items-center gap-2 {{ Request::is('login') ? 'bg-[#E9E19E] text-black' : '' }}">
-                <x-icon name="user" class="w-4 h-4" />
-                {{ Auth::user()->username }}
-            </button>
+            <div class="relative" @click.away="userMenu = false">
+                <button @click="userMenu = !userMenu"
+                    class="flex items-center gap-2 text-white font-semibold bg-[#B77C4C]/70 hover:bg-[#B77C4C] px-3 py-2 rounded-full transition">
+                    <x-icon name="user" class="w-5 h-5" />
+                    {{ Auth::user()->username }}
+                    <x-icon name="chevron-down" class="w-4 h-4" />
+                </button>
 
-            <div id="dropdownMenu"
-                class="absolute top-14 right-0 w-36 rounded-md shadow-lg z-50 py-2 hidden font-poppins font-semibold">
-                <a href="{{ route('profile.edit') }}"
-                    class="text-center block px-4 py-2 text-sm text-white hover:text-black font-poppins hover:bg-[#E9E19E] rounded-3xl hover:cursor-pointer">
-                    Settings
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit"
-                        class="block w-full text-center px-4 py-2 text-sm text-white hover:text-black font-poppins hover:bg-[#E9E19E] rounded-3xl hover:cursor-pointer">
-                        Logout
-                    </button>
-                </form>
+                <div x-show="userMenu" x-transition
+                    class="absolute right-0 mt-3 w-44 bg-white rounded-lg shadow-lg overflow-hidden z-50">
+                    <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-gray-700 hover:bg-[#E9E19E] hover:text-black">👤 Profil</a>
+                    <a href="{{ route('cart.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-[#E9E19E] hover:text-black">🛒 Keranjang</a>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-[#E9E19E] hover:text-black">
+                            🚪 Logout
+                        </button>
+                    </form>
+                </div>
             </div>
             @else
-            <a href="/login"
-                class="flex items-center gap-2 border-2 border-white text-white px-4 py-2 rounded-full font-poppins hover:bg-[#E9E19E] hover:text-black transition-all duration-200">
-                <x-icon name="user" class="w-4 h-4" />
-                <span class="text-sm font-bold">Login/Signup</span>
+            <a href="{{ route('login.form') }}"
+                class="text-sm font-semibold text-[#2F3E46] bg-[#E9E19E] hover:bg-[#dcd58c] px-5 py-2 rounded-full transition">
+                Login / Signup
             </a>
             @endauth
+
+            {{-- TOMBOL MENU MOBILE --}}
+            <button @click="open = !open" class="md:hidden text-white text-3xl focus:outline-none">
+                <template x-if="!open">☰</template>
+                <template x-if="open">✕</template>
+            </button>
         </div>
     </div>
 
-    {{-- Hero Section --}}
-    <section class="flex flex-col justify-center items-center text-white text-center min-h-[14rem]">
-        <div class="text-xl md:text-3xl font-readex mb-12">
-            @yield('heroText', 'Selamat Datang di VINSTORE!')
-        </div>
-
-        {{-- Search Bar --}}
-        @hasSection('showSearch')
-        <div class="flex justify-center">
-            <div class="flex w-full bg-white rounded-full overflow-hidden shadow-md">
-                <input type="text"
-                    class="font-poppins w-92 px-10 py-3 focus:outline-none text-black text-center"
-                    placeholder="Cari barang yang kamu mau">
-                <button
-                    class="flex items-center gap-2 rounded-4xl font-poppins font-bold bg-[#E9E19E] text-black px-6 py-2 hover:bg-[#e9e19e]/90 hover:cursor-pointer">
-                    <x-icon name="search" class="w-5 h-5 text-black" />
-                    Search
-                </button>
-            </div>
-        </div>
-        @endif
-    </section>
+    {{-- MENU MOBILE --}}
+    <div x-show="open" x-transition
+        class="md:hidden bg-[#2F3E46] text-white py-4 space-y-3 text-center">
+        <a href="/" class="block hover:text-[#E9E19E]">Home</a>
+        <a href="{{ route('toko.index') }}" class="block hover:text-[#E9E19E]">Toko</a>
+        <a href="{{ route('order') }}" class="block hover:text-[#E9E19E]">Order</a>
+        <a href="/contact" class="block hover:text-[#E9E19E]">Contact</a>
+    </div>
 </nav>
-
-{{-- JS Toggle Dropdown --}}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const userButton = document.getElementById('userButton');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        if (userButton && dropdownMenu) {
-            userButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('hidden');
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!dropdownMenu.contains(e.target) && !userButton.contains(e.target)) {
-                    dropdownMenu.classList.add('hidden');
-                }
-            });
-        }
-    });
-</script>

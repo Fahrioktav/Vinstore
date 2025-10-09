@@ -3,7 +3,7 @@
 @section('title', 'Checkout')
 
 @section('heroText')
-    Konfirmasi Pembelianmu
+Konfirmasi Pembelianmu
 @endsection
 
 @section('content')
@@ -23,29 +23,32 @@
         </div>
     </div>
 
+    <form method="POST" action="{{ route('cart.add', $product->id) }}">
+        @csrf
+        <input type="hidden" name="quantity" value="1">
+        <button class="bg-yellow-300 hover:bg-yellow-400 text-black px-6 py-2 rounded-md font-semibold hover:cursor-pointer">
+            🛒 Masukkan Keranjang
+        </button>
+    </form>
+
     <form method="POST" action="{{ route('checkout.process', $product->id) }}">
         @csrf
-
-        <div class="mb-4">
-            <label for="quantity" class="block text-sm font-semibold">Jumlah</label>
-            <input type="number" name="quantity" id="quantity" min="1" value="1" class="w-full border border-gray-400 rounded-md px-4 py-2" required>
-        </div>
-
-        <div class="mb-4">
-            <label for="payment_method" class="block text-sm font-semibold">Metode Pembayaran</label>
-            <select name="payment_method" id="payment_method" class="w-full border border-gray-400 rounded-md px-4 py-2" required>
-                <option value="" disabled selected>-- Pilih Metode Pembayaran --</option>
-                <option value="transfer">Transfer Bank</option>
-                <option value="cod">Cash on Delivery</option>
-                <option value="ewallet">E-Wallet (OVO, GoPay, DANA)</option>
-            </select>
-        </div>
-
-        <div class="text-right">
-            <button type="submit" class="bg-[#53685B] hover:bg-[#3c4a3e] text-white px-6 py-2 rounded-md font-semibold">
-                Selesaikan Pesanan
-            </button>
-        </div>
+        <input type="hidden" name="quantity" value="1">
+        <input type="hidden" name="payment_method" value="transfer"> <!-- default / JS ganti -->
+        <button class="bg-[#53685B] hover:bg-[#3c4a3e] text-white px-6 py-2 rounded-md font-semibold my-2 hover:cursor-pointer">
+            ✅ Selesaikan Pesanan
+        </button>
     </form>
+
+    <div class="mb-4">
+        <label for="payment_method" class="block text-sm font-semibold">Metode Pembayaran</label>
+        <select name="payment_method" id="payment_method" class="w-full border border-gray-400 rounded-md px-4 py-2" required>
+            <option value="" disabled selected>-- Pilih Metode Pembayaran --</option>
+            <option value="transfer">Transfer Bank</option>
+            <option value="cod">Cash on Delivery</option>
+            <option value="ewallet">E-Wallet (OVO, GoPay, DANA)</option>
+        </select>
+    </div>
+
 </div>
 @endsection

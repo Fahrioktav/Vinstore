@@ -19,6 +19,8 @@ use App\Http\Controllers\Admin\AdminStoreController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\CartController;
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes (Tanpa Login)
@@ -27,7 +29,7 @@ use App\Http\Controllers\Admin\AdminCategoryController;
 
 Route::get('/', function () {
     $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
-    return view('index', [
+    return view('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
         'products' => $products
@@ -48,6 +50,8 @@ Route::get('/order', fn() => view('order', [
 Route::get('/contact', fn() => view('contact', [
     'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
 ]));
+
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
 Route::get('/register', fn() => view('register', [
     'heroText' => 'Halo!, Selamat Datang di VINSTORE'
@@ -102,19 +106,37 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/seller/products/{id}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/seller/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
+    // Edit produk (form edit produk untuk update stok, harga, dll)
+    // routes/web.php
+    Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
+
+
     // Order Status
     Route::patch('/seller/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::get('/order', [\App\Http\Controllers\OrderController::class, 'userOrders'])->middleware('auth')->name('order');
 
+    // Tambah ke keranjang
+    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
 
-    Route::get('/checkout/{id}', [CheckoutController::class, 'show'])->name('checkout.show');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    // Untuk checkout satu produk (menampilkan halaman konfirmasi pembelian)
+    Route::get('/checkout/show/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
 
-    Route::get('/checkout/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
-    Route::post('/checkout/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
+
+    // ✅ Checkout satu produk langsung dari detail produk
+    Route::get('/checkout/product/{product}', [OrderController::class, 'showCheckout'])->name('checkout.product');
+    Route::post('/checkout/product/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
+
+    // ✅ Checkout dari keranjang (semua item)
+    Route::post('/checkout/cart', [OrderController::class, 'checkoutFromCart'])->name('checkout.fromCart');
 
     Route::delete('/order/{id}', [\App\Http\Controllers\OrderController::class, 'cancelOrder'])->middleware('auth')->name('order.cancel');
 
+    Route::get('/toko/{store}', [StoreController::class, 'show'])->name('store.show');
+
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
+    Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

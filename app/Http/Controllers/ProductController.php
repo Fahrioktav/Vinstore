@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
+    public function index()
+    {
+        $products = \App\Models\Product::latest()->paginate(12);
+        return view('products.index', compact('products'));
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -22,7 +28,6 @@ class ProductController extends Controller
         $storeId = Auth::user()->store->id;
         $imagePath = null;
 
-        // Upload gambar jika ada
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
@@ -43,18 +48,61 @@ class ProductController extends Controller
         return back()->with('success', 'Produk berhasil ditambahkan.');
     }
 
-
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'name' => 'required',
+            'stock' => 'required|integer',
+            'price' => 'required|numeric',
+            'category' => 'required',
+            'description' => 'required',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
         $product = Product::findOrFail($id);
-        $product->update($request->only('name', 'stock', 'price', 'category', 'description'));
+
+        // Pastikan hanya pemilik toko yang bisa update produk ini
+        if ($product->store->user_id !== Auth::id()) {
+            abort(403, 'Anda tidak memiliki akses ke produk ini.');
+        }
+
+        // Update gambar jika ada gambar baru
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('uploads/products'), $imageName);
+            $product->image = 'uploads/products/' . $imageName;
+        }
+
+        $product->name = $request->name;
+        $product->stock = $request->stock;
+        $product->price = $request->price;
+        $product->category = $request->category;
+        $product->description = $request->description;
+        $product->save();
 
         return back()->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy($id)
     {
-        Product::destroy($id);
+        $product = Product::findOrFail($id);
+
+        // Pastikan hanya pemilik toko yang bisa hapus
+        if ($product->store->user_id !== Auth::id()) {
+            abort(403, 'Anda tidak memiliki akses ke produk ini.');
+        }
+
+        $product->delete();
         return back()->with('success', 'Produk berhasil dihapus.');
+    }
+
+    public function edit($id)
+    {
+        $product = Product::findOrFail($id);
+        return view('seller.products.edit', compact('product'));
+
+        $product->update($data);
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');
     }
 }

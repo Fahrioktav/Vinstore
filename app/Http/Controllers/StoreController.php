@@ -70,4 +70,10 @@ class StoreController extends Controller
 
         return view('seller.dashboard', compact('store', 'orders', 'products'));
     }
+
+    public function show($id)
+    {
+        $store = \App\Models\Store::with('products', 'user')->findOrFail($id);
+        return view('store.show', compact('store'));
+    }
 }

@@ -8,60 +8,59 @@
     {{-- Section Customer Orders --}}
     <h2 class="text-xl font-bold mt-8 mb-4">Customer Orders</h2>
 
-<table class="w-full text-sm border-collapse mb-8">
-    <thead class="bg-gray-200">
-        <tr class="text-center">
-            <th>Customer</th>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @forelse ($orders as $order)
-        <tr class="text-center">
-            <td>{{ $order->user->first_name }} {{ $order->user->last_name }}</td>
-            <td>{{ $order->product->name }}</td>
-            <td>{{ $order->quantity }}</td>
-            <td>Rp{{ number_format($order->price, 0, ',', '.') }}</td>
-            <td>
-                <form method="POST" action="{{ route('orders.updateStatus', $order->id) }}">
-                    @csrf
-                    @method('PATCH')
-                    <select name="status" onchange="this.form.submit()">
-                        @foreach (['Waiting', 'On The Way', 'Delivered', 'Cancelled'] as $status)
-                        <option value="{{ $status }}" {{ $order->status == $status ? 'selected' : '' }}>
-                            {{ $status }}
-                        </option>
-                        @endforeach
-                    </select>
-                </form>
-            </td>
-            <td>{{ $order->created_at->format('d-m-Y H:i') }}</td>
-            <td>
-                <form action="{{ route('orders.updateStatus', $order->id) }}" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button class="text-red-600">🗑</button>
-                </form>
-            </td>
-        </tr>
-        @empty
-        <tr>
-            <td colspan="7" class="text-center text-gray-500 py-4">Belum ada pesanan.</td>
-        </tr>
-        @endforelse
-    </tbody>
-</table>
-
+    <table class="w-full text-sm border-collapse mb-8">
+        <thead class="bg-[#53685B] text-white">
+            <tr class="text-center">
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($orders as $order)
+            <tr class="text-center">
+                <td>{{ $order->user->first_name }} {{ $order->user->last_name }}</td>
+                <td>{{ $order->product->name }}</td>
+                <td>{{ $order->quantity }}</td>
+                <td>Rp{{ number_format($order->price, 0, ',', '.') }}</td>
+                <td>
+                    <form method="POST" action="{{ route('orders.updateStatus', $order->id) }}">
+                        @csrf
+                        @method('PATCH')
+                        <select name="status" onchange="this.form.submit()">
+                            @foreach (['Waiting', 'On The Way', 'Delivered', 'Cancelled'] as $status)
+                            <option value="{{ $status }}" {{ $order->status == $status ? 'selected' : '' }}>
+                                {{ $status }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </form>
+                </td>
+                <td>{{ $order->created_at->format('d-m-Y H:i') }}</td>
+                <td>
+                    <form action="{{ route('orders.updateStatus', $order->id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button class="text-red-600">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="7" class="text-center text-gray-500 py-4">Belum ada pesanan.</td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
 
     {{-- Section Produk --}}
     <div class="flex justify-between items-center">
         <h2 class="text-xl font-bold mb-4">Daftar Barang</h2>
-        <a href="{{ route('products.create') }}" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+        <a href="{{ route('products.create') }}" class="bg-[#53685B] text-white px-4 py-2 rounded-md hover:bg-green-700">
             + Add Barang
         </a>
     </div>
@@ -91,20 +90,32 @@
                     @endif
                 </td>
                 <td>{{ $product->name }}</td>
-                <td>{{ $product->stock }}</td>
+
+                {{-- Editable Stock Form --}}
+                <td>
+                    <form action="{{ route('products.update', $product->id) }}" method="POST" class="flex items-center justify-center space-x-2">
+                        @csrf
+                        @method('PUT')
+                        <input type="number" name="stock" value="{{ $product->stock }}" min="0" class="w-16 text-center rounded p-1 text-sm">
+                    </form>
+                </td>
+
                 <td>Rp{{ number_format($product->price, 0, ',', '.') }}</td>
                 <td>{{ $product->category }}</td>
                 <td>{{ \Illuminate\Support\Str::limit($product->description, 40) }}</td>
                 <td>
-                    <a href="#" class="text-blue-600">✏️</a>
+                    <a href="{{ route('products.edit', $product->id) }}" class="text-blue-600">✏️</a>
                     <form action="{{ route('products.destroy', $product->id) }}" method="POST" class="inline">
-                        @csrf @method('DELETE')
+                        @csrf
+                        @method('DELETE')
                         <button class="text-red-600 ml-2">🗑</button>
                     </form>
                 </td>
             </tr>
             @empty
-            <tr><td colspan="8" class="text-center text-gray-500">Belum ada produk.</td></tr>
+            <tr>
+                <td colspan="8" class="text-center text-gray-500 py-4">Belum ada produk.</td>
+            </tr>
             @endforelse
         </tbody>
     </table>
@@ -131,4 +142,3 @@
         }
     });
 </script>
-

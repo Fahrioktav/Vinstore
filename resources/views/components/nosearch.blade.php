@@ -1,4 +1,4 @@
-<nav class="flex flex-col justify-between items-center bg-cover h-full px-7 py-2" style="background-image: url('/assets/background.jpg');">
+<nav class="flex flex-col justify-between items-center bg-cover h-full px-7 py-2">
     <div class="h-40 flex justify-between items-center w-full">
         <div>
             <img src="{{ asset('assets/Logo.png') }}" alt="Logo" class="w-full h-20">

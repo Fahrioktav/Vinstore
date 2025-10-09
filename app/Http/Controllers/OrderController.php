@@ -9,6 +9,12 @@ use App\Models\Product;
 
 class OrderController extends Controller
 {
+
+    public function showCheckout(Product $product)
+    {
+        return view('checkout', compact('product'));
+    }
+    
     // Update status pesanan oleh seller
     public function updateStatus(Request $request, $id)
     {
@@ -87,5 +93,39 @@ class OrderController extends Controller
         $order->save();
 
         return back()->with('success', 'Pesanan berhasil dibatalkan.');
+    }
+
+    public function checkoutFromCart()
+    {
+        $user = Auth::user();
+        $cartItems = \App\Models\Cart::with('product')->where('user_id', $user->id)->get();
+
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.index')->with('error', 'Keranjang kamu kosong.');
+        }
+
+        $total = 0;
+        foreach ($cartItems as $item) {
+            $total += $item->product->price * $item->quantity;
+
+            // Buat order untuk tiap item
+            Order::create([
+                'user_id'    => $user->id,
+                'product_id' => $item->product_id,
+                'store_id'   => $item->store_id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price * $item->quantity,
+                'status'     => 'Waiting',
+            ]);
+
+            // Kurangi stok produk
+            $item->product->stock -= $item->quantity;
+            $item->product->save();
+        }
+
+        // Hapus semua item dari keranjang setelah checkout
+        \App\Models\Cart::where('user_id', $user->id)->delete();
+
+        return redirect()->route('order')->with('success', 'Checkout berhasil untuk semua produk!');
     }
 }
