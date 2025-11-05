@@ -44,7 +44,7 @@ Route::get('/items', fn() => view('items', [
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
 
 Route::get('/order', fn() => view('order', [
-    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
+    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?' 
 ]))->name('order');
 
 Route::get('/contact', fn() => view('contact', [

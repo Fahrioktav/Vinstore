@@ -31,5 +31,4 @@
             Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!
         </div>
     </section>
-
 </nav>

@@ -4,14 +4,14 @@
 
 @section('content')
     <div class="max-w-4xl mx-auto py-8">
-        <h2 class="text-2xl font-bold mb-6 text-center">🛒 Keranjang Belanja Kamu</h2>
+        <h2 class="text-gray-100 text-2xl font-bold mb-6 text-center">🛒 Keranjang Belanja Kamu</h2>
 
         @if($cartItems->isEmpty())
-            <div class="text-center text-gray-600">
+            <div class="text-center text-gray-100">
                 Keranjang kamu masih kosong.
             </div>
         @else
-            <div class="space-y-6">
+            <div class="text-gray-100 space-y-6">
                 @foreach ($cartItems as $item)
                     <div class="flex flex-col sm:flex-row items-center gap-6 border-b pb-4">
                         <!-- Gambar Produk -->
@@ -23,13 +23,12 @@
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="font-semibold text-lg">{{ $item->product->name }}</p>
-                                    <p class="text-sm text-gray-600 mt-1">Jumlah: {{ $item->quantity }}</p>
-                                    <p class="text-sm text-gray-600">Harga Satuan: Rp{{ number_format($item->product->price, 0, ',', '.') }}</p>
-                                    <p class="text-sm text-gray-700 font-medium mt-1">
+                                    <p class="text-sm text-gray-100 mt-1">Jumlah: {{ $item->quantity }}</p>
+                                    <p class="text-sm text-gray-100">Harga Satuan: Rp{{ number_format($item->product->price, 0, ',', '.') }}</p>
+                                    <p class="text-sm text-gray-100 font-medium mt-1">
                                         Subtotal: <span class="text-green-600 font-semibold">Rp{{ number_format($item->product->price * $item->quantity, 0, ',', '.') }}</span>
                                     </p>
                                 </div>
-
                                 <!-- Tombol Hapus -->
                                 <form method="POST" action="{{ route('cart.remove', $item->id) }}">
                                     @csrf
