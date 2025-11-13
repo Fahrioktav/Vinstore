@@ -20,6 +20,80 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\CartController;
+use App\Models\Order;
+use App\Models\Store;
+use Inertia\Inertia;
+
+Route::prefix('inertia')->name('inertia.')->group(function () {
+    Route::get('/', function () {
+        $products = Product::latest()->take(6)->get();
+        return Inertia::render('home', [
+            'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
+            'showSearch' => true,
+            'products' => $products,
+        ]);
+    })->name('home');
+
+    Route::get('/toko', function () {
+        $stores = Store::latest()->get(); // Ambil semua toko
+
+        return Inertia::render('toko', [
+            'stores' => $stores,
+            'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
+            // 'showSearch' => true
+        ]);
+    });
+
+    Route::get('/order', function () {
+        $orders = Order::where('user_id', Auth::user()->id)->latest()->get();
+        return Inertia::render('order', [
+            'orders' => $orders,
+            'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
+        ]);
+    });
+
+    Route::get('/contact', fn() => Inertia::render('contact', [
+        'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
+    ]));
+
+    Route::get('/products', function () {
+        $paginatedProducts = Product::latest()->paginate(12);
+        return Inertia::render('products/index', compact('paginatedProducts'));
+    });
+
+    Route::get('/register', function () {
+        if (Auth::user()) {
+            return redirect()->route('inertia.home');
+        }
+
+        return Inertia::render('auth/register', [
+            'heroText' => 'Halo!, Selamat Datang di VINSTORE'
+        ]);
+    });
+
+    Route::get('/login', function () {
+        if (Auth::user()) {
+            return redirect()->route('inertia.home');
+        }
+
+        return Inertia::render('auth/login', [
+            'heroText' => 'Selamat Datang Kembali!'
+        ]);
+    });
+
+    Route::middleware(['auth'])->group(function () {
+        // Profil
+        Route::get('/profile', function () {
+            $user = Auth::user();
+            $sessions = [
+                'error' => session('error'),
+                'success' => session('success'),
+            ];
+            return Inertia::render('profile/edit', compact('user', 'sessions'));
+        })->name('profile.edit');
+        Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +118,7 @@ Route::get('/items', fn() => view('items', [
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
 
 Route::get('/order', fn() => view('order', [
-    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?' 
+    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
 ]))->name('order');
 
 Route::get('/contact', fn() => view('contact', [
@@ -69,6 +143,7 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+    Inertia::clearHistory();
     return redirect('/');
 })->name('logout');
 
@@ -91,14 +166,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
 
     // Dashboard Admin
-
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-
-    // Kelola Data Routes
-    Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
-    Route::get('/admin/sellers', [AdminController::class, 'sellers'])->name('admin.sellers');
-    Route::get('/admin/stores', [AdminController::class, 'stores'])->name('admin.stores');
-    Route::get('/admin/products', [AdminController::class, 'products'])->name('admin.products');
 
     // Produk - CRUD
     Route::get('/seller/products/create', fn() => view('seller.add_product'))->name('products.create');
@@ -131,7 +199,7 @@ Route::middleware(['auth'])->group(function () {
     // ✅ Checkout dari keranjang (semua item)
     Route::post('/checkout/cart', [OrderController::class, 'checkoutFromCart'])->name('checkout.fromCart');
 
-    Route::delete('/order/{id}', [\App\Http\Controllers\OrderController::class, 'cancelOrder'])->middleware('auth')->name('order.cancel');
+    Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->middleware('auth')->name('order.cancel');
 
     Route::get('/toko/{store}', [StoreController::class, 'show'])->name('store.show');
 
@@ -140,7 +208,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
 });
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Kelola Users
     Route::resource('users', AdminUserController::class)->only(['index', 'edit', 'update', 'destroy']);
 
@@ -156,14 +224,4 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('orders', AdminOrderController::class)->only(['index', 'edit', 'update', 'destroy']);
 
     Route::resource('categories', AdminCategoryController::class)->except(['show']);
-});
-
-
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
-    Route::get('/sellers', [AdminSellerController::class, 'index'])->name('sellers.index');
-    Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
-    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
-    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
 });

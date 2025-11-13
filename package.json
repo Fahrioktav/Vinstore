@@ -15,12 +15,17 @@
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.5.4",
+        "prettier": "^3.6.2",
+        "prettier-plugin-tailwindcss": "^0.7.1",
         "tailwindcss": "^4.1.8",
         "vite": "^6.3.5"
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@inertiajs/react": "^2.2.15",
-        "alpinejs": "^3.14.9"
+        "alpinejs": "^3.14.9",
+        "clsx": "^2.1.1",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
     }
 }
