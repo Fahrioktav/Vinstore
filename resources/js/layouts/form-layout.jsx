@@ -6,7 +6,7 @@ export default function FormLayout({ children, title }) {
   const { sessions } = usePage().props;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gray-50 text-gray-800">
+    <div className="font-poppins flex min-h-dvh flex-col bg-gray-50 text-gray-800">
       <Head title={title} />
       <Navbar />
 
