@@ -5,19 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class AdminOrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('user', 'product')->latest()->get();
-        return view('admin.orders.index', compact('orders'));
+        $orders = Order::with('user', 'product', 'store')->latest()->get();
+        return Inertia::render('admin/orders/index', compact('orders'));
     }
 
     public function edit($id)
     {
-        $order = Order::with('user', 'product')->findOrFail($id);
-        return view('admin.orders.edit', compact('order'));
+        $order = Order::with('user', 'product', 'store')->findOrFail($id);
+        return Inertia::render('admin/orders/edit', compact('order'));
     }
 
     public function update(Request $request, $id)

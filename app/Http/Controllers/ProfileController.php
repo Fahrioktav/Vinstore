@@ -5,21 +5,27 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
     public function edit()
     {
         $user = Auth::user();
-        return view('profile.edit', compact('user'));
+        $sessions = [
+            'error' => session('error'),
+            'success' => session('success'),
+        ];
+        return Inertia::render('profile/edit', compact('user', 'sessions'));
     }
 
     public function update(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         // Validasi input
-        $request->validate([
+        $validated = $request->validate([
             'username' => 'required|string|max:255|unique:users,username,' . $user->id,
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
@@ -30,19 +36,19 @@ class ProfileController extends Controller
         ]);
 
         // Update data user
-        $user->username = $request->username;
-        $user->first_name = $request->first_name;
-        $user->last_name  = $request->last_name;
-        $user->email      = $request->email;
-        $user->phone      = $request->phone;
-        $user->address    = $request->address;
+        $user->username = $validated['username'];
+        $user->first_name = $validated['first_name'] ?? null;
+        $user->last_name  = $validated['last_name'] ?? null;
+        $user->email      = $validated['email'];
+        $user->phone      = $validated['phone'] ?? null;
+        $user->address    = $validated['address'] ?? null;
 
         if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
+            $user->password = Hash::make($validated['password']);
         }
 
         $user->save();
 
-        return redirect()->route('profile.edit')->with('success', 'Profil berhasil diperbarui.');
+        return redirect()->route('profile.edit')->with('success', 'Profil berhasil diperbarui!');
     }
 }

@@ -3,7 +3,7 @@ import { formatIDR } from '../lib/utils';
 import MainLayout from '../layouts/main-layout';
 
 export default function HomePage() {
-  const { heroText, showSearch, products, auth } = usePage().props;
+  const { heroText, showSearch, products, categories = [], auth } = usePage().props;
 
   return (
     <>
@@ -46,28 +46,33 @@ export default function HomePage() {
           Kategori Populer
         </h2>
         <div className="flex flex-wrap justify-center gap-8">
-          {[
-            'Kamera',
-            'MesinTik',
-            'TasKlasik',
-            'VasAntik',
-            'Gramofon',
-            'KonsolGame',
-            'PiringanHitam',
-          ].map((item) => (
-            <div
-              className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
-              key={item}
-            >
-              <img
-                src={`/assets/icons/${item}.png`}
-                className="mb-3 h-16 w-16 transition-transform group-hover:scale-110"
-              />
-              <span className="text-center font-semibold text-gray-800 group-hover:text-[#B77C4C]">
-                {item}
-              </span>
-            </div>
-          ))}
+          {categories.length === 0 ? (
+            <p className="text-gray-500">Belum ada kategori</p>
+          ) : (
+            categories.map((category) => (
+              <div
+                className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
+                key={category.id}
+              >
+                {category.image ? (
+                  <img
+                    src={`/storage/${category.image}`}
+                    alt={category.name}
+                    className="mb-3 h-16 w-16 object-cover rounded-full transition-transform group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#53685B] to-[#B77C4C] transition-transform group-hover:scale-110">
+                    <span className="text-2xl font-bold text-white">
+                      {category.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <span className="text-center font-semibold text-gray-800 group-hover:text-[#B77C4C]">
+                  {category.name}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

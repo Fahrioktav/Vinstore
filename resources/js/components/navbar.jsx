@@ -37,7 +37,16 @@ export default function Navbar() {
       {/* {-- WRAPPER TANPA MAX-W --}  */}
       <div className="flex w-full items-center justify-between px-6 py-4 md:px-12 lg:px-20 xl:px-32">
         {/* {-- LOGO --} */}
-        <Link href="/inertia" className="flex items-center gap-2">
+        <Link 
+          href={
+            auth.user?.role === 'admin' 
+              ? '/admin/dashboard' 
+              : auth.user?.role === 'seller' 
+              ? '/seller/dashboard' 
+              : '/inertia'
+          } 
+          className="flex items-center gap-2"
+        >
           <img
             src="/assets/Logo.png"
             alt="VINSTORE"

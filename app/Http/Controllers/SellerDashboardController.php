@@ -6,12 +6,15 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Store;
 use App\Models\Product;
 use App\Models\Order;
+use Inertia\Inertia;
 
 class SellerDashboardController extends Controller
 {
     public function index()
     {
-        $store = Auth::user()->store;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $store = $user->store;
 
         // Ambil semua produk milik toko seller
         $products = $store->products()->latest()->get();
@@ -28,6 +31,6 @@ class SellerDashboardController extends Controller
         // Hitung total orders
         $orderCount = $orders->count();
 
-        return view('seller.dashboard', compact('products', 'orders', 'productCount', 'orderCount'));
+        return Inertia::render('seller/dashboard', compact('products', 'orders', 'productCount', 'orderCount', 'store'));
     }
 }
