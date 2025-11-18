@@ -9,6 +9,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
 {
@@ -24,10 +25,10 @@ class AdminDashboardController extends Controller
         $totalStores = Store::count();
         $totalProducts = Product::count();
         $totalOrders = Order::count();
-        $totalCategories = Product::distinct('category')->count('category');
-        $products = Product::latest()->get();
+        $totalCategories = DB::table('products')->distinct()->count('category');
+        $products = Product::with('store')->latest()->get();
 
-        return view('admin.dashboard', compact(
+        return Inertia::render('admin/dashboard', compact(
             'totalUsers', 'totalSellers', 'totalStores', 'totalProducts',
             'totalOrders', 'totalCategories', 'products'
         ));

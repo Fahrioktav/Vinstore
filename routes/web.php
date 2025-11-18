@@ -26,11 +26,24 @@ use Inertia\Inertia;
 
 Route::prefix('inertia')->name('inertia.')->group(function () {
     Route::get('/', function () {
+        // Redirect berdasarkan role jika sudah login
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            } elseif ($user->role === 'seller') {
+                return redirect()->route('seller.dashboard');
+            }
+            // User biasa tetap ke home
+        }
+        
         $products = Product::latest()->take(6)->get();
+        $categories = \App\Models\Category::all();
         return Inertia::render('home', [
             'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
             'showSearch' => true,
             'products' => $products,
+            'categories' => $categories,
         ]);
     })->name('home');
 
@@ -102,6 +115,17 @@ Route::prefix('inertia')->name('inertia.')->group(function () {
 */
 
 Route::get('/', function () {
+    // Redirect berdasarkan role jika sudah login
+    if (Auth::check()) {
+        $user = Auth::user();
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        } elseif ($user->role === 'seller') {
+            return redirect()->route('seller.dashboard');
+        }
+        // User biasa tetap ke home
+    }
+    
     $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
     return view('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
@@ -143,8 +167,7 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    Inertia::clearHistory();
-    return redirect('/');
+    return redirect('/inertia');
 })->name('logout');
 
 /*
@@ -169,19 +192,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Produk - CRUD
-    Route::get('/seller/products/create', fn() => view('seller.add_product'))->name('products.create');
-    Route::post('/seller/products', [ProductController::class, 'store'])->name('products.store');
-    Route::put('/seller/products/{id}', [ProductController::class, 'update'])->name('products.update');
-    Route::delete('/seller/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
-
-    // Edit produk (form edit produk untuk update stok, harga, dll)
-    // routes/web.php
+    Route::get('/products/create', fn() => view('seller.add_product'))->name('products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
-
-    // Order Status
-    Route::patch('/seller/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    // Order Status & Delete
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
     Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
     Route::delete('/order/{id}/cancel', [OrderController::class, 'cancel'])->name('order.cancel');
 

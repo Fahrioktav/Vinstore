@@ -5,32 +5,49 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class AdminUserController extends Controller
 {
     public function index()
     {
         $users = User::where('role', 'user')->get();
-        return view('admin.users.index', compact('users'));
+        return Inertia::render('admin/users/index', compact('users'));
     }
 
     public function edit($id)
     {
-        $user = User::findOrFail($id);
-        return view('admin.users.edit', compact('user'));
+        $user = User::where('role', 'user')->findOrFail($id);
+        return Inertia::render('admin/users/edit', compact('user'));
     }
 
     public function update(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-        $user->update($request->all());
+        $user = User::where('role', 'user')->findOrFail($id);
+        
+        $validated = $request->validate([
+            'username' => 'required|string|max:255|unique:users,username,' . $id,
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+        ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        $user->update($validated);
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui.');
     }
 
     public function destroy($id)
     {
-        User::findOrFail($id)->delete();
-        return redirect()->back()->with('success', 'User deleted.');
+        $user = User::where('role', 'user')->findOrFail($id);
+        
+        // Hapus orders yang terkait
+        $user->orders()->delete();
+        
+        $user->delete();
+        
+        return redirect()->back()->with('success', 'User berhasil dihapus.');
     }
 }

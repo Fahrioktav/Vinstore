@@ -31,6 +31,15 @@ class OrderController extends Controller
         return back()->with('success', 'Status pesanan diperbarui.');
     }
 
+    // Delete order
+    public function destroy($id)
+    {
+        $order = Order::findOrFail($id);
+        $order->delete();
+
+        return back()->with('success', 'Order berhasil dihapus.');
+    }
+
     // Proses checkout oleh customer
     public function processCheckout(Request $request, Product $product)
     {

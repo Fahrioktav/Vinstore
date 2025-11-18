@@ -7,18 +7,42 @@
     <div class="w-full flex justify-between items-center px-6 md:px-12 lg:px-20 xl:px-32 py-4">
 
         {{-- LOGO --}}
-        <a href="{{ url('/') }}" class="flex items-center gap-2">
+        @auth
+            @if(Auth::user()->role === 'admin')
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
+            @elseif(Auth::user()->role === 'seller')
+                <a href="{{ route('seller.dashboard') }}" class="flex items-center gap-2">
+            @else
+                <a href="{{ url('/') }}" class="flex items-center gap-2">
+            @endif
+        @else
+            <a href="{{ url('/') }}" class="flex items-center gap-2">
+        @endauth
             <img src="{{ asset('assets/Logo.png') }}" alt="VINSTORE" class="w-12 h-12 object-contain">
             <span class="text-2xl font-playfair font-bold tracking-wide text-[#E9E19E]">VINSTORE</span>
         </a>
 
         {{-- MENU UTAMA --}}
-        <ul class="hidden md:flex items-center gap-10 font-semibold text-sm text-white">
-            <li><a href="/" class="hover:text-[#E9E19E] transition">Home</a></li>
-            <li><a href="{{ route('toko.index') }}" class="hover:text-[#E9E19E] transition">Toko</a></li>
-            <li><a href="{{ route('order') }}" class="hover:text-[#E9E19E] transition">Order</a></li>
-            <li><a href="/contact" class="hover:text-[#E9E19E] transition">Contact</a></li>
-        </ul>
+        @auth
+            @if(Auth::user()->role === 'user')
+                <ul class="hidden md:flex items-center gap-10 font-semibold text-sm text-white">
+                    <li><a href="/" class="hover:text-[#E9E19E] transition">Home</a></li>
+                    <li><a href="{{ route('toko.index') }}" class="hover:text-[#E9E19E] transition">Toko</a></li>
+                    <li><a href="{{ route('order') }}" class="hover:text-[#E9E19E] transition">Order</a></li>
+                    <li><a href="/contact" class="hover:text-[#E9E19E] transition">Contact</a></li>
+                </ul>
+            @else
+                {{-- Menu kosong untuk admin/seller, hanya logo dan user menu --}}
+                <div class="hidden md:block"></div>
+            @endif
+        @else
+            {{-- Guest user melihat menu biasa --}}
+            <ul class="hidden md:flex items-center gap-10 font-semibold text-sm text-white">
+                <li><a href="/" class="hover:text-[#E9E19E] transition">Home</a></li>
+                <li><a href="{{ route('toko.index') }}" class="hover:text-[#E9E19E] transition">Toko</a></li>
+                <li><a href="/contact" class="hover:text-[#E9E19E] transition">Contact</a></li>
+            </ul>
+        @endauth
 
         {{-- MENU KANAN --}}
         <div class="flex items-center gap-4">
@@ -64,9 +88,19 @@
     {{-- MENU MOBILE --}}
     <div x-show="open" x-transition
         class="md:hidden bg-[#2F3E46]/95 backdrop-blur-md text-white py-4 space-y-3 text-center">
-        <a href="/" class="block hover:text-[#E9E19E]">Home</a>
-        <a href="{{ route('toko.index') }}" class="block hover:text-[#E9E19E]">Toko</a>
-        <a href="{{ route('order') }}" class="block hover:text-[#E9E19E]">Order</a>
-        <a href="/contact" class="block hover:text-[#E9E19E]">Contact</a>
+        @auth
+            @if(Auth::user()->role === 'user')
+                <a href="/" class="block hover:text-[#E9E19E]">Home</a>
+                <a href="{{ route('toko.index') }}" class="block hover:text-[#E9E19E]">Toko</a>
+                <a href="{{ route('order') }}" class="block hover:text-[#E9E19E]">Order</a>
+                <a href="/contact" class="block hover:text-[#E9E19E]">Contact</a>
+            @else
+                <p class="text-[#E9E19E] text-sm">{{ Auth::user()->role === 'admin' ? 'Admin Panel' : 'Seller Panel' }}</p>
+            @endif
+        @else
+            <a href="/" class="block hover:text-[#E9E19E]">Home</a>
+            <a href="{{ route('toko.index') }}" class="block hover:text-[#E9E19E]">Toko</a>
+            <a href="/contact" class="block hover:text-[#E9E19E]">Contact</a>
+        @endauth
     </div>
 </nav>
