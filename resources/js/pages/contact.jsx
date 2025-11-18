@@ -1,5 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
-import FormLayout from '../layouts/main-layout';
+import FormLayout from '../layouts/form-layout';
 
 const contacts = [
   { imgSrc: '/icons/whatsapp.svg', imgAlt: 'WhatsApp', label: '082113472156' },

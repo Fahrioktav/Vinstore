@@ -7,20 +7,21 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class StoreController extends Controller
 {
 
     public function showRegisterForm()
     {
-        return view('store-register'); // ⬅ pastikan view ini ada
+        return Inertia::render('store-register'); // ⬅ pastikan view ini ada
     }
 
     public function index()
     {
         $stores = Store::latest()->get(); // Ambil semua toko
 
-        return view('toko', [
+        return Inertia::render('toko', [
             'stores' => $stores,
             'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
             'showSearch' => true

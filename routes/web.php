@@ -127,7 +127,7 @@ Route::get('/', function () {
     }
     
     $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
-    return view('home', [
+    return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
         'products' => $products
@@ -140,10 +140,6 @@ Route::get('/items', fn() => view('items', [
 ]));
 
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
-
-Route::get('/order', fn() => view('order', [
-    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
-]))->name('order');
 
 Route::get('/contact', fn() => view('contact', [
     'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
@@ -192,7 +188,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Produk - CRUD
-    Route::get('/products/create', fn() => view('seller.add_product'))->name('products.create');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');

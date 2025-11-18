@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\Product;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
@@ -88,7 +89,7 @@ class OrderController extends Controller
             ->latest()
             ->get();
 
-        return view('order', compact('orders'));
+        return Inertia::render('order', compact('orders'));
     }
 
     public function cancelOrder($id)
