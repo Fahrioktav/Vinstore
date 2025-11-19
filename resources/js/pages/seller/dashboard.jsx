@@ -1,6 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import MainLayout from '../../layouts/main-layout';
+import { formatIDR } from '../../lib/utils';
 
 export default function SellerDashboard() {
   const { products, orders, productCount, orderCount, store } = usePage().props;
@@ -189,7 +190,7 @@ function OrderRow({ order }) {
         {order.quantity}
       </td>
       <td className="px-4 py-3 font-bold text-[#53685B]">
-        Rp{order.price?.toLocaleString('id-ID')}
+        {formatIDR(order.price)}
       </td>
       <td className="px-4 py-3">
         <select
@@ -295,7 +296,7 @@ function ProductRow({ product, isSelected, onSelect }) {
         </form>
       </td>
       <td className="px-4 py-3 font-semibold text-[#53685B]">
-        Rp{product.price?.toLocaleString('id-ID')}
+        {formatIDR(product.price)}
       </td>
       <td className="px-4 py-3">
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">

@@ -5,22 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Store;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class StoreController extends Controller
 {
 
     public function showRegisterForm()
     {
-        return view('store-register'); // ⬅ pastikan view ini ada
+        return Inertia::render('store/register'); // ⬅ pastikan view ini ada
     }
 
     public function index()
     {
         $stores = Store::latest()->get(); // Ambil semua toko
 
-        return view('toko', [
+        return Inertia::render('toko', [
             'stores' => $stores,
             'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
             'showSearch' => true
@@ -49,7 +51,7 @@ class StoreController extends Controller
         ]);
 
 
-        \App\Models\User::where('id', $user->id)->update([
+        User::where('id', $user->id)->update([
             'role' => 'seller'
         ]);
 
@@ -73,7 +75,7 @@ class StoreController extends Controller
 
     public function show($id)
     {
-        $store = \App\Models\Store::with('products', 'user')->findOrFail($id);
-        return view('store.show', compact('store'));
+        $store = Store::with('products', 'user')->findOrFail($id);
+        return Inertia::render('store/show', compact('store'));
     }
 }

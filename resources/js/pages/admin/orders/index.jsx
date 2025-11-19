@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '../../../layouts/main-layout';
+import { formatIDR } from '../../../lib/utils';
 
 export default function AdminOrders() {
   const { orders, success } = usePage().props;
@@ -65,7 +66,7 @@ export default function AdminOrders() {
                       <td className="px-4 py-3">{order.store?.store_name || '-'}</td>
                       <td className="px-4 py-3">{order.quantity}</td>
                       <td className="px-4 py-3 font-bold text-[#53685B]">
-                        Rp{order.price?.toLocaleString('id-ID')}
+                        {formatIDR(order.price)}
                       </td>
                       <td className="px-4 py-3">
                         <span

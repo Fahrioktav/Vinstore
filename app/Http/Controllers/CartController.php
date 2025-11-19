@@ -6,13 +6,14 @@ use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class CartController extends Controller
 {                                                                                                               
     public function index()
     {
         $cartItems = Cart::with('product')->where('user_id', Auth::id())->get();
-        return view('cart.index', compact('cartItems'));
+        return Inertia::render('cart', compact('cartItems'));
     }
 
     public function add(Request $request, Product $product)
@@ -24,7 +25,7 @@ class CartController extends Controller
         $user = Auth::user();
 
         // Cek apakah produk sudah ada di keranjang
-        $existing = \App\Models\Cart::where('user_id', $user->id)
+        $existing = Cart::where('user_id', $user->id)
             ->where('product_id', $product->id)
             ->first();
 

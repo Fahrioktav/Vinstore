@@ -53,5 +53,5 @@ export default function ProductsPage() {
 }
 
 ProductsPage.layout = (page) => (
-  <MainLayout title="Products">{page}</MainLayout>
+  <MainLayout title="Semua Produk">{page}</MainLayout>
 );

@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        $products = \App\Models\Product::latest()->paginate(12);
-        return view('products.index', compact('products'));
+        $paginatedProducts = Product::latest()->paginate(12);
+        return Inertia::render('products/index', compact('paginatedProducts'));
     }
 
     public function store(Request $request)
@@ -97,10 +98,19 @@ class ProductController extends Controller
         return back()->with('success', 'Produk berhasil dihapus.');
     }
 
+    public function create() {
+        $sessions = [
+            'error' => session('error'),
+            'success' => session('success'),
+        ];
+        return Inertia::render('seller/products/create', compact('sessions'));
+    }
+
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        return view('seller.products.edit', compact('product'));
+        // return view('seller.products.edit', compact('product'));
+        return Inertia::render('seller/products/edit', compact('product'));
 
         $product->update($data);
         return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');

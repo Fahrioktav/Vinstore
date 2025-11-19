@@ -1,18 +1,18 @@
 import { Form, Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { UserIcon } from './icons';
-import clsx from 'clsx';
+import { cn } from '../lib/utils';
 
 const links = [
-  { label: 'Home', href: '/inertia', requireAuth: false },
-  { label: 'Toko', href: '/inertia/toko', requireAuth: false },
-  { label: 'Order', href: '/inertia/order', requireAuth: true },
-  { label: 'Contact', href: '/inertia/contact', requireAuth: false },
+  { label: 'Home', href: '/', requireAuth: false },
+  { label: 'Toko', href: '/toko', requireAuth: false },
+  { label: 'Order', href: '/order', requireAuth: true },
+  { label: 'Contact', href: '/contact', requireAuth: false },
 ];
 
 const userMenus = [
-  { label: '👤 Profil', href: '/inertia/profile' },
-  { label: '🛒 Keranjang', href: '/inertia/cart' },
+  { label: '👤 Profil', href: '/profile' },
+  { label: '🛒 Keranjang', href: '/cart' },
 ];
 
 export default function Navbar() {
@@ -29,7 +29,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className={clsx(
+      className={cn(
         'sticky top-0 left-0 z-50 w-full transition-all duration-500',
         scrolled ? 'bg-[#2F3E46]/95 shadow-lg backdrop-blur-md' : 'bg-[#2F3E46]'
       )}
@@ -43,7 +43,7 @@ export default function Navbar() {
               ? '/admin/dashboard' 
               : auth.user?.role === 'seller' 
               ? '/seller/dashboard' 
-              : '/inertia'
+              : '/'
           } 
           className="flex items-center gap-2"
         >
@@ -63,7 +63,7 @@ export default function Navbar() {
             <li key={link.label}>
               <Link
                 href={
-                  link.requireAuth && !auth.user ? '/inertia/login' : link.href
+                  link.requireAuth && !auth.user ? '/login' : link.href
                 }
                 className="transition hover:text-[#E9E19E]"
               >
@@ -115,7 +115,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link
-              href="/inertia/login"
+              href="/login"
               className="rounded-full bg-[#E9E19E] px-5 py-2 text-sm font-semibold text-[#2F3E46] transition hover:bg-[#dcd58c]"
             >
               Login / Signup
@@ -135,7 +135,7 @@ export default function Navbar() {
       {/* // {-- MENU MOBILE --} */}
       {open && (
         <div
-          className={clsx(
+          className={cn(
             'space-y-3 py-4 text-center text-white md:hidden',
             !scrolled ? 'bg-[#2F3E46]' : 'bg-transparent'
           )}

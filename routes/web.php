@@ -20,93 +20,8 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\CartController;
-use App\Models\Order;
-use App\Models\Store;
+use App\Models\Category;
 use Inertia\Inertia;
-
-Route::prefix('inertia')->name('inertia.')->group(function () {
-    Route::get('/', function () {
-        // Redirect berdasarkan role jika sudah login
-        if (Auth::check()) {
-            $user = Auth::user();
-            if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard');
-            } elseif ($user->role === 'seller') {
-                return redirect()->route('seller.dashboard');
-            }
-            // User biasa tetap ke home
-        }
-        
-        $products = Product::latest()->take(6)->get();
-        $categories = \App\Models\Category::all();
-        return Inertia::render('home', [
-            'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
-            'showSearch' => true,
-            'products' => $products,
-            'categories' => $categories,
-        ]);
-    })->name('home');
-
-    Route::get('/toko', function () {
-        $stores = Store::latest()->get(); // Ambil semua toko
-
-        return Inertia::render('toko', [
-            'stores' => $stores,
-            'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
-            // 'showSearch' => true
-        ]);
-    });
-
-    Route::get('/order', function () {
-        $orders = Order::where('user_id', Auth::user()->id)->latest()->get();
-        return Inertia::render('order', [
-            'orders' => $orders,
-            'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
-        ]);
-    });
-
-    Route::get('/contact', fn() => Inertia::render('contact', [
-        'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
-    ]));
-
-    Route::get('/products', function () {
-        $paginatedProducts = Product::latest()->paginate(12);
-        return Inertia::render('products/index', compact('paginatedProducts'));
-    });
-
-    Route::get('/register', function () {
-        if (Auth::user()) {
-            return redirect()->route('inertia.home');
-        }
-
-        return Inertia::render('auth/register', [
-            'heroText' => 'Halo!, Selamat Datang di VINSTORE'
-        ]);
-    });
-
-    Route::get('/login', function () {
-        if (Auth::user()) {
-            return redirect()->route('inertia.home');
-        }
-
-        return Inertia::render('auth/login', [
-            'heroText' => 'Selamat Datang Kembali!'
-        ]);
-    });
-
-    Route::middleware(['auth'])->group(function () {
-        // Profil
-        Route::get('/profile', function () {
-            $user = Auth::user();
-            $sessions = [
-                'error' => session('error'),
-                'success' => session('success'),
-            ];
-            return Inertia::render('profile/edit', compact('user', 'sessions'));
-        })->name('profile.edit');
-        Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    });
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -127,10 +42,12 @@ Route::get('/', function () {
     }
     
     $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
-    return view('home', [
+    $categories = Category::latest()->take(12)->get(); // Ambil 6 produk terbaru dari database
+    return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
-        'products' => $products
+        'products' => $products,
+        'categories' => $categories
     ]);
 });
 
@@ -141,23 +58,19 @@ Route::get('/items', fn() => view('items', [
 
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
 
-Route::get('/order', fn() => view('order', [
-    'heroText' => 'Udah Nyampe Mana Nih Pesananmu?'
-]))->name('order');
-
-Route::get('/contact', fn() => view('contact', [
+Route::get('/contact', fn() => Inertia::render('contact', [
     'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
 ]));
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
-Route::get('/register', fn() => view('register', [
+Route::get('/register', fn() => Inertia::render('auth/register', [
     'heroText' => 'Halo!, Selamat Datang di VINSTORE'
 ]))->name('register.form');
 
 Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
 
-Route::get('/login', fn() => view('login', [
+Route::get('/login', fn() => Inertia::render('auth/login', [
     'heroText' => 'Selamat Datang Kembali!'
 ]))->name('login.form');
 
@@ -167,7 +80,7 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    return redirect('/inertia');
+    return redirect('/');
 })->name('logout');
 
 /*
@@ -185,14 +98,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/store/register', [StoreController::class, 'showRegisterForm'])->name('store.register');
     Route::post('/store/register', [StoreController::class, 'register'])->name('store.register.submit');
 
-    // Dashboard Seller
-    Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
-
-    // Dashboard Admin
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-
     // Produk - CRUD
-    Route::get('/products/create', fn() => view('seller.add_product'))->name('products.create');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
@@ -210,7 +117,6 @@ Route::middleware(['auth'])->group(function () {
     // Untuk checkout satu produk (menampilkan halaman konfirmasi pembelian)
     Route::get('/checkout/show/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
 
-
     // ✅ Checkout satu produk langsung dari detail produk
     Route::get('/checkout/product/{product}', [OrderController::class, 'showCheckout'])->name('checkout.product');
     Route::post('/checkout/product/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
@@ -218,7 +124,7 @@ Route::middleware(['auth'])->group(function () {
     // ✅ Checkout dari keranjang (semua item)
     Route::post('/checkout/cart', [OrderController::class, 'checkoutFromCart'])->name('checkout.fromCart');
 
-    Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->middleware('auth')->name('order.cancel');
+    Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
 
     Route::get('/toko/{store}', [StoreController::class, 'show'])->name('store.show');
 
@@ -227,7 +133,15 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
 });
 
+Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
+    // Dashboard Seller
+    Route::get('dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
+});
+
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard Admin
+    Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
     // Kelola Users
     Route::resource('users', AdminUserController::class)->only(['index', 'edit', 'update', 'destroy']);
 
