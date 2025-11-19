@@ -3,7 +3,7 @@ import { formatIDR } from '../lib/utils';
 import MainLayout from '../layouts/main-layout';
 
 export default function HomePage() {
-  const { heroText, showSearch, products, categories = [], auth } = usePage().props;
+  const { heroText, showSearch, products = [], categories = [], auth } = usePage().props;
 
   return (
     <div className='bg-white'>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Product;
@@ -25,7 +26,7 @@ class AdminDashboardController extends Controller
         $totalStores = Store::count();
         $totalProducts = Product::count();
         $totalOrders = Order::count();
-        $totalCategories = DB::table('products')->distinct()->count('category');
+        $totalCategories = Category::count();
         $products = Product::with('store')->latest()->get();
 
         return Inertia::render('admin/dashboard', compact(

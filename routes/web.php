@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\CartController;
+use App\Models\Category;
 use Inertia\Inertia;
 
 /*
@@ -41,10 +42,12 @@ Route::get('/', function () {
     }
     
     $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
+    $categories = Category::latest()->take(12)->get(); // Ambil 6 produk terbaru dari database
     return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
-        'products' => $products
+        'products' => $products,
+        'categories' => $categories
     ]);
 });
 
