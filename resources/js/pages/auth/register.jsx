@@ -208,7 +208,7 @@ export default function RegisterPage() {
           <p className="text-sm text-gray-600">
             Sudah punya akun?{' '}
             <Link
-              href="/inertia/login"
+              href="/login"
               className="font-semibold text-[#B77C4C] hover:underline"
             >
               Login Sekarang

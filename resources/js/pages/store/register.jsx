@@ -1,16 +1,15 @@
-import FormLayout from '../layouts/form-layout';
+import { Form } from '@inertiajs/react';
+import FormLayout from '../../layouts/form-layout';
 
 export default function StoreRegisterPage() {
-  // @section('title', 'Register Toko')
-
   return (
-    <div class="mt-8 flex justify-center px-4">
-      <form
+    <div className="mt-8 flex justify-center px-4">
+      <Form
         action="/store/register"
         method="POST"
-        class="w-full max-w-2xl space-y-4"
+        className="w-full max-w-2xl space-y-4"
       >
-        <h2 class="font-poppins mb-4 text-center text-2xl font-bold">
+        <h2 className="font-poppins mb-4 text-center text-2xl font-bold">
           Form Registrasi Toko
         </h2>
 
@@ -19,7 +18,7 @@ export default function StoreRegisterPage() {
           type="text"
           name="store_name"
           placeholder="Nama Toko"
-          class="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
         />
 
@@ -28,7 +27,7 @@ export default function StoreRegisterPage() {
           type="text"
           name="category"
           placeholder="Kategori (contoh: Antik, Elektronik, Buku)"
-          class="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
         />
 
@@ -37,7 +36,7 @@ export default function StoreRegisterPage() {
           name="description"
           placeholder="Deskripsi Toko"
           rows="3"
-          class="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
         ></textarea>
 
@@ -46,20 +45,20 @@ export default function StoreRegisterPage() {
           type="text"
           name="location"
           placeholder="Alamat atau Lokasi Toko"
-          class="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
         />
 
         {/* <!-- Tombol Submit --> */}
-        <div class="text-center">
+        <div className="text-center">
           <button
             type="submit"
-            class="font-poppins rounded-md bg-[#4a5b4d] px-10 py-3 font-semibold text-white transition-all hover:bg-[#3c4a3e]"
+            className="font-poppins rounded-md bg-[#4a5b4d] px-10 py-3 font-semibold text-white transition-all hover:bg-[#3c4a3e]"
           >
             Daftarkan Toko
           </button>
         </div>
-      </form>
+      </Form>
     </div>
   );
 }

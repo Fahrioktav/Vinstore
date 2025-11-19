@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
@@ -18,7 +19,7 @@ class OrderController extends Controller
 
     public function showCheckout(Product $product)
     {
-        return view('checkout', compact('product'));
+        return Inertia::render('checkout', compact('product'));
     }
     
     // Update status pesanan oleh seller
@@ -113,7 +114,7 @@ class OrderController extends Controller
     public function checkoutFromCart()
     {
         $user = Auth::user();
-        $cartItems = \App\Models\Cart::with('product')->where('user_id', $user->id)->get();
+        $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Keranjang kamu kosong.');
@@ -127,7 +128,7 @@ class OrderController extends Controller
             Order::create([
                 'user_id'    => $user->id,
                 'product_id' => $item->product_id,
-                'store_id'   => $item->store_id,
+                'store_id'   => $item->product->store_id,
                 'quantity'   => $item->quantity,
                 'price'      => $item->product->price * $item->quantity,
                 'status'     => 'Waiting',
@@ -139,7 +140,7 @@ class OrderController extends Controller
         }
 
         // Hapus semua item dari keranjang setelah checkout
-        \App\Models\Cart::where('user_id', $user->id)->delete();
+        Cart::where('user_id', $user->id)->delete();
 
         return redirect()->route('order')->with('success', 'Checkout berhasil untuk semua produk!');
     }

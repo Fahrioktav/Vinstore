@@ -107,7 +107,7 @@ export default function LoginPage() {
           <p className="text-sm text-gray-600">
             Belum punya akun?{' '}
             <Link
-              href="/inertia/register"
+              href="/register"
               className="font-semibold text-[#B77C4C] hover:underline"
             >
               Daftar Sekarang

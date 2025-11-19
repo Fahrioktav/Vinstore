@@ -15,6 +15,7 @@ class Order extends Model
         'quantity',
         'price',
         'status',
+        'store_id',
     ];
 
     // Relasi ke produk

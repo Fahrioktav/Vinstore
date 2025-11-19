@@ -23,5 +23,15 @@ class StoreSeeder extends Seeder
             'created_at' => '2025-09-30 06:01:14',
             'updated_at' => '2025-09-30 06:01:14',
         ]);
+        
+        Store::create([
+            'user_id' => 3,
+            'store_name' => 'Asa Store',
+            'category' => 'Antik',
+            'description' => 'Menjual Barang Antik Berkualitas Tinggi',
+            'location' => 'Kemayoran',
+            'created_at' => '2025-09-30 06:01:14',
+            'updated_at' => '2025-09-30 06:01:14',
+        ]);
     }
 }

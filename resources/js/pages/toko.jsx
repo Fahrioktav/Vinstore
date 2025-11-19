@@ -29,7 +29,7 @@ export default function TokoPage() {
         </Form>
       )}
 
-      <section className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 py-12 md:px-12">
+      <section className="relative min-h-screen w-full overflow-hidden px-6 py-12 md:px-12">
         {/* {-- Judul --} */}
         <h2 className="mb-10 pt-32 text-center text-3xl font-bold tracking-wide text-[#E9E19E] md:text-4xl">
           Toko Paling Populer
@@ -58,7 +58,7 @@ export default function TokoPage() {
                   📍 {store.location}
                 </p>
                 <Link
-                  href={`/store/show/${store.id}`}
+                  href={`/toko/${store.id}`}
                   className="block rounded-lg bg-[#B77C4C] py-2 text-center font-semibold text-white transition-all duration-200 hover:bg-[#9e6538]"
                 >
                   Lihat Toko

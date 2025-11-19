@@ -6,7 +6,7 @@ export default function HomePage() {
   const { heroText, showSearch, products, categories = [], auth } = usePage().props;
 
   return (
-    <>
+    <div className='bg-white'>
       {/* <!-- HERO SECTION -. */}
       <section className="font-poppins relative -mt-[80px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
@@ -21,7 +21,7 @@ export default function HomePage() {
               hingga konsol legendaris.
             </p>
             <Link
-              href="/inertia/toko"
+              href="/toko"
               className="mt-8 inline-block rounded-lg bg-[#B77C4C] px-8 py-3 font-semibold text-white transition hover:bg-[#a16c3e]"
             >
               Jelajahi Sekarang
@@ -83,7 +83,7 @@ export default function HomePage() {
             Barang Paling Populer
           </h2>
           <Link
-            href="/inertia/products"
+            href="/products"
             className="text-[#B77C4C] hover:underline"
           >
             Lihat Semua
@@ -124,8 +124,8 @@ export default function HomePage() {
                   <Link
                     href={
                       auth.user
-                        ? `/inertia/checkout/show/${product.id}`
-                        : `/inertia/login`
+                        ? `/checkout/show/${product.id}`
+                        : `/login`
                     }
                   >
                     <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
@@ -173,7 +173,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 

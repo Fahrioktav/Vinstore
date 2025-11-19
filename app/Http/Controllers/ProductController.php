@@ -11,8 +11,8 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = \App\Models\Product::latest()->paginate(12);
-        return view('products.index', compact('products'));
+        $paginatedProducts = Product::latest()->paginate(12);
+        return Inertia::render('products/index', compact('paginatedProducts'));
     }
 
     public function store(Request $request)
