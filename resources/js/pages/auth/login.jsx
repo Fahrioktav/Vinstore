@@ -1,11 +1,11 @@
 import FormLayout from '@/layouts/form-layout';
 import { Form, Link } from '@inertiajs/react';
-// import FormLayout from '@/layouts/main-layout';
+// import FormLayout from '@/layouts/form-layout';
 
 export default function LoginPage() {
   return (
     // {-- Background Full Layer --}
-    <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C]">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden">
       {/* {-- Elemen Dekoratif --} */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 h-72 w-72 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
@@ -88,7 +88,7 @@ export default function LoginPage() {
               {/* {-- Tombol Login --} */}
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#9e6538]"
+                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
               >
                 Masuk Sekarang
               </button>
@@ -116,7 +116,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 

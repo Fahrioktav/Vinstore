@@ -1,12 +1,18 @@
 import { Form, Link, useForm } from '@inertiajs/react';
-import FormLayout from '@/layouts/main-layout';
+import FormLayout from '@/layouts/form-layout';
 
 export default function RegisterPage() {
   const {} = useForm();
 
   return (
     // {-- Section Background --}
-    <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 py-12">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6 py-12">
+      {/* {-- Elemen Dekoratif --} */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 h-72 w-72 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
+        <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-[#B77C4C]/25 blur-3xl"></div>
+      </div>
+
       {/* {-- CARD REGISTER --} */}
       <div className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white/95 p-10 shadow-2xl backdrop-blur-md">
         {/* {-- Header --} */}
@@ -188,7 +194,7 @@ export default function RegisterPage() {
               {/* {-- Tombol Register --} */}
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#9e6538]"
+                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
               >
                 Daftar Sekarang
               </button>
@@ -216,11 +222,7 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
-
-      {/* {-- Dekorasi Background --} */}
-      <div className="absolute top-0 left-0 -z-10 h-72 w-72 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
-      <div className="absolute right-0 bottom-0 -z-10 h-96 w-96 rounded-full bg-[#B77C4C]/25 blur-3xl"></div>
-    </section>
+    </div>
   );
 }
 

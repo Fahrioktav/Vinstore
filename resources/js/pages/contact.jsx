@@ -1,14 +1,16 @@
 import { Form, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
+import { cn } from '@/lib/utils';
 
 const contacts = [
   { imgSrc: '/icons/whatsapp.svg', imgAlt: 'WhatsApp', label: '082113472156' },
-  { imgSrc: '/icons/instagram.svg', imgAlt: 'Instagram', label: '@VINSTORE' },
-  { imgSrc: '/icons/twitter.svg', imgAlt: 'Twitter', label: '@VINSTORE' },
+  { imgSrc: '/icons/instagram.svg', imgAlt: 'Instagram', label: 'Instagram' },
+  { imgSrc: '/icons/twitter.svg', imgAlt: 'Twitter', label: 'Twitter' },
 ];
 
-const inputClassName =
-  'w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5A6E5A] transition';
+const inputClassName = cn(
+  'w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:ring-2 focus:ring-[#5A6E5A] focus:outline-none'
+);
 
 export default function ContactPage() {
   const { auth } = usePage().props;

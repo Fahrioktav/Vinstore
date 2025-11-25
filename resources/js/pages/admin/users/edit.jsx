@@ -24,16 +24,20 @@ export default function EditUser() {
       <Head title="Edit User" />
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
-          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">✏️ Edit User</h2>
+          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">
+            ✏️ Edit User
+          </h2>
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Username</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Username
+              </label>
               <input
                 type="text"
                 value={data.username}
                 onChange={(e) => setData('username', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.username ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.username ? 'border-red-500' : 'border-gray-300'}`}
                 required
               />
               {errors.username && (
@@ -43,28 +47,36 @@ export default function EditUser() {
 
             <div className="mb-4 grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold">Nama Depan</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Nama Depan
+                </label>
                 <input
                   type="text"
                   value={data.first_name}
                   onChange={(e) => setData('first_name', e.target.value)}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.first_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.first_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {errors.first_name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.first_name}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.first_name}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold">Nama Belakang</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Nama Belakang
+                </label>
                 <input
                   type="text"
                   value={data.last_name}
                   onChange={(e) => setData('last_name', e.target.value)}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.last_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.last_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {errors.last_name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.last_name}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.last_name}
+                  </p>
                 )}
               </div>
             </div>
@@ -75,7 +87,7 @@ export default function EditUser() {
                 type="email"
                 value={data.email}
                 onChange={(e) => setData('email', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                 required
               />
               {errors.email && (
@@ -84,12 +96,14 @@ export default function EditUser() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Telepon</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Telepon
+              </label>
               <input
                 type="text"
                 value={data.phone}
                 onChange={(e) => setData('phone', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.phone && (
                 <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
@@ -102,7 +116,7 @@ export default function EditUser() {
                 value={data.address}
                 onChange={(e) => setData('address', e.target.value)}
                 rows="3"
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.address && (
                 <p className="mt-1 text-xs text-red-500">{errors.address}</p>
@@ -131,6 +145,4 @@ export default function EditUser() {
   );
 }
 
-EditUser.layout = (page) => (
-  <MainLayout title="Edit User">{page}</MainLayout>
-);
+EditUser.layout = (page) => <MainLayout title="Edit User">{page}</MainLayout>;

@@ -9,7 +9,7 @@ export default function FormLayout({ children, title }) {
       <Navbar />
 
       {/* {-- Konten Halaman Full Height --} */}
-      <main className="flex min-h-screen grow flex-col items-center justify-center bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] bg-cover bg-fixed bg-center px-4 py-10">
+      <main className="flex min-h-screen grow flex-col items-center justify-center bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] bg-cover bg-fixed bg-center">
         {children}
       </main>
       <Footer />
