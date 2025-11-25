@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "format": "prettier --write \"resources/js/**/*.{js,jsx,ts,tsx}\""
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
