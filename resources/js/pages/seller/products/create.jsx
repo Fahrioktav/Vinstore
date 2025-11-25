@@ -90,7 +90,7 @@ export default function SellerCreateProductPage() {
                 rows="4"
                 className="w-full rounded-md border border-gray-400 px-4 py-2"
                 required
-              ></textarea>
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold">

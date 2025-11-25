@@ -61,12 +61,11 @@ export default function SellerEditProductPage() {
           <label className="mb-1 block text-sm font-semibold">Deskripsi</label>
           <textarea
             name="description"
+            defaultValue={product.description}
             rows="4"
             className="w-full rounded border p-2"
             required
-          >
-            {product.description}
-          </textarea>
+          />
         </div>
         <div className="mb-4">
           <label className="mb-1 block text-sm font-semibold">

@@ -13,7 +13,7 @@ const inputClassName = cn(
 );
 
 export default function ContactPage() {
-  const { auth } = usePage().props;
+  const { user } = usePage().props;
 
   return (
     <section className="bg-gray-50 px-6 py-16 text-gray-800 md:px-20">
@@ -63,21 +63,25 @@ export default function ContactPage() {
 
           <input
             type="text"
+            defaultValue={user?.first_name + ' ' + user?.last_name}
             placeholder="Nama Lengkap"
             className={inputClassName}
+            readOnly={!!user}
           />
 
           <input
             type="email"
             placeholder="Alamat Email"
+            defaultValue={user?.email}
             className={inputClassName}
+            readOnly={!!user}
           />
 
           <textarea
             rows="5"
             placeholder="Tulis pesanmu di sini..."
             className={inputClassName}
-          ></textarea>
+          />
 
           <button
             type="submit"

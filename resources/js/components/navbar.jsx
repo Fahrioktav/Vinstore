@@ -16,7 +16,9 @@ const userMenus = [
 ];
 
 export default function Navbar() {
-  const { auth } = usePage().props;
+  const { user } = usePage().props;
+  const url = usePage().url;
+
   const [open, setOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -39,9 +41,9 @@ export default function Navbar() {
         {/* {-- LOGO --} */}
         <Link
           href={
-            auth.user?.role === 'admin'
+            user?.role === 'admin'
               ? '/admin/dashboard'
-              : auth.user?.role === 'seller'
+              : user?.role === 'seller'
                 ? '/seller/dashboard'
                 : '/'
           }
@@ -62,8 +64,9 @@ export default function Navbar() {
           {links.map((link) => (
             <li key={link.label}>
               <Link
-                href={link.requireAuth && !auth.user ? '/login' : link.href}
+                href={link.requireAuth && !user ? '/login' : link.href}
                 className="transition hover:text-[#E9E19E]"
+                preserveScroll={url === link.href}
               >
                 {link.label}
               </Link>
@@ -74,7 +77,7 @@ export default function Navbar() {
         {/* {-- MENU KANAN --} */}
         <div className="flex items-center gap-4">
           {/* {-- USER LOGIN --} */}
-          {auth.user ? (
+          {user ? (
             <div
               className="relative"
               // @click.away="userMenu = false"
@@ -84,7 +87,7 @@ export default function Navbar() {
                 className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-4 py-2 font-semibold text-white transition hover:bg-[#B77C4C]"
               >
                 <UserIcon className="h-5 w-5" />
-                {auth.user.username}
+                {user.username}
                 {/* <x-icon name="chevron-down" className="w-4 h-4" /> */}
               </button>
 
