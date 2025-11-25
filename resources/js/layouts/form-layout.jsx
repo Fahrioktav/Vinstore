@@ -1,10 +1,8 @@
 import { Head, usePage } from '@inertiajs/react';
-import Navbar from '../components/navbar';
-import Footer from '../components/footer';
+import Navbar from '@/components/navbar';
+import Footer from '@/components/footer';
 
 export default function FormLayout({ children, title }) {
-  const { sessions } = usePage().props;
-
   return (
     <div className="font-poppins flex min-h-dvh flex-col bg-gray-50 text-gray-800">
       <Head title={title} />

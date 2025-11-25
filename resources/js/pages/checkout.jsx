@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
-import MainLayout from '../layouts/main-layout';
-import { formatIDR } from '../lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const { product } = usePage().props;
@@ -53,7 +53,9 @@ export default function CheckoutPage() {
           required
           defaultValue=""
         >
-          <option value="" disabled>-- Pilih Metode Pembayaran --</option>
+          <option value="" disabled>
+            -- Pilih Metode Pembayaran --
+          </option>
           <option value="transfer">Transfer Bank</option>
           <option value="cod">Cash on Delivery</option>
           <option value="ewallet">E-Wallet (OVO, GoPay, DANA)</option>

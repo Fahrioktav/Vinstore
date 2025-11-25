@@ -1,5 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
-import FormLayout from '../../../layouts/form-layout';
+import FormLayout from '@/layouts/form-layout';
 
 export default function SellerCreateProductPage() {
   const { sessions } = usePage().props;

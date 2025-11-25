@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function EditUser() {
   const { user, errors: serverErrors } = usePage().props;

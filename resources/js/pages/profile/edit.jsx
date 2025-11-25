@@ -1,5 +1,5 @@
 import { Form, Link, usePage } from '@inertiajs/react';
-import FormLayout from '../../layouts/form-layout';
+import FormLayout from '@/layouts/form-layout';
 
 export default function EditProfilePage() {
   const { user, sessions, errors } = usePage().props;

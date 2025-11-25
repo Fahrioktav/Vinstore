@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm, Link } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function CategoriesEdit({ category }) {
   const [imagePreview, setImagePreview] = React.useState(
@@ -37,55 +37,55 @@ export default function CategoriesEdit({ category }) {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center mb-6">
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-6 flex items-center">
             <Link
               href="/admin/categories"
-              className="text-[#53685B] hover:text-[#2F3E46] mr-4"
+              className="mr-4 text-[#53685B] hover:text-[#2F3E46]"
             >
               ← Back
             </Link>
             <h1 className="text-3xl font-bold text-[#2F3E46]">Edit Category</h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="rounded-lg bg-white p-6 shadow-md">
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2">
+                <label className="mb-2 block font-semibold text-gray-700">
                   Category Name *
                 </label>
                 <input
                   type="text"
                   value={data.name}
                   onChange={(e) => setData('name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#53685B] focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-[#53685B]"
                   placeholder="Enter category name"
                   required
                 />
                 {errors.name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.name}</p>
                 )}
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2">
+                <label className="mb-2 block font-semibold text-gray-700">
                   Category Image
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#53685B] focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-[#53685B]"
                 />
                 {errors.image && (
-                  <p className="text-red-500 text-sm mt-1">{errors.image}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.image}</p>
                 )}
                 {imagePreview && (
                   <div className="mt-4">
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
+                      className="h-32 w-32 rounded-lg border-2 border-gray-300 object-cover"
                     />
                   </div>
                 )}
@@ -94,14 +94,14 @@ export default function CategoriesEdit({ category }) {
               <div className="flex justify-end space-x-4">
                 <Link
                   href="/admin/categories"
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-6 py-2 text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
                   disabled={processing}
-                  className="bg-[#53685B] text-white px-6 py-2 rounded-lg hover:bg-[#2F3E46] transition disabled:opacity-50"
+                  className="rounded-lg bg-[#53685B] px-6 py-2 text-white transition hover:bg-[#2F3E46] disabled:opacity-50"
                 >
                   {processing ? 'Updating...' : 'Update Category'}
                 </button>

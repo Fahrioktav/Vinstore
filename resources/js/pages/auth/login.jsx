@@ -1,5 +1,6 @@
+import FormLayout from '@/layouts/form-layout';
 import { Form, Link } from '@inertiajs/react';
-import FormLayout from '../../layouts/main-layout';
+// import FormLayout from '@/layouts/main-layout';
 
 export default function LoginPage() {
   return (

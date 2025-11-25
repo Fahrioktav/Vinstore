@@ -1,5 +1,5 @@
 import { Form, Link, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function SellerEditProductPage() {
   const { product } = usePage().props;

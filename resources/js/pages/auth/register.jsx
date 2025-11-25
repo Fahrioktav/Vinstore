@@ -1,5 +1,5 @@
 import { Form, Link, useForm } from '@inertiajs/react';
-import FormLayout from '../../layouts/main-layout';
+import FormLayout from '@/layouts/main-layout';
 
 export default function RegisterPage() {
   const {} = useForm();

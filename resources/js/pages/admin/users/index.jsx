@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function AdminUsers() {
   const { users, success } = usePage().props;

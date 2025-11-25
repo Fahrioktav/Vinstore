@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function EditStore() {
   const { store, errors: serverErrors } = usePage().props;
@@ -21,25 +21,31 @@ export default function EditStore() {
       <Head title="Edit Toko" />
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
-          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">✏️ Edit Toko</h2>
+          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">
+            ✏️ Edit Toko
+          </h2>
 
           <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-sm text-gray-600">
-              <span className="font-semibold">Owner:</span> {store.user?.username || '-'}
+              <span className="font-semibold">Owner:</span>{' '}
+              {store.user?.username || '-'}
             </p>
             <p className="text-sm text-gray-600">
-              <span className="font-semibold">Email:</span> {store.user?.email || '-'}
+              <span className="font-semibold">Email:</span>{' '}
+              {store.user?.email || '-'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Nama Toko</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Nama Toko
+              </label>
               <input
                 type="text"
                 value={data.store_name}
                 onChange={(e) => setData('store_name', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.store_name ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.store_name ? 'border-red-500' : 'border-gray-300'}`}
                 required
               />
               {errors.store_name && (
@@ -53,7 +59,7 @@ export default function EditStore() {
                 type="text"
                 value={data.location}
                 onChange={(e) => setData('location', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.location ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.location ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.location && (
                 <p className="mt-1 text-xs text-red-500">{errors.location}</p>
@@ -61,15 +67,19 @@ export default function EditStore() {
             </div>
 
             <div className="mb-6">
-              <label className="mb-2 block text-sm font-semibold">Deskripsi</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Deskripsi
+              </label>
               <textarea
                 value={data.description}
                 onChange={(e) => setData('description', e.target.value)}
                 rows="4"
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.description && (
-                <p className="mt-1 text-xs text-red-500">{errors.description}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.description}
+                </p>
               )}
             </div>
 
@@ -95,6 +105,4 @@ export default function EditStore() {
   );
 }
 
-EditStore.layout = (page) => (
-  <MainLayout title="Edit Toko">{page}</MainLayout>
-);
+EditStore.layout = (page) => <MainLayout title="Edit Toko">{page}</MainLayout>;

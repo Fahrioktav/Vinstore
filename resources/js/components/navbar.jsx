@@ -1,7 +1,7 @@
 import { Form, Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { UserIcon } from './icons';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 const links = [
   { label: 'Home', href: '/', requireAuth: false },
@@ -37,14 +37,14 @@ export default function Navbar() {
       {/* {-- WRAPPER TANPA MAX-W --}  */}
       <div className="flex w-full items-center justify-between px-6 py-4 md:px-12 lg:px-20 xl:px-32">
         {/* {-- LOGO --} */}
-        <Link 
+        <Link
           href={
-            auth.user?.role === 'admin' 
-              ? '/admin/dashboard' 
-              : auth.user?.role === 'seller' 
-              ? '/seller/dashboard' 
-              : '/'
-          } 
+            auth.user?.role === 'admin'
+              ? '/admin/dashboard'
+              : auth.user?.role === 'seller'
+                ? '/seller/dashboard'
+                : '/'
+          }
           className="flex items-center gap-2"
         >
           <img
@@ -62,9 +62,7 @@ export default function Navbar() {
           {links.map((link) => (
             <li key={link.label}>
               <Link
-                href={
-                  link.requireAuth && !auth.user ? '/login' : link.href
-                }
+                href={link.requireAuth && !auth.user ? '/login' : link.href}
                 className="transition hover:text-[#E9E19E]"
               >
                 {link.label}

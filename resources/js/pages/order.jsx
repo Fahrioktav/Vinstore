@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
-import { cn, formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { cn, formatIDR } from '@/lib/utils';
+import MainLayout from '@/layouts/main-layout';
 
 const statusStyles = {
   Waiting: 'bg-yellow-500/30 text-yellow-200',

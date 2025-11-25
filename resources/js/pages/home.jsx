@@ -1,12 +1,18 @@
 import { Link, usePage } from '@inertiajs/react';
-import { formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
+import MainLayout from '@/layouts/main-layout';
 
 export default function HomePage() {
-  const { heroText, showSearch, products = [], categories = [], auth } = usePage().props;
+  const {
+    heroText,
+    showSearch,
+    products = [],
+    categories = [],
+    auth,
+  } = usePage().props;
 
   return (
-    <div className='bg-white'>
+    <div className="bg-white">
       {/* <!-- HERO SECTION -. */}
       <section className="font-poppins relative -mt-[80px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
@@ -58,7 +64,7 @@ export default function HomePage() {
                   <img
                     src={`/storage/${category.image}`}
                     alt={category.name}
-                    className="mb-3 h-16 w-16 object-cover rounded-full transition-transform group-hover:scale-110"
+                    className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />
                 ) : (
                   <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#53685B] to-[#B77C4C] transition-transform group-hover:scale-110">
@@ -82,10 +88,7 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
           </h2>
-          <Link
-            href="/products"
-            className="text-[#B77C4C] hover:underline"
-          >
+          <Link href="/products" className="text-[#B77C4C] hover:underline">
             Lihat Semua
           </Link>
         </div>
@@ -122,11 +125,7 @@ export default function HomePage() {
                   </span>
 
                   <Link
-                    href={
-                      auth.user
-                        ? `/checkout/show/${product.id}`
-                        : `/login`
-                    }
+                    href={auth.user ? `/checkout/show/${product.id}` : `/login`}
                   >
                     <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
                       Order
