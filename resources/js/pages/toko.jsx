@@ -1,5 +1,5 @@
 import { Form, Link, usePage } from '@inertiajs/react';
-import MainLayout from '../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function TokoPage() {
   const { showSearch, stores } = usePage().props;
@@ -29,9 +29,9 @@ export default function TokoPage() {
         </Form>
       )}
 
-      <section className="relative min-h-screen w-full overflow-hidden px-6 py-12 md:px-12">
+      <section className="relative w-full overflow-hidden px-6 py-12 md:px-12">
         {/* {-- Judul --} */}
-        <h2 className="mb-10 pt-32 text-center text-3xl font-bold tracking-wide text-[#E9E19E] md:text-4xl">
+        <h2 className="mb-10 pt-10 text-center text-3xl font-bold tracking-wide text-[#E9E19E] md:text-4xl">
           Toko Paling Populer
         </h2>
 

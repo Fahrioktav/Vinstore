@@ -1,28 +1,22 @@
-import { Form, Link, useForm } from '@inertiajs/react';
-import FormLayout from '../../layouts/main-layout';
+import { Form, Link } from '@inertiajs/react';
+import FormLayout from '@/layouts/form-layout';
+import {
+  AuthErrorMessage,
+  AuthLabel,
+  AuthLayout,
+  AuthLayoutCard,
+  AuthLayoutDivider,
+  AuthLayoutHeader,
+} from '@/components/auth/auth-layout';
 
 export default function RegisterPage() {
-  const {} = useForm();
-
   return (
-    // {-- Section Background --}
-    <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 py-12">
-      {/* {-- CARD REGISTER --} */}
-      <div className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white/95 p-10 shadow-2xl backdrop-blur-md">
-        {/* {-- Header --} */}
-        <div className="mb-8 flex flex-col items-center">
-          <img
-            src="/assets/Logo.png"
-            alt="VINSTORE"
-            className="mb-3 h-16 w-16 object-contain"
-          />
-          <h1 className="text-center text-2xl font-bold text-[#3E2723] md:text-3xl">
-            Buat Akun Baru
-          </h1>
-          <p className="text-center text-sm text-gray-600">
-            Daftar dan mulailah menjelajahi koleksi barang antik eksklusif ✨
-          </p>
-        </div>
+    <AuthLayout>
+      <AuthLayoutCard type="register">
+        <AuthLayoutHeader
+          title="Buat akun baru"
+          subtitle="Daftar dan mulailah menjelajahi koleksi barang antik eksklusif ✨"
+        />
 
         {/* {-- FORM REGISTER --} */}
         <Form
@@ -35,25 +29,12 @@ export default function RegisterPage() {
           {({ errors, hasErrors }) => (
             <>
               {/* {-- ERROR MESSAGE --} */}
-              {hasErrors && (
-                <div className="mb-6 rounded border border-red-400 bg-red-100 px-4 py-3 text-sm text-red-700">
-                  <ul className="list-inside list-disc">
-                    {Object.values(errors).map((error) => (
-                      <li key={error}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <AuthErrorMessage errors={errors} hasErrors={hasErrors} />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* {-- Username --} */}
                 <div className="md:col-span-2">
-                  <label
-                    htmlFor="username"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Username
-                  </label>
+                  <AuthLabel htmlFor="username">Username</AuthLabel>
                   <input
                     type="text"
                     name="username"
@@ -66,12 +47,7 @@ export default function RegisterPage() {
 
                 {/* {-- Nama Depan & Belakang --} */}
                 <div>
-                  <label
-                    htmlFor="first_name"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Nama Depan
-                  </label>
+                  <AuthLabel htmlFor="first_name">Nama Depan</AuthLabel>
                   <input
                     type="text"
                     name="first_name"
@@ -82,12 +58,7 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="last_name"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Nama Belakang
-                  </label>
+                  <AuthLabel htmlFor="last_name">Nama Belakang</AuthLabel>
                   <input
                     type="text"
                     name="last_name"
@@ -100,12 +71,7 @@ export default function RegisterPage() {
 
                 {/* {-- Email & Telepon --} */}
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Email
-                  </label>
+                  <AuthLabel htmlFor="email">Email</AuthLabel>
                   <input
                     type="email"
                     name="email"
@@ -116,12 +82,7 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="phone"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Nomor Telepon
-                  </label>
+                  <AuthLabel htmlFor="phone">Nomor Telepon</AuthLabel>
                   <input
                     type="tel"
                     name="phone"
@@ -134,12 +95,7 @@ export default function RegisterPage() {
 
                 {/* {-- Password & Konfirmasi --} */}
                 <div>
-                  <label
-                    htmlFor="password"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Password
-                  </label>
+                  <AuthLabel htmlFor="password">Password</AuthLabel>
                   <input
                     type="password"
                     name="password"
@@ -150,12 +106,9 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="password_confirmation"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
+                  <AuthLabel htmlFor="password_confirmation">
                     Konfirmasi Password
-                  </label>
+                  </AuthLabel>
                   <input
                     type="password"
                     name="password_confirmation"
@@ -168,12 +121,7 @@ export default function RegisterPage() {
 
                 {/* {-- Alamat --} */}
                 <div className="md:col-span-2">
-                  <label
-                    htmlFor="address"
-                    className="mb-1 block text-sm font-semibold text-[#3E2723]"
-                  >
-                    Alamat Lengkap
-                  </label>
+                  <AuthLabel htmlFor="address">Alamat Lengkap</AuthLabel>
                   <textarea
                     name="address"
                     id="address"
@@ -188,7 +136,7 @@ export default function RegisterPage() {
               {/* {-- Tombol Register --} */}
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#9e6538]"
+                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
               >
                 Daftar Sekarang
               </button>
@@ -196,12 +144,7 @@ export default function RegisterPage() {
           )}
         </Form>
 
-        {/* {-- Divider --} */}
-        <div className="my-6 flex items-center">
-          <hr className="flex-1 border-gray-300" />
-          <span className="px-3 text-sm text-gray-500">atau</span>
-          <hr className="flex-1 border-gray-300" />
-        </div>
+        <AuthLayoutDivider />
 
         {/* {-- Redirect ke Login --} */}
         <div className="text-center">
@@ -215,12 +158,8 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
-      </div>
-
-      {/* {-- Dekorasi Background --} */}
-      <div className="absolute top-0 left-0 -z-10 h-72 w-72 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
-      <div className="absolute right-0 bottom-0 -z-10 h-96 w-96 rounded-full bg-[#B77C4C]/25 blur-3xl"></div>
-    </section>
+      </AuthLayoutCard>
+    </AuthLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import MainLayout from '../../layouts/main-layout';
-import { formatIDR } from '../../lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const {
@@ -59,11 +59,11 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <>
+    <div className="bg-white">
       <Head title="Admin Dashboard" />
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <h2 className="mb-6 mt-2 text-3xl font-bold text-[#53685B]">
-            Dashboard Admin
+        <h2 className="mt-2 mb-6 text-3xl font-bold text-[#53685B]">
+          Dashboard Admin
         </h2>
 
         {/* Stats Grid */}
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="absolute right-4 top-3 text-4xl text-[#53685B] opacity-20 transition group-hover:opacity-40">
+              <div className="absolute top-3 right-4 text-4xl text-[#53685B] opacity-20 transition group-hover:opacity-40">
                 →
               </div>
             </Link>
@@ -128,7 +128,10 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="7"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       <p className="text-lg">📦 Belum ada produk</p>
                     </td>
                   </tr>
@@ -138,7 +141,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

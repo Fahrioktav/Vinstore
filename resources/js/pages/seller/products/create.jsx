@@ -1,5 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
-import FormLayout from '../../../layouts/form-layout';
+import FormLayout from '@/layouts/form-layout';
 
 export default function SellerCreateProductPage() {
   const { sessions } = usePage().props;
@@ -90,7 +90,7 @@ export default function SellerCreateProductPage() {
                 rows="4"
                 className="w-full rounded-md border border-gray-400 px-4 py-2"
                 required
-              ></textarea>
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold">

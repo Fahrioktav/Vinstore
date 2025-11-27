@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
-import MainLayout from '../../layouts/main-layout';
-import { formatIDR } from '../../lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function ProductsPage() {
   const { paginatedProducts } = usePage().props;

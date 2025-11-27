@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
-import { formatIDR } from '../../../lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function AdminProducts() {
   const { products, success } = usePage().props;

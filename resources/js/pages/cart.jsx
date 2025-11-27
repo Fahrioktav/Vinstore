@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
-import { formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
+import MainLayout from '@/layouts/main-layout';
 
 export default function CartPage() {
   const { cartItems } = usePage().props;
@@ -37,8 +37,7 @@ export default function CartPage() {
                       Jumlah: {item.quantity}
                     </p>
                     <p className="text-sm text-gray-100">
-                      Harga Satuan:{' '}
-                      {formatIDR(item.product.price)}
+                      Harga Satuan: {formatIDR(item.product.price)}
                     </p>
                     <p className="mt-1 text-sm font-medium text-gray-100">
                       Subtotal:{' '}

@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import FormLayout from '../../layouts/form-layout';
+import FormLayout from '@/layouts/form-layout';
 
 export default function StoreRegisterPage() {
   return (
@@ -38,7 +38,7 @@ export default function StoreRegisterPage() {
           rows="3"
           className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
-        ></textarea>
+        />
 
         {/* <!-- Lokasi Toko --> */}
         <input

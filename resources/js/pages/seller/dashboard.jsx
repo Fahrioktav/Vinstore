@@ -1,7 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import MainLayout from '../../layouts/main-layout';
-import { formatIDR } from '../../lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function SellerDashboard() {
   const { products, orders, productCount, orderCount, store } = usePage().props;
@@ -68,10 +68,7 @@ export default function SellerDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="7"
-                      className="py-8 text-center text-gray-500"
-                    >
+                    <td colSpan="7" className="py-8 text-center text-gray-500">
                       📭 Belum ada pesanan
                     </td>
                   </tr>
@@ -129,10 +126,7 @@ export default function SellerDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="8"
-                      className="py-8 text-center text-gray-500"
-                    >
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
                       📦 Belum ada produk
                     </td>
                   </tr>
@@ -186,9 +180,7 @@ function OrderRow({ order }) {
         <p className="text-xs text-gray-500">{order.user.email}</p>
       </td>
       <td className="px-4 py-3">{order.product.name}</td>
-      <td className="px-4 py-3 text-center font-semibold">
-        {order.quantity}
-      </td>
+      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
       <td className="px-4 py-3 font-bold text-[#53685B]">
         {formatIDR(order.price)}
       </td>
