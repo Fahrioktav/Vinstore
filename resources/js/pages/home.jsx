@@ -15,7 +15,7 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* <!-- HERO SECTION -. */}
-      <section className="font-poppins relative flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
+      <section className="font-poppins relative -mt-20 flex min-h-screen items-center bg-[#2F3E46] p-20 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
           {/* {-- LEFT TEXT --} */}
           <div className="md:w-1/2">
