@@ -4,7 +4,7 @@ export function AuthLayout({ children, className }) {
   return (
     <div
       className={cn(
-        'relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6 py-12',
+        'relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12',
         className
       )}
     >

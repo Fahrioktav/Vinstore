@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function HomePage() {
   const {
@@ -14,7 +15,7 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* <!-- HERO SECTION -. */}
-      <section className="font-poppins relative -mt-[80px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
+      <section className="font-poppins relative flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
           {/* {-- LEFT TEXT --} */}
           <div className="md:w-1/2">
@@ -47,7 +48,7 @@ export default function HomePage() {
       </section>
 
       {/* {-- KATEGORI SECTION --} */}
-      <section className="mt-20 px-6 md:px-16">
+      <section className="px-6 py-20 md:px-16">
         <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
           Kategori Populer
         </h2>
@@ -83,7 +84,7 @@ export default function HomePage() {
       </section>
 
       {/* {-- PRODUK POPULER --} */}
-      <section id="products" className="mt-20 px-6 md:px-16">
+      <section id="products" className="px-6 py-20 md:px-16">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
@@ -94,43 +95,46 @@ export default function HomePage() {
         </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 pt-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {products.map((product, i) => (
-              <div
-                className="flex flex-col rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
+              <Card
                 key={i}
+                className="gap-0 py-4 shadow-md transition hover:shadow-lg"
               >
-                <div className="relative">
-                  <img
-                    src={product.image}
-                    className="mb-4 h-48 w-full rounded-md object-cover"
-                  />
-                  <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
-                    Antik
-                  </span>
-                </div>
+                <CardContent className="px-4">
+                  <div className="relative">
+                    <img
+                      src={product.image}
+                      className="mb-4 h-48 w-full rounded-md object-cover"
+                    />
+                    <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
+                      Antik
+                    </span>
+                  </div>
+                  <div className="flex-grow">
+                    <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
+                      {product.name}
+                    </h3>
+                    <p className="mb-3 line-clamp-3 text-sm text-gray-600">
+                      {product.description}
+                    </p>
+                  </div>
 
-                <div className="flex-grow">
-                  <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-                    {product.name}
-                  </h3>
-                  <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-                    {product.description}
-                  </p>
-                </div>
+                  <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
+                    <span className="font-bold text-[#B77C4C]">
+                      {formatIDR(product.price)}
+                    </span>
 
-                <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
-                  <span className="font-bold text-[#B77C4C]">
-                    {formatIDR(product.price)}
-                  </span>
-
-                  <Link href={user ? `/checkout/show/${product.id}` : `/login`}>
-                    <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
-                      Order
-                    </button>
-                  </Link>
-                </div>
-              </div>
+                    <Link
+                      href={user ? `/checkout/show/${product.id}` : `/login`}
+                    >
+                      <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
+                        Order
+                      </button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
@@ -139,7 +143,7 @@ export default function HomePage() {
       </section>
 
       {/* {-- REKOMENDASI SECTION --} */}
-      <section className="mt-20 bg-[#fdf8f3] py-12">
+      <section className="bg-[#fdf8f3] py-20">
         <div className="mx-auto max-w-6xl px-6 text-center md:px-16">
           <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
             Rekomendasi Untukmu
@@ -151,21 +155,23 @@ export default function HomePage() {
 
           <div className="flex flex-wrap justify-center gap-6">
             {products.slice(0, 3).map((recommendation) => (
-              <div
+              <Card
                 key={recommendation.id}
-                className="w-72 rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
+                className="w-72 rounded-xl bg-white py-4 shadow-md transition hover:shadow-lg"
               >
-                <img
-                  src={recommendation.image}
-                  className="mb-3 h-40 w-full rounded-md object-cover"
-                />
-                <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-                  {recommendation.name}
-                </h3>
-                <span className="font-bold text-[#B77C4C]">
-                  {formatIDR(recommendation.price, 0, ',', '.')}
-                </span>
-              </div>
+                <CardContent className="px-4">
+                  <img
+                    src={recommendation.image}
+                    className="mb-3 h-40 w-full rounded-md object-cover"
+                  />
+                  <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
+                    {recommendation.name}
+                  </h3>
+                  <span className="font-bold text-[#B77C4C]">
+                    {formatIDR(recommendation.price, 0, ',', '.')}
+                  </span>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>

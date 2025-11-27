@@ -20,7 +20,7 @@ export default function OrderPage() {
   };
 
   return (
-    <section className="min-h-screen w-full bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
+    <section className="w-full px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
       <div className="mx-auto max-w-6xl">
         <h2 className="mb-10 text-center text-4xl font-bold">📦 Pesananmu</h2>
         {orders.length === 0 ? (

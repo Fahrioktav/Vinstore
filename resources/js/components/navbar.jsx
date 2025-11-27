@@ -1,7 +1,13 @@
-import { Form, Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { UserIcon } from './icons';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from './ui/dropdown-menu';
+import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 const links = [
   { label: 'Home', href: '/', requireAuth: false },
@@ -20,7 +26,6 @@ export default function Navbar() {
   const url = usePage().url;
 
   const [open, setOpen] = useState(false);
-  const [userMenu, setUserMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -28,6 +33,10 @@ export default function Navbar() {
       setScrolled(window.scrollY > 10);
     });
   }, []);
+
+  const handleLogout = () => {
+    router.post('/logout');
+  };
 
   return (
     <nav
@@ -78,42 +87,36 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {/* {-- USER LOGIN --} */}
           {user ? (
-            <div
-              className="relative"
-              // @click.away="userMenu = false"
-            >
-              <button
-                onClick={() => setUserMenu((prev) => !prev)}
-                className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-4 py-2 font-semibold text-white transition hover:bg-[#B77C4C]"
-              >
-                <UserIcon className="h-5 w-5" />
-                {user.username}
-                {/* <x-icon name="chevron-down" className="w-4 h-4" /> */}
-              </button>
-
-              {/* {-- DROPDOWN USER --} */}
-              {userMenu && (
-                <div className="absolute right-0 z-50 mt-3 w-44 overflow-hidden rounded-lg bg-white shadow-lg">
-                  {userMenus.map((menu) => (
-                    <Link
-                      key={menu.label}
-                      href={menu.href}
-                      className="block px-4 py-2 text-gray-700 hover:bg-[#E9E19E] hover:text-black"
-                    >
-                      {menu.label}
-                    </Link>
-                  ))}
-                  <Form action="/logout" method="POST">
-                    <button
-                      type="submit"
-                      className="w-full px-4 py-2 text-left text-gray-700 hover:cursor-pointer hover:bg-[#E9E19E] hover:text-black"
-                    >
-                      🚪 Logout
-                    </button>
-                  </Form>
-                </div>
-              )}
-            </div>
+            // DROPDOWN USER
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-4 py-2 font-semibold text-white transition hover:bg-[#B77C4C]">
+                  <UserIcon className="h-5 w-5" />
+                  {user.username}
+                  {/* <x-icon name="chevron-down" className="w-4 h-4" /> */}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="shadow-lgshadow-lg mt-2 w-44 border-0 p-0">
+                {userMenus.map((menu, i) => (
+                  <DropdownMenuItem
+                    key={i}
+                    className={DropdownMenuItemStyle}
+                    asChild
+                  >
+                    <Link href={menu.href}>{menu.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem className={DropdownMenuItemStyle} asChild>
+                  <button
+                    type="submit"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    🚪 Logout
+                  </button>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link
               href="/login"
@@ -155,3 +158,7 @@ export default function Navbar() {
     </nav>
   );
 }
+
+const DropdownMenuItemStyle = cn(
+  'rounded-none px-4 py-2 text-gray-700 focus:cursor-pointer focus:bg-[#E9E19E] focus:text-black'
+);

@@ -1,6 +1,7 @@
 import { Form, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import {
+  AuthErrorMessage,
   AuthLabel,
   AuthLayout,
   AuthLayoutCard,

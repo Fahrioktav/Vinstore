@@ -3,9 +3,21 @@ import FormLayout from '@/layouts/form-layout';
 import { cn } from '@/lib/utils';
 
 const contacts = [
-  { imgSrc: '/icons/whatsapp.svg', imgAlt: 'WhatsApp', label: '082113472156' },
-  { imgSrc: '/icons/instagram.svg', imgAlt: 'Instagram', label: 'Instagram' },
-  { imgSrc: '/icons/twitter.svg', imgAlt: 'Twitter', label: 'Twitter' },
+  {
+    imgSrc: '/assets/icons/social-whatsapp.png',
+    imgAlt: 'WhatsApp',
+    label: '082113472156',
+  },
+  {
+    imgSrc: '/assets/icons/social-instagram.png',
+    imgAlt: 'Instagram',
+    label: 'Instagram',
+  },
+  {
+    imgSrc: '/assets/icons/social-twitter.png',
+    imgAlt: 'Twitter',
+    label: 'Twitter',
+  },
 ];
 
 const inputClassName = cn(
@@ -16,7 +28,7 @@ export default function ContactPage() {
   const { user } = usePage().props;
 
   return (
-    <section className="bg-gray-50 px-6 py-16 text-gray-800 md:px-20">
+    <section className="my-auto bg-gray-50 px-6 py-16 text-gray-800 md:px-20">
       <div className="mx-auto grid max-w-6xl items-start gap-12 md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
@@ -63,7 +75,7 @@ export default function ContactPage() {
 
           <input
             type="text"
-            defaultValue={user?.first_name + ' ' + user?.last_name}
+            defaultValue={user ? user?.first_name + ' ' + user?.last_name : ''}
             placeholder="Nama Lengkap"
             className={inputClassName}
             readOnly={!!user}

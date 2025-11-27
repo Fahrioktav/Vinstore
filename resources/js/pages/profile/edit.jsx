@@ -4,10 +4,8 @@ import FormLayout from '@/layouts/form-layout';
 export default function EditProfilePage() {
   const { user, sessions, errors } = usePage().props;
 
-  console.log('rerendered');
-
   return (
-    <div className="mx-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl">
+    <div className="mx-auto my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl">
       <h2 className="font-poppins mb-6 text-2xl font-bold text-[#2F3E46]">
         👤 Edit Profile
       </h2>
