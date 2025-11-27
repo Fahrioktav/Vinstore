@@ -20,7 +20,7 @@ export default function MainLayout({ children, title, heroText }) {
         </section>
       )} */}
 
-      <main className="grow py-20">{children}</main>
+      <main className="grow">{children}</main>
       <Footer />
     </div>
   );

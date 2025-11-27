@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="bg-white">
+    <div className="">
       <Head title="Admin Dashboard" />
       <div className="mx-auto max-w-7xl px-6 py-8">
         <h2 className="mt-2 mb-6 text-3xl font-bold text-[#53685B]">
