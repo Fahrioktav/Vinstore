@@ -1,16 +1,23 @@
 import { Link, usePage } from '@inertiajs/react';
-import { formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
+import MainLayout from '@/layouts/main-layout';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function HomePage() {
-  const { heroText, showSearch, products = [], categories = [], auth } = usePage().props;
+  const {
+    heroText,
+    showSearch,
+    products = [],
+    categories = [],
+    user,
+  } = usePage().props;
 
   return (
-    <>
-      {/* HERO SECTION */}
-      <section className="font-poppins relative -mt-[72px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
+    <div className="bg-white">
+      {/* <!-- HERO SECTION -. */}
+      <section className="font-poppins relative -mt-20 flex min-h-screen items-center bg-[#2F3E46] p-20 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
-          {/* LEFT TEXT */}
+          {/* {-- LEFT TEXT --} */}
           <div className="md:w-1/2">
             <h1 className="text-4xl leading-tight font-extrabold md:text-6xl">
               Temukan Barang Antik Impianmu di{' '}
@@ -21,14 +28,14 @@ export default function HomePage() {
               hingga konsol legendaris.
             </p>
             <Link
-              href="/inertia/toko"
+              href="/toko"
               className="mt-8 inline-block rounded-lg bg-[#B77C4C] px-8 py-3 font-semibold text-white transition hover:bg-[#a16c3e]"
             >
               Jelajahi Sekarang
             </Link>
           </div>
 
-          {/* RIGHT IMAGE */}
+          {/* {-- RIGHT IMAGE --} */}
           <div className="mt-10 flex flex-col items-center md:mt-0 md:w-1/2">
             <img
               src="/assets/hero-antique.jpg"
@@ -40,8 +47,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* KATEGORI SECTION */}
-      <section className="mt-20 px-6 md:px-16">
+      {/* {-- KATEGORI SECTION --} */}
+      <section className="px-6 py-20 md:px-16">
         <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
           Kategori Populer
         </h2>
@@ -58,7 +65,7 @@ export default function HomePage() {
                   <img
                     src={`/storage/${category.image}`}
                     alt={category.name}
-                    className="mb-3 h-16 w-16 object-cover rounded-full transition-transform group-hover:scale-110"
+                    className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />
                 ) : (
                   <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#53685B] to-[#B77C4C] transition-transform group-hover:scale-110">
@@ -76,59 +83,58 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PRODUK POPULER */}
-      <section id="products" className="mt-20 px-6 md:px-16">
+      {/* {-- PRODUK POPULER --} */}
+      <section id="products" className="px-6 py-20 md:px-16">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
           </h2>
-          <Link
-            href="/inertia/products"
-            className="text-[#B77C4C] hover:underline"
-          >
+          <Link href="/products" className="text-[#B77C4C] hover:underline">
             Lihat Semua
           </Link>
         </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {products.map((product) => (
-              <div
-                className="flex flex-col rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
-                key={product.id}
+          <div className="grid grid-cols-1 gap-8 pt-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.map((product, i) => (
+              <Card
+                key={i}
+                className="gap-0 py-4 shadow-md transition hover:shadow-lg"
               >
-                <div className="relative">
-                  <img
-                    src={product.image || '/assets/products/default.jpg'}
-                    alt={product.name}
-                    className="mb-4 h-48 w-full rounded-md object-contain"
-                  />
-                  <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
-                    Antik
-                  </span>
-                </div>
+                <CardContent className="px-4">
+                  <div className="relative">
+                    <img
+                      src={product.image}
+                      className="mb-4 h-48 w-full rounded-md object-cover"
+                    />
+                    <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
+                      Antik
+                    </span>
+                  </div>
+                  <div className="flex-grow">
+                    <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
+                      {product.name}
+                    </h3>
+                    <p className="mb-3 line-clamp-3 text-sm text-gray-600">
+                      {product.description}
+                    </p>
+                  </div>
 
-                <div className="flex-grow">
-                  <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-                    {product.name}
-                  </h3>
-                  <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-                    {product.description}
-                  </p>
-                </div>
+                  <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
+                    <span className="font-bold text-[#B77C4C]">
+                      {formatIDR(product.price)}
+                    </span>
 
-                <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
-                  <span className="font-bold text-[#B77C4C]">
-                    {formatIDR(product.price)}
-                  </span>
-
-                  <Link href={`/inertia/checkout/show/${product.id}`}>
-                    <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
-                      Order Now
-                    </button>
-                  </Link>
-                </div>
-              </div>
+                    <Link
+                      href={user ? `/checkout/show/${product.id}` : `/login`}
+                    >
+                      <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
+                        Order
+                      </button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
@@ -136,8 +142,8 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* REKOMENDASI SECTION */}
-      <section className="mt-20 bg-[#fdf8f3] py-12">
+      {/* {-- REKOMENDASI SECTION --} */}
+      <section className="bg-[#fdf8f3] py-20">
         <div className="mx-auto max-w-6xl px-6 text-center md:px-16">
           <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
             Rekomendasi Untukmu
@@ -149,27 +155,28 @@ export default function HomePage() {
 
           <div className="flex flex-wrap justify-center gap-6">
             {products.slice(0, 3).map((recommendation) => (
-              <div
+              <Card
                 key={recommendation.id}
-                className="w-72 rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
+                className="w-72 rounded-xl bg-white py-4 shadow-md transition hover:shadow-lg"
               >
-                <img
-                  src={recommendation.image || '/assets/products/default.jpg'}
-                  alt={recommendation.name}
-                  className="mb-3 h-40 w-full rounded-md object-contain"
-                />
-                <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-                  {recommendation.name}
-                </h3>
-                <span className="font-bold text-[#B77C4C]">
-                  {formatIDR(recommendation.price)}
-                </span>
-              </div>
+                <CardContent className="px-4">
+                  <img
+                    src={recommendation.image}
+                    className="mb-3 h-40 w-full rounded-md object-cover"
+                  />
+                  <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
+                    {recommendation.name}
+                  </h3>
+                  <span className="font-bold text-[#B77C4C]">
+                    {formatIDR(recommendation.price, 0, ',', '.')}
+                  </span>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function EditProduct() {
   const { product, errors: serverErrors } = usePage().props;
@@ -43,7 +43,9 @@ export default function EditProduct() {
       <Head title="Edit Produk" />
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
-          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">📦 Edit Produk</h2>
+          <h2 className="mb-6 text-3xl font-bold text-[#53685B]">
+            📦 Edit Produk
+          </h2>
 
           <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-sm text-gray-600">
@@ -54,12 +56,14 @@ export default function EditProduct() {
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Nama Produk</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Nama Produk
+              </label>
               <input
                 type="text"
                 value={data.name}
                 onChange={(e) => setData('name', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
                 required
               />
               {errors.name && (
@@ -69,12 +73,14 @@ export default function EditProduct() {
 
             <div className="mb-4 grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold">Harga</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Harga
+                </label>
                 <input
                   type="number"
                   value={data.price}
                   onChange={(e) => setData('price', e.target.value)}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
                   required
                   min="0"
                 />
@@ -89,7 +95,7 @@ export default function EditProduct() {
                   type="number"
                   value={data.stock}
                   onChange={(e) => setData('stock', e.target.value)}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.stock ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.stock ? 'border-red-500' : 'border-gray-300'}`}
                   required
                   min="0"
                 />
@@ -100,12 +106,14 @@ export default function EditProduct() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Kategori</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Kategori
+              </label>
               <input
                 type="text"
                 value={data.category}
                 onChange={(e) => setData('category', e.target.value)}
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.category ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.category ? 'border-red-500' : 'border-gray-300'}`}
                 required
               />
               {errors.category && (
@@ -114,15 +122,19 @@ export default function EditProduct() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold">Deskripsi</label>
+              <label className="mb-2 block text-sm font-semibold">
+                Deskripsi
+              </label>
               <textarea
                 value={data.description}
                 onChange={(e) => setData('description', e.target.value)}
                 rows="4"
-                className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.description && (
-                <p className="mt-1 text-xs text-red-500">{errors.description}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.description}
+                </p>
               )}
             </div>
 
@@ -143,7 +155,7 @@ export default function EditProduct() {
                 type="file"
                 onChange={handleImageChange}
                 accept="image/*"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Kosongkan jika tidak ingin mengubah gambar

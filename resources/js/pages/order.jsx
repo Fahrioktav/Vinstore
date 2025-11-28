@@ -1,12 +1,26 @@
-import { usePage } from '@inertiajs/react';
-import { formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { Form, usePage } from '@inertiajs/react';
+import { cn, formatIDR } from '@/lib/utils';
+import MainLayout from '@/layouts/main-layout';
+
+const statusStyles = {
+  Waiting: 'bg-yellow-500/30 text-yellow-200',
+  'On The Way': 'bg-blue-500/30 text-blue-200',
+  Delivered: 'bg-green-500/30 text-green-200',
+  Cancelled: 'bg-red-500/30 text-red-200',
+  Unknown: 'bg-gray-500/30 text-gray-200',
+};
 
 export default function OrderPage() {
   const { orders } = usePage().props;
 
+  const onSubmit = (e) => {
+    if (!confirm('Yakin ingin membatalkan pesanan ini?')) {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <section className="min-h-screen w-full bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
+    <section className="w-full px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
       <div className="mx-auto max-w-6xl">
         <h2 className="mb-10 text-center text-4xl font-bold">📦 Pesananmu</h2>
         {orders.length === 0 ? (
@@ -39,31 +53,26 @@ export default function OrderPage() {
                     <td className="px-6 py-4">{formatIDR(order.price)}</td>
                     <td className="px-6 py-4">
                       <span
-                        className="rounded-full px-3 py-1 text-sm"
-                        // @if(order.status === 'Waiting') bg-yellow-500/30 text-yellow-200
-                        // @elseif(order.status === 'On The Way') bg-blue-500/30 text-blue-200
-                        // @elseif(order.status === 'Delivered') bg-green-500/30 text-green-200
-                        // @elseif(order.status === 'Cancelled') bg-red-500/30 text-red-200
-                        // @else bg-gray-500/30 text-gray-200 @endif"
+                        className={cn(
+                          'rounded-full px-3 py-1 text-sm',
+                          statusStyles[order.status] ?? statusStyles.Unknown
+                        )}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      {order.created_at.format('d M Y, H:i')}
-                    </td>
+                    <td className="px-6 py-4">{orderDate(order.created_at)}</td>
                     <td className="px-6 py-4 text-center">
                       {['Waiting', 'On The Way'].includes(order.status) ? (
-                        <form
-                          action="{ route('order.cancel', order.id) }"
-                          method="POST"
-                          onSubmit="return confirm('Yakin ingin membatalkan pesanan ini?');"
-                        >
-                          @csrf @method('DELETE')
-                          <button className="font-semibold text-red-400 transition hover:text-red-300">
+                        <Form action={`/order/${order.id}`} method="DELETE">
+                          <button
+                            type="submit"
+                            className="font-semibold text-red-400 transition hover:text-red-300"
+                            onClick={onSubmit}
+                          >
                             Batalkan
                           </button>
-                        </form>
+                        </Form>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
@@ -80,3 +89,17 @@ export default function OrderPage() {
 }
 
 OrderPage.layout = (page) => <MainLayout title="Order">{page}</MainLayout>;
+
+// Format manual pakai Intl.DateTimeFormat
+const formatter = new Intl.DateTimeFormat('id-ID', {
+  day: '2-digit',
+  month: 'short', // Jan, Feb, Mar...
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+function orderDate(date) {
+  return formatter.format(new Date(date));
+}

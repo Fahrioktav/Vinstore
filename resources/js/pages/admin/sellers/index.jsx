@@ -1,11 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function AdminSellers() {
   const { sellers, success } = usePage().props;
 
   const handleDelete = (id) => {
-    if (confirm('Yakin ingin menghapus seller ini? Semua toko dan produknya juga akan terhapus.')) {
+    if (
+      confirm(
+        'Yakin ingin menghapus seller ini? Semua toko dan produknya juga akan terhapus.'
+      )
+    ) {
       router.delete(`/admin/sellers/${id}`, {
         preserveScroll: true,
       });

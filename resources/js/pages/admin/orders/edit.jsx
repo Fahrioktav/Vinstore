@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
 
 export default function EditOrder() {
   const { order } = usePage().props;
@@ -41,7 +42,9 @@ export default function EditOrder() {
               </div>
               <div>
                 <p className="text-gray-600">Toko</p>
-                <p className="font-semibold">{order.store?.store_name || '-'}</p>
+                <p className="font-semibold">
+                  {order.store?.store_name || '-'}
+                </p>
               </div>
               <div>
                 <p className="text-gray-600">Quantity</p>
@@ -50,7 +53,7 @@ export default function EditOrder() {
               <div>
                 <p className="text-gray-600">Total Harga</p>
                 <p className="font-bold text-[#53685B]">
-                  Rp{order.price?.toLocaleString('id-ID')}
+                  {formatIDR(order.price)}
                 </p>
               </div>
               <div>

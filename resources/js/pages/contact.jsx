@@ -1,21 +1,38 @@
 import { Form, usePage } from '@inertiajs/react';
-import FormLayout from '../layouts/main-layout';
+import FormLayout from '@/layouts/form-layout';
+import { cn } from '@/lib/utils';
 
 const contacts = [
-  { imgSrc: '/icons/whatsapp.svg', imgAlt: 'WhatsApp', label: '082113472156' },
-  { imgSrc: '/icons/instagram.svg', imgAlt: 'Instagram', label: '@VINSTORE' },
-  { imgSrc: '/icons/twitter.svg', imgAlt: 'Twitter', label: '@VINSTORE' },
+  {
+    imgSrc: '/assets/icons/social-whatsapp.png',
+    imgAlt: 'WhatsApp',
+    label: '082113472156',
+    href: 'https://wa.me',
+  },
+  {
+    imgSrc: '/assets/icons/social-instagram.png',
+    imgAlt: 'Instagram',
+    label: 'Instagram',
+    href: 'https://instagram.com/vinstore.id',
+  },
+  {
+    imgSrc: '/assets/icons/social-twitter.png',
+    imgAlt: 'Twitter',
+    label: 'Twitter',
+    href: 'https://twitter.com/vinstore.id',
+  },
 ];
 
-const inputClassName =
-  'w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5A6E5A] transition';
+const inputClassName = cn(
+  'w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:ring-2 focus:ring-[#5A6E5A] focus:outline-none'
+);
 
 export default function ContactPage() {
-  const { auth } = usePage().props;
+  const { user } = usePage().props;
 
   return (
-    <section className="bg-gray-50 px-6 py-16 text-gray-800 md:px-20">
-      <div className="mx-auto grid max-w-6xl items-start gap-12 md:grid-cols-2">
+    <section className="flex w-full grow bg-gray-50">
+      <div className="mx-auto my-auto grid max-w-6xl items-start gap-12 p-16 md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
           <h3 className="text-4xl font-bold text-[#4a5b4d]">Hubungi Kami</h3>
@@ -27,8 +44,10 @@ export default function ContactPage() {
 
           <div className="mt-8 space-y-4">
             {contacts.map((contact, idx) => (
-              <div
+              <a
                 key={idx}
+                href={contact.href}
+                target="_blank"
                 className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-3 shadow-sm transition hover:shadow-md"
               >
                 <img
@@ -37,7 +56,7 @@ export default function ContactPage() {
                   className="h-6 w-6"
                 />
                 <span className="text-gray-700">{contact.label}</span>
-              </div>
+              </a>
             ))}
           </div>
 
@@ -61,21 +80,25 @@ export default function ContactPage() {
 
           <input
             type="text"
+            defaultValue={user ? user?.first_name + ' ' + user?.last_name : ''}
             placeholder="Nama Lengkap"
             className={inputClassName}
+            readOnly={!!user}
           />
 
           <input
             type="email"
             placeholder="Alamat Email"
+            defaultValue={user?.email}
             className={inputClassName}
+            readOnly={!!user}
           />
 
           <textarea
             rows="5"
             placeholder="Tulis pesanmu di sini..."
             className={inputClassName}
-          ></textarea>
+          />
 
           <button
             type="submit"

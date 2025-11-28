@@ -1,11 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function AdminStores() {
   const { stores, success } = usePage().props;
 
   const handleDelete = (id) => {
-    if (confirm('Yakin ingin menghapus toko ini? Semua produknya juga akan terhapus.')) {
+    if (
+      confirm(
+        'Yakin ingin menghapus toko ini? Semua produknya juga akan terhapus.'
+      )
+    ) {
       router.delete(`/admin/stores/${id}`, {
         preserveScroll: true,
       });
@@ -42,8 +46,12 @@ export default function AdminStores() {
                   stores.map((store) => (
                     <tr key={store.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-semibold">{store.id}</td>
-                      <td className="px-4 py-3 font-semibold">{store.store_name}</td>
-                      <td className="px-4 py-3">{store.user?.username || '-'}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        {store.store_name}
+                      </td>
+                      <td className="px-4 py-3">
+                        {store.user?.username || '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {store.location || '-'}
                       </td>

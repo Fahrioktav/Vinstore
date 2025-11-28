@@ -3,8 +3,8 @@ import { Link } from '@inertiajs/react';
 const links = [
   { label: 'Privacy Policy', href: '#' },
   { label: 'Terms', href: '#' },
-  { label: 'Pricing', href: '#' },
-  { label: 'Do not sell or share my personal info', href: '#' },
+  // { label: 'Pricing', href: '#' },
+  // { label: 'Do not sell or share my personal info', href: '#' },
 ];
 
 export default function Footer() {

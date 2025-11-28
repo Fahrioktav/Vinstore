@@ -1,0 +1,189 @@
+import { cn } from '@/lib/utils';
+import { cva } from 'class-variance-authority';
+
+export function AuthLayout({ children, className }) {
+  return (
+    <div
+      className={cn(
+        'relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function AuthLayoutHeader({ title, subtitle }) {
+  return (
+    <div className="mb-6 flex flex-col items-center">
+      <img
+        src="/assets/Logo.png"
+        alt="VINSTORE"
+        className="mb-3 h-16 w-16 object-contain"
+      />
+      <h1 className="text-2xl font-bold text-[#3E2723]">{title}</h1>
+      <p className="text-sm text-gray-600">{subtitle}</p>
+    </div>
+  );
+}
+
+const DefaultCardStyles = {
+  login:
+    'relative z-10 mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white/95 p-8 shadow-2xl backdrop-blur-md md:p-10',
+  register:
+    'relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white/95 p-10 shadow-2xl backdrop-blur-md',
+};
+
+export function AuthLayoutCard({ children, type, ...props }) {
+  const style = DefaultCardStyles[type] ?? '';
+
+  return (
+    <div className={style} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function AuthLayoutDivider() {
+  return (
+    <div className="my-6 flex items-center">
+      <hr className="flex-1 border-gray-300" />
+      <span className="px-3 text-sm text-gray-500">atau</span>
+      <hr className="flex-1 border-gray-300" />
+    </div>
+  );
+}
+
+export function AuthErrorMessage({ errors, hasErrors }) {
+  return (
+    hasErrors && (
+      <div className="mb-6 rounded border border-red-400 bg-red-100 px-4 py-3 text-sm text-red-700">
+        <ul className="list-inside list-disc">
+          {Object.values(errors).map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      </div>
+    )
+  );
+}
+
+const labelVariants = cva('mb-1 block text-sm font-semibold ', {
+  variants: {
+    variant: {
+      brown: 'text-[#3E2723]',
+      green: '',
+    },
+  },
+  defaultVariants: {
+    variant: 'brown',
+  },
+});
+
+export function AuthLabel({ htmlFor, children, className, variant, ...props }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={cn(labelVariants({ variant, className }))}
+      {...props}
+    >
+      {children}
+    </label>
+  );
+}
+
+const inputVariants = cva(
+  'w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:outline-none',
+  {
+    variants: {
+      variant: {
+        brown: 'focus:ring-[#B77C4C]',
+        green: 'focus:ring-[#E9E19E]',
+      },
+    },
+    defaultVariants: {
+      variant: 'brown',
+    },
+  }
+);
+
+export function AuthInput({
+  id,
+  type,
+  name,
+  className,
+  placeholder,
+  required = false,
+  variant,
+  min,
+  max,
+  step,
+  ...props
+}) {
+  return (
+    <input
+      id={id}
+      type={type}
+      name={name}
+      placeholder={placeholder}
+      className={cn(inputVariants({ variant, className }))}
+      required={required}
+      min={min}
+      step={step}
+      max={max}
+      {...props}
+    />
+  );
+}
+
+export function AuthTextArea({
+  id,
+  name,
+  rows,
+  placeholder,
+  required = false,
+  className,
+  variant,
+  ...props
+}) {
+  return (
+    <textarea
+      id={id}
+      name={name}
+      rows={rows}
+      placeholder={placeholder}
+      className={cn(inputVariants({ variant, className }))}
+      required={required}
+      {...props}
+    />
+  );
+}
+
+// TODO: TERAKHIR SAMPE SINI
+const buttonVariants = cva(
+  'w-full rounded-lg py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer ',
+  {
+    variants: {
+      variant: {
+        brown: 'bg-[#B77C4C] hover:bg-[#9e6538]',
+        green: 'bg-[#53685B] hover:bg-[#3c4a3e]',
+      },
+    },
+    defaultVariants: {
+      variant: 'brown',
+    },
+  }
+);
+
+export function AuthButton({ type = 'submit', className, children, ...props }) {
+  return (
+    <button
+      type={type}
+      className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
-import MainLayout from '../../../layouts/main-layout';
+import MainLayout from '@/layouts/main-layout';
 
 export default function CategoriesIndex({ categories }) {
   const handleDelete = (id, name) => {
@@ -16,48 +16,53 @@ export default function CategoriesIndex({ categories }) {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-[#2F3E46]">Manage Categories</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-[#2F3E46]">
+            Manage Categories
+          </h1>
           <Link
             href="/admin/categories/create"
-            className="bg-[#53685B] text-white px-6 py-2 rounded-lg hover:bg-[#2F3E46] transition"
+            className="rounded-lg bg-[#53685B] px-6 py-2 text-white transition hover:bg-[#2F3E46]"
           >
             + Add Category
           </Link>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-hidden rounded-lg bg-white shadow-md">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#53685B]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-white uppercase">
                   ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-white uppercase">
                   Image
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-white uppercase">
                   Category Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-white uppercase">
                   Created At
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-white uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {categories.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  <td
+                    colSpan="5"
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
                     Belum ada kategori
                   </td>
                 </tr>
               ) : (
                 categories.map((category) => (
                   <tr key={category.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                       {category.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -65,32 +70,34 @@ export default function CategoriesIndex({ categories }) {
                         <img
                           src={`/storage/${category.image}`}
                           alt={category.name}
-                          className="w-16 h-16 object-cover rounded-lg"
+                          className="h-16 w-16 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-gradient-to-br from-[#53685B] to-[#B77C4C] rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-xl">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-[#53685B] to-[#B77C4C]">
+                          <span className="text-xl font-bold text-white">
                             {category.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
                       {category.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(category.created_at).toLocaleDateString('id-ID')}
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+                      {new Date(category.created_at).toLocaleDateString(
+                        'id-ID'
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                    <td className="space-x-2 px-6 py-4 text-center text-sm font-medium whitespace-nowrap">
                       <Link
                         href={`/admin/categories/${category.id}/edit`}
-                        className="text-[#53685B] hover:text-[#2F3E46] font-semibold"
+                        className="font-semibold text-[#53685B] hover:text-[#2F3E46]"
                       >
                         Edit
                       </Link>
                       <button
                         onClick={() => handleDelete(category.id, category.name)}
-                        className="text-red-600 hover:text-red-900 font-semibold"
+                        className="font-semibold text-red-600 hover:text-red-900"
                       >
                         Delete
                       </button>
