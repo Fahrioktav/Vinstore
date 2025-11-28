@@ -1,12 +1,15 @@
 import { Form, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import {
+  AuthButton,
   AuthErrorMessage,
+  AuthInput,
   AuthLabel,
   AuthLayout,
   AuthLayoutCard,
   AuthLayoutDivider,
   AuthLayoutHeader,
+  AuthTextArea,
 } from '@/components/auth/auth-layout';
 
 export default function RegisterPage() {
@@ -35,12 +38,11 @@ export default function RegisterPage() {
                 {/* {-- Username --} */}
                 <div className="md:col-span-2">
                   <AuthLabel htmlFor="username">Username</AuthLabel>
-                  <input
+                  <AuthInput
                     type="text"
                     name="username"
                     id="username"
                     placeholder="Masukkan username"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
@@ -48,23 +50,21 @@ export default function RegisterPage() {
                 {/* {-- Nama Depan & Belakang --} */}
                 <div>
                   <AuthLabel htmlFor="first_name">Nama Depan</AuthLabel>
-                  <input
+                  <AuthInput
                     type="text"
                     name="first_name"
                     id="first_name"
                     placeholder="Nama depan"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
                 <div>
                   <AuthLabel htmlFor="last_name">Nama Belakang</AuthLabel>
-                  <input
+                  <AuthInput
                     type="text"
                     name="last_name"
                     id="last_name"
                     placeholder="Nama belakang"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
@@ -72,23 +72,21 @@ export default function RegisterPage() {
                 {/* {-- Email & Telepon --} */}
                 <div>
                   <AuthLabel htmlFor="email">Email</AuthLabel>
-                  <input
+                  <AuthInput
                     type="email"
                     name="email"
                     id="email"
                     placeholder="Masukkan email"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
                 <div>
                   <AuthLabel htmlFor="phone">Nomor Telepon</AuthLabel>
-                  <input
+                  <AuthInput
                     type="tel"
                     name="phone"
                     id="phone"
                     placeholder="Masukkan nomor telepon"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
@@ -96,12 +94,11 @@ export default function RegisterPage() {
                 {/* {-- Password & Konfirmasi --} */}
                 <div>
                   <AuthLabel htmlFor="password">Password</AuthLabel>
-                  <input
+                  <AuthInput
                     type="password"
                     name="password"
                     id="password"
                     placeholder="Masukkan password"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
@@ -109,12 +106,11 @@ export default function RegisterPage() {
                   <AuthLabel htmlFor="password_confirmation">
                     Konfirmasi Password
                   </AuthLabel>
-                  <input
+                  <AuthInput
                     type="password"
                     name="password_confirmation"
                     id="password_confirmation"
                     placeholder="Ulangi password"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
                   />
                 </div>
@@ -122,24 +118,18 @@ export default function RegisterPage() {
                 {/* {-- Alamat --} */}
                 <div className="md:col-span-2">
                   <AuthLabel htmlFor="address">Alamat Lengkap</AuthLabel>
-                  <textarea
+                  <AuthTextArea
                     name="address"
                     id="address"
                     rows="3"
                     placeholder="Masukkan alamat lengkap"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                     required
-                  ></textarea>
+                  />
                 </div>
               </div>
 
               {/* {-- Tombol Register --} */}
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
-              >
-                Daftar Sekarang
-              </button>
+              <AuthButton type="submit">Daftar Sekarang</AuthButton>
             </>
           )}
         </Form>

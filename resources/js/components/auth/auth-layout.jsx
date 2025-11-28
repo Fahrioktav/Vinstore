@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { cva } from 'class-variance-authority';
 
 export function AuthLayout({ children, className }) {
   return (
@@ -34,9 +35,14 @@ const DefaultCardStyles = {
     'relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white/95 p-10 shadow-2xl backdrop-blur-md',
 };
 
-export function AuthLayoutCard({ children, type }) {
+export function AuthLayoutCard({ children, type, ...props }) {
   const style = DefaultCardStyles[type] ?? '';
-  return <div className={style}>{children}</div>;
+
+  return (
+    <div className={style} {...props}>
+      {children}
+    </div>
+  );
 }
 
 export function AuthLayoutDivider() {
@@ -46,17 +52,6 @@ export function AuthLayoutDivider() {
       <span className="px-3 text-sm text-gray-500">atau</span>
       <hr className="flex-1 border-gray-300" />
     </div>
-  );
-}
-
-export function AuthLabel({ htmlFor, children }) {
-  return (
-    <label
-      htmlFor={htmlFor}
-      className="mb-1 block text-sm font-semibold text-[#3E2723]"
-    >
-      {children}
-    </label>
   );
 }
 
@@ -71,5 +66,124 @@ export function AuthErrorMessage({ errors, hasErrors }) {
         </ul>
       </div>
     )
+  );
+}
+
+const labelVariants = cva('mb-1 block text-sm font-semibold ', {
+  variants: {
+    variant: {
+      brown: 'text-[#3E2723]',
+      green: '',
+    },
+  },
+  defaultVariants: {
+    variant: 'brown',
+  },
+});
+
+export function AuthLabel({ htmlFor, children, className, variant, ...props }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={cn(labelVariants({ variant, className }))}
+      {...props}
+    >
+      {children}
+    </label>
+  );
+}
+
+const inputVariants = cva(
+  'w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:outline-none',
+  {
+    variants: {
+      variant: {
+        brown: 'focus:ring-[#B77C4C]',
+        green: 'focus:ring-[#E9E19E]',
+      },
+    },
+    defaultVariants: {
+      variant: 'brown',
+    },
+  }
+);
+
+export function AuthInput({
+  id,
+  type,
+  name,
+  className,
+  placeholder,
+  required = false,
+  variant,
+  min,
+  max,
+  step,
+  ...props
+}) {
+  return (
+    <input
+      id={id}
+      type={type}
+      name={name}
+      placeholder={placeholder}
+      className={cn(inputVariants({ variant, className }))}
+      required={required}
+      min={min}
+      step={step}
+      max={max}
+      {...props}
+    />
+  );
+}
+
+export function AuthTextArea({
+  id,
+  name,
+  rows,
+  placeholder,
+  required = false,
+  className,
+  variant,
+  ...props
+}) {
+  return (
+    <textarea
+      id={id}
+      name={name}
+      rows={rows}
+      placeholder={placeholder}
+      className={cn(inputVariants({ variant, className }))}
+      required={required}
+      {...props}
+    />
+  );
+}
+
+// TODO: TERAKHIR SAMPE SINI
+const buttonVariants = cva(
+  'w-full rounded-lg py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer ',
+  {
+    variants: {
+      variant: {
+        brown: 'bg-[#B77C4C] hover:bg-[#9e6538]',
+        green: 'bg-[#53685B] hover:bg-[#3c4a3e]',
+      },
+    },
+    defaultVariants: {
+      variant: 'brown',
+    },
+  }
+);
+
+export function AuthButton({ type = 'submit', className, children, ...props }) {
+  return (
+    <button
+      type={type}
+      className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
+      {...props}
+    >
+      {children}
+    </button>
   );
 }

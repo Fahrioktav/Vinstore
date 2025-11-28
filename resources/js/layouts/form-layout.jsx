@@ -12,6 +12,9 @@ export default function FormLayout({ children, title }) {
       <main className="flex grow flex-col items-center bg-gradient-to-br from-[#2F3E46] via-[#354F52] to-[#B77C4C] bg-cover bg-fixed bg-center">
         {children}
       </main>
+      {/* <main className="flex grow flex-col items-center bg-red-500">
+        {children}
+      </main> */}
       <Footer />
     </div>
   );

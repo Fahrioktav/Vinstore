@@ -17,7 +17,14 @@ import {
 } from '@tanstack/react-table';
 import React from 'react';
 
-export function DataTable({ data, columns, headerClassName }) {
+export function DataTable({
+  data,
+  columns,
+  headerClassName,
+  fallback = 'No results.',
+  bordered = true,
+  rounded = true,
+}) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -43,7 +50,13 @@ export function DataTable({ data, columns, headerClassName }) {
   });
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div
+      className={cn(
+        'overflow-hidden',
+        bordered && 'border',
+        rounded && 'rounded-md'
+      )}
+    >
       <Table>
         <TableHeader className={cn('bg-[#53685B] text-white', headerClassName)}>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -82,15 +95,16 @@ export function DataTable({ data, columns, headerClassName }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+              <TableCell
+                colSpan={columns.length}
+                className="text-muted-foreground h-24 text-center"
+              >
+                {fallback}
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
-
-      <pre>{JSON.stringify(rowSelection, null, 2)}</pre>
     </div>
   );
 }

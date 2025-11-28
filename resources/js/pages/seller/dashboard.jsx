@@ -25,24 +25,7 @@ export default function SellerDashboard() {
     }
   };
 
-  const productColumns = React.useMemo(
-    () =>
-      getProductColumns({
-        products,
-        handleSelectProduct,
-        handleSelectAll,
-        selectedProducts,
-        setSelectedProducts,
-      }),
-    [
-      products,
-      getProductColumns,
-      handleSelectProduct,
-      handleSelectAll,
-      selectedProducts,
-      setSelectedProducts,
-    ]
-  );
+  const productColumns = React.useMemo(() => getProductColumns(), []);
 
   return (
     <>
@@ -160,6 +143,9 @@ export default function SellerDashboard() {
             data={products}
             columns={productColumns}
             headerClassName="bg-gray-200 text-black"
+            fallback="📦 Belum ada produk"
+            bordered={false}
+            rounded={false}
           />
         </div>
 
