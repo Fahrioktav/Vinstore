@@ -26,20 +26,28 @@ use Inertia\Inertia;
 
 Route::prefix('inertia')->name('inertia.')->group(function () {
     Route::get('/', function () {
+        $products = Product::latest()->take(6)->get();
+        $categories = \App\Models\Category::all();
+        
         // Redirect berdasarkan role jika sudah login
         if (Auth::check()) {
             $user = Auth::user();
             if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('inertia.admin.dashboard');
             } elseif ($user->role === 'seller') {
                 return redirect()->route('seller.dashboard');
             }
-            // User biasa tetap ke home
+            // User biasa ke home
+            return Inertia::render('home', [
+                'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
+                'showSearch' => true,
+                'products' => $products,
+                'categories' => $categories,
+            ]);
         }
         
-        $products = Product::latest()->take(6)->get();
-        $categories = \App\Models\Category::all();
-        return Inertia::render('home', [
+        // User yang belum login ke user/index
+        return Inertia::render('user/index', [
             'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
             'showSearch' => true,
             'products' => $products,
@@ -105,6 +113,9 @@ Route::prefix('inertia')->name('inertia.')->group(function () {
             return Inertia::render('profile/edit', compact('user', 'sessions'));
         })->name('profile.edit');
         Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+        // Dashboard Admin (React)
+        Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     });
 });
 
@@ -115,23 +126,8 @@ Route::prefix('inertia')->name('inertia.')->group(function () {
 */
 
 Route::get('/', function () {
-    // Redirect berdasarkan role jika sudah login
-    if (Auth::check()) {
-        $user = Auth::user();
-        if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        } elseif ($user->role === 'seller') {
-            return redirect()->route('seller.dashboard');
-        }
-        // User biasa tetap ke home
-    }
-    
-    $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
-    return view('home', [
-        'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
-        'showSearch' => true,
-        'products' => $products
-    ]);
+    // Redirect ke /inertia yang sudah menggunakan React
+    return redirect('/inertia');
 });
 
 Route::get('/items', fn() => view('items', [
@@ -151,15 +147,13 @@ Route::get('/contact', fn() => view('contact', [
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
-Route::get('/register', fn() => view('register', [
-    'heroText' => 'Halo!, Selamat Datang di VINSTORE'
-]))->name('register.form');
+// Redirect ke Inertia register
+Route::get('/register', fn() => redirect('/inertia/register'))->name('register.form');
 
 Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
 
-Route::get('/login', fn() => view('login', [
-    'heroText' => 'Selamat Datang Kembali!'
-]))->name('login.form');
+// Redirect ke Inertia login
+Route::get('/login', fn() => redirect('/inertia/login'))->name('login.form');
 
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 
@@ -187,9 +181,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard Seller
     Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
-
-    // Dashboard Admin
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Produk - CRUD
     Route::get('/products/create', fn() => view('seller.add_product'))->name('products.create');

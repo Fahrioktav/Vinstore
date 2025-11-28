@@ -11,7 +11,7 @@ class AdminController extends Controller
 {
     public function index()
     {
-        return view('admin.dashboard');
+        return view('inertia.admin.dashboard');
     }
 
     public function users()

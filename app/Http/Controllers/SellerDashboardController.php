@@ -16,6 +16,11 @@ class SellerDashboardController extends Controller
         $user = Auth::user();
         $store = $user->store;
 
+        // Jika seller belum punya toko, redirect ke halaman registrasi toko
+        if (!$store) {
+            return redirect()->route('store.register')->with('error', 'Anda harus mendaftarkan toko terlebih dahulu');
+        }
+
         // Ambil semua produk milik toko seller
         $products = $store->products()->latest()->get();
 

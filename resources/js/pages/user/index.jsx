@@ -1,14 +1,14 @@
 import { Link, usePage } from '@inertiajs/react';
-import { formatIDR } from '../lib/utils';
-import MainLayout from '../layouts/main-layout';
+import { formatIDR } from '../../lib/utils';
+import MainLayout from '../../layouts/main-layout';
 
-export default function HomePage() {
+export default function UserIndex() {
   const { heroText, showSearch, products = [], categories = [], auth } = usePage().props;
 
   return (
     <>
       {/* HERO SECTION */}
-      <section className="font-poppins relative -mt-[72px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
+      <section className="font-poppins relative -mt-[80px] flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
           {/* LEFT TEXT */}
           <div className="md:w-1/2">
@@ -21,10 +21,10 @@ export default function HomePage() {
               hingga konsol legendaris.
             </p>
             <Link
-              href="/inertia/toko"
+              href="/inertia/login"
               className="mt-8 inline-block rounded-lg bg-[#B77C4C] px-8 py-3 font-semibold text-white transition hover:bg-[#a16c3e]"
             >
-              Jelajahi Sekarang
+              Login untuk Mulai Belanja
             </Link>
           </div>
 
@@ -83,10 +83,10 @@ export default function HomePage() {
             Barang Paling Populer
           </h2>
           <Link
-            href="/inertia/products"
+            href="/inertia/login"
             className="text-[#B77C4C] hover:underline"
           >
-            Lihat Semua
+            Login untuk Lihat Semua
           </Link>
         </div>
 
@@ -100,8 +100,8 @@ export default function HomePage() {
                 <div className="relative">
                   <img
                     src={product.image || '/assets/products/default.jpg'}
+                    className="mb-4 h-48 w-full rounded-md object-cover"
                     alt={product.name}
-                    className="mb-4 h-48 w-full rounded-md object-contain"
                   />
                   <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
                     Antik
@@ -122,9 +122,9 @@ export default function HomePage() {
                     {formatIDR(product.price)}
                   </span>
 
-                  <Link href={`/inertia/checkout/show/${product.id}`}>
+                  <Link href="/inertia/login">
                     <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
-                      Order Now
+                      Login untuk Order
                     </button>
                   </Link>
                 </div>
@@ -143,8 +143,7 @@ export default function HomePage() {
             Rekomendasi Untukmu
           </h2>
           <p className="mb-10 text-gray-700">
-            Berdasarkan minatmu, kami pilihkan produk antik yang mungkin kamu
-            suka.
+            Berdasarkan minatmu, kami pilihkan produk antik yang mungkin kamu suka.
           </p>
 
           <div className="flex flex-wrap justify-center gap-6">
@@ -155,8 +154,8 @@ export default function HomePage() {
               >
                 <img
                   src={recommendation.image || '/assets/products/default.jpg'}
-                  alt={recommendation.name}
                   className="mb-3 h-40 w-full rounded-md object-contain"
+                  alt={recommendation.name}
                 />
                 <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
                   {recommendation.name}
@@ -167,10 +166,19 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+          
+          <Link
+            href="/inertia/login"
+            className="mt-8 inline-block rounded-lg bg-[#53685B] px-8 py-3 font-semibold text-white transition hover:bg-[#2F3E46]"
+          >
+            Login untuk Belanja
+          </Link>
         </div>
       </section>
+
+      <div className="mt-20"></div>
     </>
   );
 }
 
-HomePage.layout = (page) => <MainLayout title="Home">{page}</MainLayout>;
+UserIndex.layout = (page) => <MainLayout title="Welcome">{page}</MainLayout>;

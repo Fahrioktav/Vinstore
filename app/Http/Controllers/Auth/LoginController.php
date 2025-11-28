@@ -30,11 +30,11 @@ class LoginController extends Controller
 
             // Cek role user untuk redirect ke dashboard yang sesuai
             if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('inertia.admin.dashboard');
             } elseif ($user->role === 'seller') {
                 return redirect()->route('seller.dashboard');
             } else {
-                return redirect()->intended('/');
+                return redirect()->intended('/inertia');
             }
         }
 
