@@ -1,17 +1,18 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { UserIcon } from './icons';
+import { UserIcon } from '../icons';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-} from './ui/dropdown-menu';
+} from '../ui/dropdown-menu';
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 const links = [
   { label: 'Home', href: '/', requireAuth: false },
   { label: 'Toko', href: '/toko', requireAuth: false },
+  { label: 'Produk', href: '/products', requireAuth: false },
   { label: 'Order', href: '/order', requireAuth: true },
   { label: 'Contact', href: '/contact', requireAuth: false },
 ];

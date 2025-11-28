@@ -1,9 +1,9 @@
-import { Form, usePage } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 
 export default function ProductsPage() {
-  const { paginatedProducts } = usePage().props;
+  const { user, paginatedProducts } = usePage().props;
   const products = paginatedProducts.data;
 
   return (
@@ -31,14 +31,23 @@ export default function ProductsPage() {
                   <span className="font-bold text-[#B77C4C]">
                     {formatIDR(product.price)}
                   </span>
-                  <Form action={`/checkout/show/${product.id}`} method="GET">
-                    <button
-                      type="submit"
+                  {user ? (
+                    <Form action={`/checkout/show/${product.id}`} method="GET">
+                      <button
+                        type="submit"
+                        className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm text-white hover:bg-[#a0683d]"
+                      >
+                        Order
+                      </button>
+                    </Form>
+                  ) : (
+                    <Link
+                      href="/login"
                       className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm text-white hover:bg-[#a0683d]"
                     >
                       Order
-                    </button>
-                  </Form>
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
