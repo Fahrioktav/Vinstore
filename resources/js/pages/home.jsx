@@ -125,9 +125,7 @@ export default function HomePage() {
                       {formatIDR(product.price)}
                     </span>
 
-                    <Link
-                      href={user ? `/checkout/show/${product.id}` : `/login`}
-                    >
+                    <Link href={`/checkout/show/${product.id}`}>
                       <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
                         Order
                       </button>

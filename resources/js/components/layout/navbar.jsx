@@ -70,11 +70,11 @@ export default function Navbar() {
         </Link>
 
         {/* {-- MENU UTAMA --} */}
-        <ul className="hidden items-center gap-10 text-sm font-semibold text-white md:flex">
+        <ul className="hidden items-center gap-5 text-sm font-semibold text-white transition-all md:flex lg:gap-10">
           {links.map((link) => (
             <li key={link.label}>
               <Link
-                href={link.requireAuth && !user ? '/login' : link.href}
+                href={link.href}
                 className="transition hover:text-[#E9E19E]"
                 preserveScroll={url === link.href}
               >

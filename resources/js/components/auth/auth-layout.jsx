@@ -1,7 +1,11 @@
 import { cn } from '@/lib/utils';
+import { router, usePage } from '@inertiajs/react';
 import { cva } from 'class-variance-authority';
 
 export function AuthLayout({ children, className }) {
+  const { user } = usePage().props;
+  if (user) router.visit('/');
+
   return (
     <div
       className={cn(
@@ -77,7 +81,7 @@ const labelVariants = cva('mb-1 block text-sm font-semibold ', {
     },
   },
   defaultVariants: {
-    variant: 'brown',
+    variant: 'green',
   },
 });
 
@@ -103,7 +107,7 @@ const inputVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'brown',
+      variant: 'green',
     },
   }
 );
@@ -162,25 +166,31 @@ export function AuthTextArea({
 
 // TODO: TERAKHIR SAMPE SINI
 const buttonVariants = cva(
-  'w-full rounded-lg py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer ',
+  'px-6 rounded-lg py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer ',
   {
     variants: {
       variant: {
         brown: 'bg-[#B77C4C] hover:bg-[#9e6538]',
-        green: 'bg-[#53685B] hover:bg-[#3c4a3e]',
+        green: 'bg-green-600 hover:bg-green-700',
       },
     },
     defaultVariants: {
-      variant: 'brown',
+      variant: 'green',
     },
   }
 );
 
-export function AuthButton({ type = 'submit', className, children, ...props }) {
+export function AuthButton({
+  type = 'submit',
+  className,
+  children,
+  variant,
+  ...props
+}) {
   return (
     <button
       type={type}
-      className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
+      className={cn(buttonVariants({ variant }), className)}
       {...props}
     >
       {children}

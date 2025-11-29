@@ -31,23 +31,15 @@ export default function ProductsPage() {
                   <span className="font-bold text-[#B77C4C]">
                     {formatIDR(product.price)}
                   </span>
-                  {user ? (
-                    <Form action={`/checkout/show/${product.id}`} method="GET">
-                      <button
-                        type="submit"
-                        className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm text-white hover:bg-[#a0683d]"
-                      >
-                        Order
-                      </button>
-                    </Form>
-                  ) : (
-                    <Link
-                      href="/login"
+
+                  <Link href={`/checkout/show/${product.id}`}>
+                    <button
+                      type="submit"
                       className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm text-white hover:bg-[#a0683d]"
                     >
                       Order
-                    </Link>
-                  )}
+                    </button>
+                  </Link>
                 </div>
               </div>
             ))}
