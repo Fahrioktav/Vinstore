@@ -1,13 +1,11 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import React from 'react';
+import { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
-import { DataTable } from '@/components/data-table/data-table';
-import { Button } from '@/components/ui/button';
 
 export default function SellerDashboard() {
   const { products, orders, productCount, orderCount, store } = usePage().props;
-  const [selectedProducts, setSelectedProducts] = React.useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   const handleSelectProduct = (productId) => {
     setSelectedProducts((prev) =>
@@ -24,8 +22,6 @@ export default function SellerDashboard() {
       setSelectedProducts([]);
     }
   };
-
-  const productColumns = React.useMemo(() => getProductColumns(), []);
 
   return (
     <>
@@ -138,180 +134,90 @@ export default function SellerDashboard() {
               </tbody>
             </table>
           </div>
-
-          <DataTable
-            data={products}
-            columns={productColumns}
-            headerClassName="bg-gray-200 text-black"
-            fallback="📦 Belum ada produk"
-            bordered={false}
-            rounded={false}
-          />
         </div>
-
-        <pre>{JSON.stringify(products, null, 2)}</pre>
-        <pre>{JSON.stringify(orders, null, 2)}</pre>
-        {/* <DemoTable data={products} columns={columns} /> */}
       </div>
     </>
   );
 }
 
-function getProductColumns() {
-  return [
-    {
-      id: 'selections',
-      header: ({ table }) => {
-        return (
-          <input
-            type="checkbox"
-            checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected().toString()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-          />
-        );
-      },
-      cell: ({ row }) => {
-        return (
-          <input
-            type="checkbox"
-            checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
-          />
-        );
-      },
-    },
-    {
-      accessorKey: 'image',
-      header: () => {
-        return <span>Foto</span>;
-      },
-      cell: ({ row }) => {
-        const product = row.original;
+function OrderRow({ order }) {
+  const { post, data, setData, processing } = useForm({
+    status: order.status,
+  });
 
-        return product.image ? (
-          <img
-            src={`/${product.image}`}
-            alt={product.name}
-            className="h-16 w-16 rounded-lg object-cover"
-          />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200 text-gray-400">
-            📷
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'name',
-      header: () => {
-        return <span>Nama</span>;
-      },
-      cell: ({ row }) => {
-        return <span className="font-semibold">{row.original.name}</span>;
-      },
-    },
-    {
-      accessorKey: 'stock',
-      header: () => {
-        return <span>Stok</span>;
-      },
-      cell: ({ row }) => {
-        return (
-          <form
-            // onSubmit={handleStockUpdate}
-            className="flex items-center justify-center gap-2"
-          >
-            <input
-              type="number"
-              defaultValue={row.original.stock}
-              onChange={(e) => setData('stock', e.target.value)}
-              min="0"
-              className="w-16 rounded border border-gray-300 px-2 py-1 text-center text-sm"
-              // disabled={processing}
-            />
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              type="submit"
-              // disabled={processing}
-              className="text-green-600 hover:text-green-800"
-            >
-              ✓
-            </Button>
-          </form>
-        );
-      },
-    },
-    {
-      accessorKey: 'price',
-      header: () => {
-        return <span>Harga</span>;
-      },
-      cell: ({ row }) => {
-        return (
-          <span className="font-semibold text-[#53685B]">
-            {formatIDR(row.original.price)}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'category',
-      header: () => {
-        return <span>Kategori</span>;
-      },
-      cell: ({ row }) => {
-        return (
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
-            {row.original.category}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'description',
-      header: () => {
-        return <span>Deskripsi</span>;
-      },
-      cell: ({ row }) => {
-        const product = row.original;
+  const handleStatusChange = (e) => {
+    const newStatus = e.target.value;
+    setData('status', newStatus);
+    post(`/orders/${order.id}/status`, {
+      preserveScroll: true,
+    });
+  };
 
-        return (
-          <span className="text-xs text-gray-600">
-            {product.description?.substring(0, 40)}
-            {product.description?.length > 40 ? '...' : ''}
-          </span>
-        );
-      },
-    },
-    {
-      id: 'actions',
-      header: () => {
-        return <span className="flex justify-center">Action</span>;
-      },
-      cell: ({ row }) => {
-        const product = row.original;
+  const handleDelete = () => {
+    if (confirm('Yakin ingin menghapus order ini?')) {
+      post(`/orders/${order.id}`, {
+        _method: 'DELETE',
+        preserveScroll: true,
+      });
+    }
+  };
 
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <Button size="icon-sm" variant="ghost" asChild>
-              <Link href={`/products/${product.id}/edit`}>✏️</Link>
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              // onClick={handleDelete}
-              className="hover:cursor-pointer"
-              // disabled={processing}
-            >
-              🗑️
-            </Button>
-          </div>
-        );
-      },
-    },
-  ];
+  const statusColors = {
+    Waiting: 'bg-yellow-100 text-yellow-700',
+    'On The Way': 'bg-blue-100 text-blue-700',
+    Processing: 'bg-blue-100 text-blue-700',
+    Delivered: 'bg-green-100 text-green-700',
+    Completed: 'bg-green-100 text-green-700',
+    Cancelled: 'bg-red-100 text-red-700',
+  };
+
+  return (
+    <tr className="border-t hover:bg-gray-50">
+      <td className="px-4 py-3">
+        <p className="font-semibold">
+          {order.user.first_name} {order.user.last_name}
+        </p>
+        <p className="text-xs text-gray-500">{order.user.email}</p>
+      </td>
+      <td className="px-4 py-3">{order.product.name}</td>
+      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
+      <td className="px-4 py-3 font-bold text-[#53685B]">
+        {formatIDR(order.price)}
+      </td>
+      <td className="px-4 py-3">
+        <select
+          value={data.status}
+          onChange={handleStatusChange}
+          disabled={processing}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[data.status] || 'bg-gray-100 text-gray-700'}`}
+        >
+          <option value="Waiting">⏳ Waiting</option>
+          <option value="Processing">🔄 Processing</option>
+          <option value="On The Way">🚚 On The Way</option>
+          <option value="Delivered">✅ Delivered</option>
+          <option value="Cancelled">❌ Cancelled</option>
+        </select>
+      </td>
+      <td className="px-4 py-3 text-xs text-gray-600">
+        {new Date(order.created_at).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </td>
+      <td className="px-4 py-3 text-center">
+        <button
+          onClick={handleDelete}
+          className="text-red-600 transition hover:text-red-800"
+          disabled={processing}
+        >
+          🗑️
+        </button>
+      </td>
+    </tr>
+  );
 }
 
 function ProductRow({ product, isSelected, onSelect }) {
@@ -409,86 +315,6 @@ function ProductRow({ product, isSelected, onSelect }) {
             🗑️
           </button>
         </div>
-      </td>
-    </tr>
-  );
-}
-
-function OrderRow({ order }) {
-  const { post, data, setData, processing } = useForm({
-    status: order.status,
-  });
-
-  const handleStatusChange = (e) => {
-    const newStatus = e.target.value;
-    setData('status', newStatus);
-    post(`/orders/${order.id}/status`, {
-      preserveScroll: true,
-    });
-  };
-
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus order ini?')) {
-      post(`/orders/${order.id}`, {
-        _method: 'DELETE',
-        preserveScroll: true,
-      });
-    }
-  };
-
-  const statusColors = {
-    Waiting: 'bg-yellow-100 text-yellow-700',
-    'On The Way': 'bg-blue-100 text-blue-700',
-    Processing: 'bg-blue-100 text-blue-700',
-    Delivered: 'bg-green-100 text-green-700',
-    Completed: 'bg-green-100 text-green-700',
-    Cancelled: 'bg-red-100 text-red-700',
-  };
-
-  return (
-    <tr className="border-t hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <p className="font-semibold">
-          {order.user.first_name} {order.user.last_name}
-        </p>
-        <p className="text-xs text-gray-500">{order.user.email}</p>
-      </td>
-      <td className="px-4 py-3">{order.product.name}</td>
-      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
-      <td className="px-4 py-3 font-bold text-[#53685B]">
-        {formatIDR(order.price)}
-      </td>
-      <td className="px-4 py-3">
-        <select
-          value={data.status}
-          onChange={handleStatusChange}
-          disabled={processing}
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[data.status] || 'bg-gray-100 text-gray-700'}`}
-        >
-          <option value="Waiting">⏳ Waiting</option>
-          <option value="Processing">🔄 Processing</option>
-          <option value="On The Way">🚚 On The Way</option>
-          <option value="Delivered">✅ Delivered</option>
-          <option value="Cancelled">❌ Cancelled</option>
-        </select>
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-600">
-        {new Date(order.created_at).toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </td>
-      <td className="px-4 py-3 text-center">
-        <button
-          onClick={handleDelete}
-          className="text-red-600 transition hover:text-red-800"
-          disabled={processing}
-        >
-          🗑️
-        </button>
       </td>
     </tr>
   );
