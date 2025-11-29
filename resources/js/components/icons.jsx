@@ -36,25 +36,6 @@ export function MailIcon() {
   );
 }
 
-export function Mapicon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="1.5"
-      stroke="currentColor"
-      className="'.$class.'"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M9 20l-5.447-2.724A2.25 2.25 0 013 15.26V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v10.01a2.25 2.25 0 01-1.553 2.136L15 20l-6-2.727z"
-      />
-    </svg>
-  );
-}
-
 export function SearchIcon() {
   return (
     <svg

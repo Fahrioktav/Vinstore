@@ -103,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
+    Route::patch('/products/{id}', [ProductController::class, 'updateStock'])->name('products.updateStock');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
     // Order Status & Delete

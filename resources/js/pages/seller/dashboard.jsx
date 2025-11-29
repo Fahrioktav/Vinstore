@@ -1,11 +1,22 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import React from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function SellerDashboard() {
-  const { products, orders, productCount, orderCount, store } = usePage().props;
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const { products, orders, productCount, orderCount, flash } = usePage().props;
+
+  if (flash?.success) {
+    toast.success(flash.success);
+  }
+
+  if (flash?.error) {
+    toast.error(flash.error);
+  }
+
+  const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   const handleSelectProduct = (productId) => {
     setSelectedProducts((prev) =>
@@ -25,7 +36,6 @@ export default function SellerDashboard() {
 
   return (
     <>
-      <Head title="Seller Dashboard" />
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header Stats */}
         <div className="mb-8 grid gap-6 md:grid-cols-2">
@@ -84,12 +94,14 @@ export default function SellerDashboard() {
             <h2 className="text-2xl font-bold text-[#53685B]">
               🛍️ Daftar Barang
             </h2>
-            <Link
-              href="/products/create"
-              className="rounded-lg bg-[#53685B] px-6 py-2 font-semibold text-white transition hover:bg-[#3c4a3e]"
-            >
-              + Add Barang
-            </Link>
+            <button>
+              <Link
+                href="/products/create"
+                className="rounded-lg bg-[#53685B] px-6 py-2 font-semibold text-white transition hover:bg-[#3c4a3e]"
+              >
+                + Add Barang
+              </Link>
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -137,6 +149,115 @@ export default function SellerDashboard() {
         </div>
       </div>
     </>
+  );
+}
+function ProductRow({ product, isSelected, onSelect }) {
+  const {
+    patch,
+    delete: destroy,
+    data,
+    setData,
+    processing,
+  } = useForm({
+    ...product,
+  });
+
+  const handleStockUpdate = (e) => {
+    e.preventDefault();
+    patch(`/products/${product.id}`, {
+      preserveScroll: true,
+    });
+  };
+
+  const handleDelete = () => {
+    if (confirm('Yakin ingin menghapus produk ini?')) {
+      destroy(`/products/${product.id}`, {
+        preserveScroll: true,
+      });
+    }
+  };
+
+  return (
+    <tr className="border-t hover:bg-gray-50">
+      <td className="px-4 py-3 text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onSelect(product.id)}
+        />
+      </td>
+      <td className="px-4 py-3">
+        {product.image ? (
+          <img
+            src={`/${product.image}`}
+            alt={product.name}
+            className="h-16 w-16 rounded-lg object-cover"
+          />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200 text-gray-400">
+            📷
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-3 font-semibold">{product.name}</td>
+      <td className="px-4 py-3">
+        <form
+          onSubmit={handleStockUpdate}
+          className="flex items-center justify-center gap-2"
+        >
+          <input
+            type="number"
+            value={data.stock}
+            onChange={(e) => setData('stock', e.target.value)}
+            min="0"
+            className="w-16 rounded border border-gray-300 px-2 py-1 text-center text-sm"
+            disabled={processing}
+          />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            type="submit"
+            disabled={processing}
+            className="text-green-600 hover:text-green-800"
+          >
+            ✓
+          </Button>
+        </form>
+      </td>
+      <td className="px-4 py-3 font-semibold text-[#53685B]">
+        {formatIDR(product.price)}
+      </td>
+      <td className="px-4 py-3">
+        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
+          {product.category}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-xs text-gray-600">
+        {product.description?.substring(0, 40)}
+        {product.description?.length > 40 ? '...' : ''}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="ghost" size="icon-sm" asChild>
+            <Link
+              href={`/products/${product.id}/edit`}
+              className="text-blue-600 transition hover:text-blue-800"
+            >
+              ✏️
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleDelete}
+            className="text-red-600 transition hover:text-red-800"
+            disabled={processing}
+          >
+            🗑️
+          </Button>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -208,113 +329,15 @@ function OrderRow({ order }) {
         })}
       </td>
       <td className="px-4 py-3 text-center">
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleDelete}
           className="text-red-600 transition hover:text-red-800"
           disabled={processing}
         >
           🗑️
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function ProductRow({ product, isSelected, onSelect }) {
-  const { post, data, setData, processing } = useForm({
-    stock: product.stock,
-  });
-
-  const handleStockUpdate = (e) => {
-    e.preventDefault();
-    post(`/products/${product.id}`, {
-      _method: 'PUT',
-      preserveScroll: true,
-    });
-  };
-
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus produk ini?')) {
-      post(`/products/${product.id}`, {
-        _method: 'DELETE',
-        preserveScroll: true,
-      });
-    }
-  };
-
-  return (
-    <tr className="border-t hover:bg-gray-50">
-      <td className="px-4 py-3 text-center">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onSelect(product.id)}
-        />
-      </td>
-      <td className="px-4 py-3">
-        {product.image ? (
-          <img
-            src={`/${product.image}`}
-            alt={product.name}
-            className="h-16 w-16 rounded-lg object-cover"
-          />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200 text-gray-400">
-            📷
-          </div>
-        )}
-      </td>
-      <td className="px-4 py-3 font-semibold">{product.name}</td>
-      <td className="px-4 py-3">
-        <form
-          onSubmit={handleStockUpdate}
-          className="flex items-center justify-center gap-2"
-        >
-          <input
-            type="number"
-            value={data.stock}
-            onChange={(e) => setData('stock', e.target.value)}
-            min="0"
-            className="w-16 rounded border border-gray-300 px-2 py-1 text-center text-sm"
-            disabled={processing}
-          />
-          <button
-            type="submit"
-            disabled={processing}
-            className="text-green-600 hover:text-green-800"
-          >
-            ✓
-          </button>
-        </form>
-      </td>
-      <td className="px-4 py-3 font-semibold text-[#53685B]">
-        {formatIDR(product.price)}
-      </td>
-      <td className="px-4 py-3">
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
-          {product.category}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-600">
-        {product.description?.substring(0, 40)}
-        {product.description?.length > 40 ? '...' : ''}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center justify-center gap-2">
-          <Link
-            href={`/products/${product.id}/edit`}
-            className="text-blue-600 transition hover:text-blue-800"
-          >
-            ✏️
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="text-red-600 transition hover:text-red-800"
-            disabled={processing}
-          >
-            🗑️
-          </button>
-        </div>
+        </Button>
       </td>
     </tr>
   );

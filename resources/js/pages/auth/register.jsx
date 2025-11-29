@@ -1,4 +1,4 @@
-import { Form, Link } from '@inertiajs/react';
+import { Form, Link, router, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import {
   AuthButton,
@@ -13,6 +13,9 @@ import {
 } from '@/components/auth/auth-layout';
 
 export default function RegisterPage() {
+  const { user } = usePage().props;
+  if (user) router.visit('/');
+
   return (
     <AuthLayout>
       <AuthLayoutCard type="register">
@@ -37,8 +40,11 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* {-- Username --} */}
                 <div className="md:col-span-2">
-                  <AuthLabel htmlFor="username">Username</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="username">
+                    Username
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="text"
                     name="username"
                     id="username"
@@ -49,8 +55,11 @@ export default function RegisterPage() {
 
                 {/* {-- Nama Depan & Belakang --} */}
                 <div>
-                  <AuthLabel htmlFor="first_name">Nama Depan</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="first_name">
+                    Nama Depan
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="text"
                     name="first_name"
                     id="first_name"
@@ -59,8 +68,11 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <AuthLabel htmlFor="last_name">Nama Belakang</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="last_name">
+                    Nama Belakang
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="text"
                     name="last_name"
                     id="last_name"
@@ -71,8 +83,11 @@ export default function RegisterPage() {
 
                 {/* {-- Email & Telepon --} */}
                 <div>
-                  <AuthLabel htmlFor="email">Email</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="email">
+                    Email
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="email"
                     name="email"
                     id="email"
@@ -81,8 +96,11 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <AuthLabel htmlFor="phone">Nomor Telepon</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="phone">
+                    Nomor Telepon
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="tel"
                     name="phone"
                     id="phone"
@@ -93,8 +111,11 @@ export default function RegisterPage() {
 
                 {/* {-- Password & Konfirmasi --} */}
                 <div>
-                  <AuthLabel htmlFor="password">Password</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="password">
+                    Password
+                  </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="password"
                     name="password"
                     id="password"
@@ -103,10 +124,11 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <AuthLabel htmlFor="password_confirmation">
+                  <AuthLabel variant="brown" htmlFor="password_confirmation">
                     Konfirmasi Password
                   </AuthLabel>
                   <AuthInput
+                    variant="brown"
                     type="password"
                     name="password_confirmation"
                     id="password_confirmation"
@@ -117,7 +139,9 @@ export default function RegisterPage() {
 
                 {/* {-- Alamat --} */}
                 <div className="md:col-span-2">
-                  <AuthLabel htmlFor="address">Alamat Lengkap</AuthLabel>
+                  <AuthLabel variant="brown" htmlFor="address">
+                    Alamat Lengkap
+                  </AuthLabel>
                   <AuthTextArea
                     name="address"
                     id="address"
@@ -129,7 +153,9 @@ export default function RegisterPage() {
               </div>
 
               {/* {-- Tombol Register --} */}
-              <AuthButton type="submit">Daftar Sekarang</AuthButton>
+              <AuthButton variant="brown" type="submit" className="w-full">
+                Daftar Sekarang
+              </AuthButton>
             </>
           )}
         </Form>

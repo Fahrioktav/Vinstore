@@ -2,6 +2,7 @@ import { Form, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
+  AuthButton,
   AuthInput,
   AuthLabel,
   AuthTextArea,
@@ -14,7 +15,7 @@ export default function SellerCreateProductPage() {
     <section className="flex max-w-4xl grow px-6 py-8">
       <Card className="my-auto shadow-md transition hover:shadow-lg">
         <CardContent>
-          <h2 className="font-poppins mb-6 text-2xl font-bold text-[#3E2723]">
+          <h2 className="font-poppins mb-6 text-2xl font-bold">
             Tambah Produk
           </h2>
 
@@ -53,91 +54,63 @@ export default function SellerCreateProductPage() {
                 )}
 
                 <div>
-                  <AuthLabel variant="green" htmlFor="name">
-                    Nama Produk
-                  </AuthLabel>
-                  <AuthInput
-                    id="name"
-                    type="text"
-                    name="name"
-                    required
-                    variant="green"
-                  />
+                  <AuthLabel htmlFor="name">Nama Produk</AuthLabel>
+                  <AuthInput id="name" type="text" name="name" required />
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <AuthLabel variant="green" htmlFor="stock">
-                      Stok
-                    </AuthLabel>
+                    <AuthLabel htmlFor="stock">Stok</AuthLabel>
                     <AuthInput
                       id="stock"
                       type="number"
                       name="stock"
                       required
-                      variant="green"
                       min="0"
                     />
                   </div>
                   <div>
-                    <AuthLabel variant="green" htmlFor="price">
-                      Harga
-                    </AuthLabel>
+                    <AuthLabel htmlFor="price">Harga</AuthLabel>
                     <AuthInput
                       id="price"
                       type="number"
                       step="0.01"
                       name="price"
                       required
-                      variant="green"
                       min="0"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <AuthLabel variant="green" htmlFor="category">
-                    Kategori
-                  </AuthLabel>
+                  <AuthLabel htmlFor="category">Kategori</AuthLabel>
                   <AuthInput
                     id="category"
                     type="text"
                     name="category"
                     required
-                    variant="green"
                   />
                 </div>
                 <div>
-                  <AuthLabel variant="green" htmlFor="description">
-                    Deskripsi
-                  </AuthLabel>
+                  <AuthLabel htmlFor="description">Deskripsi</AuthLabel>
                   <AuthTextArea
                     id="description"
                     name="description"
                     rows="4"
                     required
-                    variant="green"
                   />
                 </div>
                 <div>
-                  <AuthLabel variant="green" htmlFor="image">
-                    Gambar Produk
-                  </AuthLabel>
+                  <AuthLabel htmlFor="image">Gambar Produk</AuthLabel>
                   <AuthInput
                     id="image"
                     type="file"
                     name="image"
                     accept="image/*"
-                    variant="green"
                   />
                 </div>
                 <div className="text-right">
-                  <button
-                    type="submit"
-                    className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e]"
-                  >
-                    Simpan Produk
-                  </button>
+                  <AuthButton type="submit">Simpan Produk</AuthButton>
                 </div>
               </>
             )}

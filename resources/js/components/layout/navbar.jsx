@@ -1,17 +1,18 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { UserIcon } from './icons';
+import { UserIcon } from '../icons';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-} from './ui/dropdown-menu';
+} from '../ui/dropdown-menu';
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 const links = [
   { label: 'Home', href: '/', requireAuth: false },
   { label: 'Toko', href: '/toko', requireAuth: false },
+  { label: 'Produk', href: '/products', requireAuth: false },
   { label: 'Order', href: '/order', requireAuth: true },
   { label: 'Contact', href: '/contact', requireAuth: false },
 ];
@@ -69,11 +70,11 @@ export default function Navbar() {
         </Link>
 
         {/* {-- MENU UTAMA --} */}
-        <ul className="hidden items-center gap-10 text-sm font-semibold text-white md:flex">
+        <ul className="hidden items-center gap-5 text-sm font-semibold text-white transition-all md:flex lg:gap-10">
           {links.map((link) => (
             <li key={link.label}>
               <Link
-                href={link.requireAuth && !user ? '/login' : link.href}
+                href={link.href}
                 className="transition hover:text-[#E9E19E]"
                 preserveScroll={url === link.href}
               >

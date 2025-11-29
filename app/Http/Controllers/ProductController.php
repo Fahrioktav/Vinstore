@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -46,7 +47,7 @@ class ProductController extends Controller
             'image' => $imagePath
         ]);
 
-        return back()->with('success', 'Produk berhasil ditambahkan.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil ditambahkan.');
     }
 
     public function update(Request $request, $id)
@@ -82,7 +83,27 @@ class ProductController extends Controller
         $product->description = $request->description;
         $product->save();
 
-        return back()->with('success', 'Produk berhasil diperbarui.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');
+    }
+
+    public function updateStock(Request $request, $id) {
+        $validator = Validator::make($request->all(), [
+            'stock' => 'required|integer',
+        ]);
+        
+        if ($validator->fails()) {
+            return back()->with('error', $validator->errors());
+        }
+
+        $product = Product::findOrFail($id);
+
+        // Pastikan hanya pemilik toko yang bisa update produk ini
+        if ($product->store->user_id !== Auth::id()) {
+            abort(403, 'Anda tidak memiliki akses ke produk ini.');
+        }
+
+        $product->stock = $request->stock;
+        $product->save();   
     }
 
     public function destroy($id)

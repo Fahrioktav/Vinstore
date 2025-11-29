@@ -1,7 +1,9 @@
 import FormLayout from '@/layouts/form-layout';
 import { Form, Link } from '@inertiajs/react';
 import {
+  AuthButton,
   AuthErrorMessage,
+  AuthInput,
   AuthLabel,
   AuthLayout,
   AuthLayoutCard,
@@ -33,12 +35,14 @@ export default function LoginPage() {
 
               {/* {-- Username / Email --} */}
               <div>
-                <AuthLabel htmlFor="login">Username atau Email</AuthLabel>
-                <input
+                <AuthLabel variant="brown" htmlFor="login">
+                  Username atau Email
+                </AuthLabel>
+                <AuthInput
+                  variant="brown"
                   type="text"
                   name="login"
                   id="login"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                   placeholder="Masukkan username atau email"
                   required
                 />
@@ -46,24 +50,23 @@ export default function LoginPage() {
 
               {/* {-- Password --} */}
               <div>
-                <AuthLabel htmlFor="password">Password</AuthLabel>
-                <input
+                <AuthLabel variant="brown" htmlFor="password">
+                  Password
+                </AuthLabel>
+                <AuthInput
+                  variant="brown"
                   type="password"
                   name="password"
                   id="password"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:ring-[#B77C4C] focus:outline-none"
                   placeholder="Masukkan password"
                   required
                 />
               </div>
 
               {/* {-- Tombol Login --} */}
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-[#B77C4C] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer hover:bg-[#9e6538]"
-              >
+              <AuthButton variant="brown" type="submit" className="w-full">
                 Masuk Sekarang
-              </button>
+              </AuthButton>
             </>
           )}
         </Form>

@@ -13,6 +13,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
+  // Also change jsconfig.json if you change aliases below
   resolve: {
     alias: {
       '@/*': path.resolve(__dirname, './resources/js/*'),
