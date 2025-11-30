@@ -1,4 +1,4 @@
-import { Form, Link, router, usePage } from '@inertiajs/react';
+import { Form, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import {
   AuthButton,
@@ -13,9 +13,6 @@ import {
 } from '@/components/auth/auth-layout';
 
 export default function RegisterPage() {
-  const { user } = usePage().props;
-  if (user) router.visit('/');
-
   return (
     <AuthLayout>
       <AuthLayoutCard type="register">

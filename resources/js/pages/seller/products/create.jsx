@@ -3,6 +3,7 @@ import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   AuthButton,
+  AuthButtonLink,
   AuthInput,
   AuthLabel,
   AuthTextArea,
@@ -12,8 +13,8 @@ export default function SellerCreateProductPage() {
   const { sessions } = usePage().props;
 
   return (
-    <section className="flex max-w-4xl grow px-6 py-8">
-      <Card className="my-auto shadow-md transition hover:shadow-lg">
+    <section className="flex w-full max-w-2xl grow px-6 py-8">
+      <Card className="my-auto w-full shadow-md transition hover:shadow-lg">
         <CardContent>
           <h2 className="font-poppins mb-6 text-2xl font-bold">
             Tambah Produk
@@ -32,7 +33,7 @@ export default function SellerCreateProductPage() {
             action="/products"
             method="POST"
             encType="multipart/form-data"
-            className="space-y-6"
+            className="flex flex-col gap-4"
             disableWhileProcessing={true}
             options={{ preserveScroll: true }}
           >
@@ -67,6 +68,7 @@ export default function SellerCreateProductPage() {
                       name="stock"
                       required
                       min="0"
+                      defaultValue="0"
                     />
                   </div>
                   <div>
@@ -74,10 +76,11 @@ export default function SellerCreateProductPage() {
                     <AuthInput
                       id="price"
                       type="number"
-                      step="0.01"
+                      // step="0.01"
                       name="price"
                       required
                       min="0"
+                      defaultValue="0"
                     />
                   </div>
                 </div>
@@ -123,7 +126,10 @@ export default function SellerCreateProductPage() {
                     Format: PDF, JPG, PNG (Max 5MB)
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="flex justify-end gap-4">
+                  <AuthButtonLink href="/seller/dashboard">
+                    Kembali
+                  </AuthButtonLink>
                   <AuthButton type="submit">Simpan Produk</AuthButton>
                 </div>
               </>

@@ -1,11 +1,8 @@
 import { cn } from '@/lib/utils';
-import { router, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { cva } from 'class-variance-authority';
 
 export function AuthLayout({ children, className }) {
-  const { user } = usePage().props;
-  if (user) router.visit('/');
-
   return (
     <div
       className={cn(
@@ -20,7 +17,7 @@ export function AuthLayout({ children, className }) {
 
 export function AuthLayoutHeader({ title, subtitle }) {
   return (
-    <div className="mb-6 flex flex-col items-center">
+    <div className="mb-6 flex flex-col items-center text-center">
       <img
         src="/assets/Logo.png"
         alt="VINSTORE"
@@ -32,18 +29,29 @@ export function AuthLayoutHeader({ title, subtitle }) {
   );
 }
 
-const DefaultCardStyles = {
-  login:
-    'relative z-10 mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white/95 p-8 shadow-2xl backdrop-blur-md md:p-10',
-  register:
-    'relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white/95 p-10 shadow-2xl backdrop-blur-md',
-};
+const authLayoutVariants = cva(
+  'relative w-full rounded-2xl border border-gray-200 bg-white/95 p-8 shadow-2xl',
+  {
+    variants: {
+      variant: {
+        login: 'max-w-lg',
+        register: 'max-w-2xl',
+      },
+    },
+    defaultVariants: {
+      variant: 'login',
+    },
+  }
+);
 
-export function AuthLayoutCard({ children, type, ...props }) {
-  const style = DefaultCardStyles[type] ?? '';
-
+export function AuthLayoutCard({
+  children,
+  type: variant,
+  className,
+  ...props
+}) {
   return (
-    <div className={style} {...props}>
+    <div className={cn(authLayoutVariants({ variant }), className)} {...props}>
       {children}
     </div>
   );
@@ -73,7 +81,7 @@ export function AuthErrorMessage({ errors, hasErrors }) {
   );
 }
 
-const labelVariants = cva('mb-1 block text-sm font-semibold ', {
+const labelVariants = cva('mb-1 block text-sm font-semibold', {
   variants: {
     variant: {
       brown: 'text-[#3E2723]',
@@ -116,6 +124,8 @@ export function AuthInput({
   id,
   type,
   name,
+  value,
+  defaultValue,
   className,
   placeholder,
   required = false,
@@ -130,6 +140,8 @@ export function AuthInput({
       id={id}
       type={type}
       name={name}
+      value={value}
+      defaultValue={defaultValue}
       placeholder={placeholder}
       className={cn(inputVariants({ variant, className }))}
       required={required}
@@ -166,12 +178,13 @@ export function AuthTextArea({
 
 // TODO: TERAKHIR SAMPE SINI
 const buttonVariants = cva(
-  'px-6 rounded-lg py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer ',
+  'rounded-lg px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:cursor-pointer',
   {
     variants: {
       variant: {
         brown: 'bg-[#B77C4C] hover:bg-[#9e6538]',
         green: 'bg-green-600 hover:bg-green-700',
+        link: 'bg-muted text-muted-foreground hover:underline',
       },
     },
     defaultVariants: {
@@ -195,5 +208,17 @@ export function AuthButton({
     >
       {children}
     </button>
+  );
+}
+
+export function AuthButtonLink({ children, href = '#', ...props }) {
+  return (
+    <Link
+      href={href}
+      className="bg-muted text-muted-foreground rounded-lg px-6 py-3 font-semibold shadow-md transition-all duration-200 hover:cursor-pointer hover:underline"
+      {...props}
+    >
+      {children}
+    </Link>
   );
 }
