@@ -133,7 +133,7 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
 // Only role = seller can access
 Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
     // Dashboard Seller
-    Route::get('dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
     
     // Edit Toko
     Route::get('/store/edit', [StoreController::class, 'edit'])->name('store.edit');

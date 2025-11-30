@@ -89,7 +89,10 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
           </h2>
-          <Link href="/products" className="text-[#B77C4C] hover:underline">
+          <Link
+            href="/products"
+            className="text-right text-[#B77C4C] hover:underline"
+          >
             Lihat Semua
           </Link>
         </div>
@@ -184,7 +187,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-6">
-            {products.slice(0, 3).map((recommendation) => (
+            {products.slice(0, 2).map((recommendation) => (
               <Card
                 key={recommendation.id}
                 className="w-72 rounded-xl bg-white py-4 shadow-md transition hover:shadow-lg"

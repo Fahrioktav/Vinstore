@@ -98,7 +98,7 @@ export default function SellerDashboard() {
             </h2>
             <button>
               <Link
-                href="/products/create"
+                href="/seller/products/create"
                 className="rounded-lg bg-[#53685B] px-6 py-2 font-semibold text-white transition hover:bg-[#3c4a3e]"
               >
                 + Add Barang
@@ -167,14 +167,14 @@ function ProductRow({ product, isSelected, onSelect }) {
 
   const handleStockUpdate = (e) => {
     e.preventDefault();
-    patch(`/products/${product.id}`, {
+    patch(`/seller/products/${product.id}`, {
       preserveScroll: true,
     });
   };
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      destroy(`/products/${product.id}`, {
+      destroy(`/seller/products/${product.id}`, {
         preserveScroll: true,
       });
     }
@@ -264,7 +264,7 @@ function ProductRow({ product, isSelected, onSelect }) {
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="icon-sm" asChild>
             <Link
-              href={`/products/${product.id}/edit`}
+              href={`/seller/products/${product.id}/edit`}
               className="text-blue-600 transition hover:text-blue-800"
             >
               ✏️

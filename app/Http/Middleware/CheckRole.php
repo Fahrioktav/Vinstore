@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    protected $defaultRoutesByRole = [
+    static $defaultRoutesByRole = [
         'user' => '/',
         'seller' => '/seller/dashboard',
         'admin' => '/admin/dashboard'
@@ -37,7 +37,7 @@ class CheckRole
         $role = Auth::user()->role;
 
         if (!in_array($role, $roles)) {
-            return redirect($this->defaultRoutesByRole[$role] ?? '/');
+            return redirect(self::$defaultRoutesByRole[$role] ?? '/');
         }
 
         return $next($request);
