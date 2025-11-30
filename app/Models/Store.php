@@ -15,6 +15,7 @@ class Store extends Model
         'category',
         'description',
         'location',
+        'photo',
     ];
 
     public function user()

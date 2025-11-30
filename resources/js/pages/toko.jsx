@@ -44,7 +44,7 @@ export default function TokoPage() {
             >
               {/* {-- GAMBAR TOKO --} */}
               <img
-                src="/assets/store-placeholder.jpg"
+                src={store.photo ? `/storage/${store.photo}` : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko'}
                 alt={store.store_name}
                 className="h-48 w-full object-cover"
               />

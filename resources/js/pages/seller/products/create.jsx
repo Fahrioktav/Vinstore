@@ -109,6 +109,20 @@ export default function SellerCreateProductPage() {
                     accept="image/*"
                   />
                 </div>
+                <div>
+                  <AuthLabel htmlFor="certificate">
+                    📜 Sertifikat Keaslian (Opsional)
+                  </AuthLabel>
+                  <AuthInput
+                    id="certificate"
+                    type="file"
+                    name="certificate"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Format: PDF, JPG, PNG (Max 5MB)
+                  </p>
+                </div>
                 <div className="text-right">
                   <AuthButton type="submit">Simpan Produk</AuthButton>
                 </div>

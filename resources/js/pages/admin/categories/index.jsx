@@ -68,7 +68,7 @@ export default function CategoriesIndex({ categories }) {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {category.image ? (
                         <img
-                          src={`/storage/${category.image}`}
+                          src={`/${category.image}`}
                           alt={category.name}
                           className="h-16 w-16 rounded-lg object-cover"
                         />

@@ -1,8 +1,45 @@
-import { Form, Link, usePage } from '@inertiajs/react';
+import { useForm, Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 
 export default function EditProfilePage() {
   const { user, sessions, errors } = usePage().props;
+  
+  const [photoPreview, setPhotoPreview] = useState(
+    user.photo ? `/storage/${user.photo}` : 'https://via.placeholder.com/150'
+  );
+
+  const { data, setData, post, processing } = useForm({
+    username: user.username || '',
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    address: user.address || '',
+    photo: null,
+    password: '',
+    password_confirmation: '',
+  });
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setData('photo', file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    post('/profile', {
+      forceFormData: true,
+      preserveScroll: true,
+    });
+  };
 
   return (
     <div className="mx-auto my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl">
@@ -25,17 +62,17 @@ export default function EditProfilePage() {
       )}
 
       <div className="grid items-start gap-6 md:grid-cols-3">
-        {/* <!-- Foto Profil -. */}
+        {/* <!-- Foto Profil --> */}
         <div className="text-center">
           <img
-            src="https://via.placeholder.com/150"
+            src={photoPreview}
             alt="Profile Picture"
             className="border-md mx-auto h-40 w-40 items-center rounded-full border object-cover"
           />
           <div className="mt-4">
-            <Link
-              href="#"
-              className="flex items-center justify-center gap-1 font-semibold text-blue-600 hover:underline"
+            <label
+              htmlFor="photo-upload"
+              className="flex items-center justify-center gap-1 font-semibold text-blue-600 hover:underline cursor-pointer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -51,32 +88,73 @@ export default function EditProfilePage() {
                   d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6M13 7H7v6M6 6h.01"
                 />
               </svg>
-              Edit Profile
-            </Link>
+              Edit Photo
+            </label>
+            <input
+              id="photo-upload"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
+            {errors?.photo && (
+              <p className="mt-1 text-xs text-red-500">{errors.photo}</p>
+            )}
           </div>
-          <div className="mt-6">
-            <Link
-              href="/store/register"
-              className="inline-block rounded-md bg-[#53685B] px-6 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
-            >
-              🏪 Buka Toko
-            </Link>
+
+          {/* Informasi Toko (for seller) */}
+          {user.role === 'seller' && user.store && (
+            <div className="mt-6 border-t pt-6">
+              <h3 className="mb-3 text-sm font-bold text-[#2F3E46]">🏪 Informasi Toko</h3>
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <img
+                    src={user.store.photo ? `/storage/${user.store.photo}` : 'https://placehold.co/400x200/53685B/FFFFFF?text=Foto+Toko'}
+                    alt={user.store.store_name}
+                    className="h-32 w-full object-cover"
+                  />
+                </div>
+                <div className="text-sm">
+                  <p className="font-semibold text-[#2F3E46]">{user.store.store_name}</p>
+                  <p className="text-xs text-gray-600">📂 {user.store.category}</p>
+                  <p className="text-xs text-gray-600">📍 {user.store.location}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 space-y-3">
+            {user.role === 'seller' && (
+              <Link
+                href="/store/edit"
+                className="block rounded-md bg-[#B77C4C] px-6 py-2 text-center font-semibold text-white hover:bg-[#a0683d]"
+              >
+                ✏️ Edit Toko
+              </Link>
+            )}
+            {user.role !== 'seller' && user.role !== 'admin' && (
+              <Link
+                href="/store/register"
+                className="block rounded-md bg-[#53685B] px-6 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
+              >
+                🏪 Buka Toko
+              </Link>
+            )}
           </div>
         </div>
 
-        {/* <!-- Form Edit -. */}
-        <Form
-          action="/profile"
-          method="POST"
+        {/* <!-- Form Edit --> */}
+        <form
+          onSubmit={handleSubmit}
           className="space-y-4 md:col-span-2"
-          options={{ preserveScroll: true }}
         >
           <div>
             <label className="block text-sm font-semibold">Username</label>
             <input
               type="text"
               name="username"
-              defaultValue={user.username}
+              value={data.username}
+              onChange={(e) => setData('username', e.target.value)}
               className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.username ? 'border-red-500' : 'border-gray-400'}`}
               required
             />
@@ -90,7 +168,8 @@ export default function EditProfilePage() {
               <input
                 type="text"
                 name="first_name"
-                defaultValue={user.first_name}
+                value={data.first_name}
+                onChange={(e) => setData('first_name', e.target.value)}
                 className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.first_name ? 'border-red-500' : 'border-gray-400'}`}
               />
               {errors?.first_name && (
@@ -102,7 +181,8 @@ export default function EditProfilePage() {
               <input
                 type="text"
                 name="last_name"
-                defaultValue={user.last_name}
+                value={data.last_name}
+                onChange={(e) => setData('last_name', e.target.value)}
                 className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.last_name ? 'border-red-500' : 'border-gray-400'}`}
               />
               {errors?.last_name && (
@@ -116,7 +196,8 @@ export default function EditProfilePage() {
               <input
                 type="email"
                 name="email"
-                defaultValue={user.email}
+                value={data.email}
+                onChange={(e) => setData('email', e.target.value)}
                 className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.email ? 'border-red-500' : 'border-gray-400'}`}
                 required
               />
@@ -131,7 +212,8 @@ export default function EditProfilePage() {
               <input
                 type="text"
                 name="phone"
-                defaultValue={user.phone}
+                value={data.phone}
+                onChange={(e) => setData('phone', e.target.value)}
                 className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.phone ? 'border-red-500' : 'border-gray-400'}`}
               />
               {errors?.phone && (
@@ -143,21 +225,35 @@ export default function EditProfilePage() {
             <label className="block text-sm font-semibold">Password</label>
             <input
               type="password"
-              value="********"
-              disabled
-              className="w-full cursor-not-allowed rounded-md border border-gray-400 bg-gray-100 px-4 py-2"
+              name="password"
+              value={data.password}
+              onChange={(e) => setData('password', e.target.value)}
+              className="w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E]"
+              placeholder="Kosongkan jika tidak ingin mengubah"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Kosongkan jika tidak ingin mengubah password
-            </p>
+            {errors?.password && (
+              <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold">Confirm Password</label>
+            <input
+              type="password"
+              name="password_confirmation"
+              value={data.password_confirmation}
+              onChange={(e) => setData('password_confirmation', e.target.value)}
+              className="w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E]"
+              placeholder="Konfirmasi password baru"
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold">Your Address</label>
             <textarea
               name="address"
               rows="3"
+              value={data.address}
+              onChange={(e) => setData('address', e.target.value)}
               className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.address ? 'border-red-500' : 'border-gray-400'}`}
-              defaultValue={user.address}
             />
             {errors?.address && (
               <p className="mt-1 text-xs text-red-500">{errors.address}</p>
@@ -166,12 +262,13 @@ export default function EditProfilePage() {
           <div className="pt-4 text-right">
             <button
               type="submit"
-              className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e]"
+              disabled={processing}
+              className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e] disabled:opacity-50"
             >
-              Simpan Perubahan
+              {processing ? 'Menyimpan...' : 'Simpan Perubahan'}
             </button>
           </div>
-        </Form>
+        </form>
       </div>
     </div>
   );

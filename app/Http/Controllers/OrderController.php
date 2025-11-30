@@ -25,12 +25,20 @@ class OrderController extends Controller
     // Update status pesanan oleh seller
     public function updateStatus(Request $request, $id)
     {
-        $request->validate(['status' => 'required']);
+        $request->validate(['status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled']);
+        
         $order = Order::findOrFail($id);
-        $order->status = $request->status;
-        $order->save();
+        
+        // Pastikan hanya seller yang memiliki toko ini yang bisa update
+        if ($order->store_id !== Auth::user()->store->id) {
+            abort(403, 'Anda tidak memiliki akses untuk mengupdate order ini.');
+        }
+        
+        $order->update([
+            'status' => $request->status
+        ]);
 
-        return back()->with('success', 'Status pesanan diperbarui.');
+        return back()->with('success', 'Status pesanan berhasil diperbarui.');
     }
 
     // Delete order
@@ -80,12 +88,12 @@ class OrderController extends Controller
 
     public function userOrders()
     {
-        $user = Auth::user(); // ← Pasti ada method user()
+        $user = Auth::user();
         if (!$user) {
             return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        $orders = Order::with('product')
+        $orders = Order::with(['product', 'store'])
             ->where('user_id', $user->id)
             ->latest()
             ->get();

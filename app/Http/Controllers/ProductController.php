@@ -25,16 +25,25 @@ class ProductController extends Controller
             'category' => 'required',
             'description' => 'required',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $storeId = Auth::user()->store->id;
         $imagePath = null;
+        $certificatePath = null;
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('uploads/products'), $imageName);
             $imagePath = 'uploads/products/' . $imageName;
+        }
+
+        if ($request->hasFile('certificate')) {
+            $certificate = $request->file('certificate');
+            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificate->move(public_path('uploads/certificates'), $certificateName);
+            $certificatePath = 'uploads/certificates/' . $certificateName;
         }
 
         Product::create([
@@ -44,7 +53,8 @@ class ProductController extends Controller
             'price' => $request->price,
             'category' => $request->category,
             'description' => $request->description,
-            'image' => $imagePath
+            'image' => $imagePath,
+            'certificate' => $certificatePath
         ]);
 
         return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil ditambahkan.');
@@ -59,6 +69,7 @@ class ProductController extends Controller
             'category' => 'required',
             'description' => 'required',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $product = Product::findOrFail($id);
@@ -74,6 +85,14 @@ class ProductController extends Controller
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('uploads/products'), $imageName);
             $product->image = 'uploads/products/' . $imageName;
+        }
+
+        // Update sertifikat jika ada sertifikat baru
+        if ($request->hasFile('certificate')) {
+            $certificate = $request->file('certificate');
+            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificate->move(public_path('uploads/certificates'), $certificateName);
+            $product->certificate = 'uploads/certificates/' . $certificateName;
         }
 
         $product->name = $request->name;

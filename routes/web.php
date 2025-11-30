@@ -97,6 +97,10 @@ Route::middleware(['auth'])->group(function () {
     // Register Toko
     Route::get('/store/register', [StoreController::class, 'showRegisterForm'])->name('store.register');
     Route::post('/store/register', [StoreController::class, 'register'])->name('store.register.submit');
+    
+    // Edit Toko
+    Route::get('/store/edit', [StoreController::class, 'edit'])->name('store.edit');
+    Route::post('/store/update', [StoreController::class, 'update'])->name('store.update');
 
     // Produk - CRUD
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');

@@ -63,7 +63,7 @@ export default function HomePage() {
               >
                 {category.image ? (
                   <img
-                    src={`/storage/${category.image}`}
+                    src={`/${category.image}`}
                     alt={category.name}
                     className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />
@@ -110,6 +110,14 @@ export default function HomePage() {
                     <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
                       Antik
                     </span>
+                    {product.certificate && (
+                      <span className="absolute top-2 right-2 rounded-md bg-green-600 px-2 py-1 text-xs text-white shadow flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Bersertifikat
+                      </span>
+                    )}
                   </div>
                   <div className="flex-grow">
                     <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
@@ -120,16 +128,27 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
-                    <span className="font-bold text-[#B77C4C]">
-                      {formatIDR(product.price)}
-                    </span>
+                  <div className="mt-auto border-t border-gray-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-[#B77C4C]">
+                        {formatIDR(product.price)}
+                      </span>
+                      <span className={`text-xs font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {product.stock > 0 ? `Stok: ${product.stock}` : 'Habis'}
+                      </span>
+                    </div>
 
-                    <Link href={`/checkout/show/${product.id}`}>
-                      <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
-                        Order
+                    {product.stock > 0 ? (
+                      <Link href={`/checkout/show/${product.id}`}>
+                        <button className="w-full rounded-md bg-[#B77C4C] px-3 py-3 text-sm font-medium text-white transition hover:bg-[#a0683d]">
+                          Order
+                        </button>
+                      </Link>
+                    ) : (
+                      <button disabled className="w-full rounded-md bg-gray-400 px-3 py-3 text-sm font-medium text-white cursor-not-allowed">
+                        Stok Habis
                       </button>
-                    </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>

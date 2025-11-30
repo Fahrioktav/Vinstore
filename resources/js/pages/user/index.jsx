@@ -56,7 +56,7 @@ export default function UserIndex() {
               >
                 {category.image ? (
                   <img
-                    src={`/storage/${category.image}`}
+                    src={`/${category.image}`}
                     alt={category.name}
                     className="mb-3 h-16 w-16 object-cover rounded-full transition-transform group-hover:scale-110"
                   />

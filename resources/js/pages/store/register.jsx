@@ -8,6 +8,7 @@ export default function StoreRegisterPage() {
         action="/store/register"
         method="POST"
         className="w-full max-w-2xl space-y-4"
+        options={{ forceFormData: true }}
       >
         <h2 className="font-poppins mb-4 text-center text-2xl font-bold">
           Form Registrasi Toko
@@ -48,6 +49,17 @@ export default function StoreRegisterPage() {
           className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
           required
         />
+
+        {/* <!-- Foto Toko --> */}
+        <div>
+          <label className="block text-sm font-semibold mb-1">Foto Toko (Opsional)</label>
+          <input
+            type="file"
+            name="photo"
+            accept="image/*"
+            className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          />
+        </div>
 
         {/* <!-- Tombol Submit --> */}
         <div className="text-center">

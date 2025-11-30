@@ -81,6 +81,35 @@ export default function SellerEditProductPage() {
             </div>
           )}
         </div>
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-semibold">
+            📜 Sertifikat Keaslian (opsional)
+          </label>
+          <input 
+            type="file" 
+            name="certificate" 
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="w-full" 
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Format: PDF, JPG, PNG (Max 5MB)
+          </p>
+          {product.certificate && (
+            <div className="mt-2">
+              <a 
+                href={`/${product.certificate}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                </svg>
+                Lihat Sertifikat Saat Ini
+              </a>
+            </div>
+          )}
+        </div>
         <button
           type="submit"
           className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"

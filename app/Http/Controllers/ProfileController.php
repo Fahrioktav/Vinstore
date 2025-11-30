@@ -7,12 +7,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
     public function edit()
     {
-        $user = Auth::user();
+        $userId = Auth::id();
+        $user = User::with('store')->find($userId);
+        
         $sessions = [
             'error' => session('error'),
             'success' => session('success'),
@@ -27,23 +30,35 @@ class ProfileController extends Controller
 
         // Validasi input
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users,username,' . $user->id,
+            'username' => 'required|string|max:255|unique:users,username,' . $user->id . ',id',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id . ',id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'password' => 'nullable|string|min:6|confirmed'
         ]);
 
-        // Update data user
-        $user->username = $validated['username'];
-        $user->first_name = $validated['first_name'] ?? null;
-        $user->last_name  = $validated['last_name'] ?? null;
-        $user->email      = $validated['email'];
-        $user->phone      = $validated['phone'] ?? null;
-        $user->address    = $validated['address'] ?? null;
+        // Update data user hanya jika field diisi
+        if ($request->filled('username')) {
+            $user->username = $validated['username'];
+        }
+        if ($request->filled('first_name')) {
+            $user->first_name = $validated['first_name'];
+        }
+        if ($request->filled('last_name')) {
+            $user->last_name = $validated['last_name'];
+        }
+        if ($request->filled('email')) {
+            $user->email = $validated['email'];
+        }
+        if ($request->filled('phone')) {
+            $user->phone = $validated['phone'];
+        }
+        if ($request->filled('address')) {
+            $user->address = $validated['address'];
+        }
 
         // Handle photo upload
         if ($request->hasFile('photo')) {

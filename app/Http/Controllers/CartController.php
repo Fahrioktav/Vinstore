@@ -22,6 +22,15 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
+        // Cek stok produk
+        if ($product->stock <= 0) {
+            return back()->with('error', 'Maaf, produk ini sudah habis!');
+        }
+
+        if ($product->stock < $request->quantity) {
+            return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product->stock);
+        }
+
         $user = Auth::user();
 
         // Cek apakah produk sudah ada di keranjang
@@ -30,8 +39,13 @@ class CartController extends Controller
             ->first();
 
         if ($existing) {
+            // Cek total quantity tidak melebihi stok
+            $totalQuantity = $existing->quantity + $request->quantity;
+            if ($totalQuantity > $product->stock) {
+                return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product->stock . ', di keranjang: ' . $existing->quantity);
+            }
             // Tambah kuantitas jika sudah ada
-            $existing->quantity += $request->quantity;
+            $existing->quantity = $totalQuantity;
             $existing->save();
         } else {
             // Tambah item baru

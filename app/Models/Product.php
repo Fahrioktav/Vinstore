@@ -17,6 +17,7 @@ class Product extends Model
         'category',
         'description',
         'image',
+        'certificate',
     ];
 
     public function store()

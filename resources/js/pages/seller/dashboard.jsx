@@ -1,5 +1,5 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import React from 'react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
+import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -123,6 +123,7 @@ export default function SellerDashboard() {
                   <th className="px-4 py-3 text-left">Harga</th>
                   <th className="px-4 py-3 text-left">Kategori</th>
                   <th className="px-4 py-3 text-left">Deskripsi</th>
+                  <th className="px-4 py-3 text-center">Sertifikat</th>
                   <th className="px-4 py-3 text-center">Action</th>
                 </tr>
               </thead>
@@ -236,6 +237,23 @@ function ProductRow({ product, isSelected, onSelect }) {
         {product.description?.substring(0, 40)}
         {product.description?.length > 40 ? '...' : ''}
       </td>
+      <td className="px-4 py-3 text-center">
+        {product.certificate ? (
+          <a 
+            href={`/${product.certificate}`} 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-green-600 hover:text-green-800"
+            title="Lihat Sertifikat"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          </a>
+        ) : (
+          <span className="text-gray-400 text-xs">-</span>
+        )}
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="icon-sm" asChild>
@@ -262,22 +280,36 @@ function ProductRow({ product, isSelected, onSelect }) {
 }
 
 function OrderRow({ order }) {
-  const { post, data, setData, processing } = useForm({
-    status: order.status,
-  });
+  const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
-    setData('status', newStatus);
-    post(`/orders/${order.id}/status`, {
-      preserveScroll: true,
-    });
+    setCurrentStatus(newStatus); // Update UI immediately
+    setIsUpdating(true);
+    
+    // Post dengan router.post
+    router.post(`/orders/${order.id}/status`, 
+      { status: newStatus },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setIsUpdating(false);
+          console.log('Status updated successfully');
+        },
+        onError: (errors) => {
+          // Revert jika error
+          setCurrentStatus(order.status);
+          setIsUpdating(false);
+          console.error('Failed to update status:', errors);
+        }
+      }
+    );
   };
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus order ini?')) {
-      post(`/orders/${order.id}`, {
-        _method: 'DELETE',
+      router.delete(`/orders/${order.id}`, {
         preserveScroll: true,
       });
     }
@@ -307,10 +339,10 @@ function OrderRow({ order }) {
       </td>
       <td className="px-4 py-3">
         <select
-          value={data.status}
+          value={currentStatus}
           onChange={handleStatusChange}
-          disabled={processing}
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[data.status] || 'bg-gray-100 text-gray-700'}`}
+          disabled={isUpdating}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'}`}
         >
           <option value="Waiting">⏳ Waiting</option>
           <option value="Processing">🔄 Processing</option>
@@ -334,7 +366,7 @@ function OrderRow({ order }) {
           size="icon-sm"
           onClick={handleDelete}
           className="text-red-600 transition hover:text-red-800"
-          disabled={processing}
+          disabled={isUpdating}
         >
           🗑️
         </Button>

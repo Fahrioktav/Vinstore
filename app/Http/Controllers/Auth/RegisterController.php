@@ -33,7 +33,7 @@ class RegisterController extends Controller
             'address' => $request->address,
         ]);
 
-        // Redirect ke halaman login Inertia dengan pesan sukses
-        return redirect('/inertia/login')->with('success', 'Pendaftaran berhasil!');
+        // Redirect ke halaman login dengan pesan sukses
+        return redirect()->route('login.form')->with('success', 'Pendaftaran berhasil! Silakan login.');
     }
 }

@@ -4,7 +4,7 @@ import MainLayout from '@/layouts/main-layout';
 
 export default function CategoriesEdit({ category }) {
   const [imagePreview, setImagePreview] = React.useState(
-    category.image ? `/storage/${category.image}` : null
+    category.image ? `/${category.image}` : null
   );
   const { data, setData, post, processing, errors } = useForm({
     name: category.name || '',
