@@ -15,6 +15,7 @@ export default function ProductsPage() {
     <>
       {showSearch && (
         <SearchInput
+          action="/products"
           defaultValue={q}
           placeholder="Cari barang antik favoritmu..."
         />

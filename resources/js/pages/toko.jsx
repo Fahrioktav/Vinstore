@@ -13,6 +13,7 @@ export default function TokoPage() {
     <>
       {showSearch && (
         <SearchInput
+          action="/toko"
           defaultValue={q}
           placeholder="Cari toko antik favoritmu..."
         />

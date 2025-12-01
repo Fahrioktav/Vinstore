@@ -1,10 +1,14 @@
 import { Form } from '@inertiajs/react';
 
-export default function SearchInput({ placeholder = '', defaultValue = '' }) {
+export default function SearchInput({
+  action,
+  placeholder = '',
+  defaultValue = '',
+}) {
   return (
     // {-- FORM SEARCH --}
     <Form
-      action="/toko"
+      action={action}
       method="GET"
       className="mx-auto mt-8 flex w-full max-w-2xl items-center rounded-full border border-gray-200 bg-white/90 px-6 py-3 shadow-lg backdrop-blur-md transition focus-within:ring-2 focus-within:ring-[#B77C4C]"
       options={{ preserveScroll: true, preserveState: true }}
