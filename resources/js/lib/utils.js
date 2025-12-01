@@ -35,3 +35,9 @@ export function getStoreImage(store) {
     ? `/${store.image}`
     : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko';
 }
+
+export function getUserImage(user) {
+  return user.image
+    ? `/${user.image}`
+    : `https://avatar.iran.liara.run/username?username=${user.username}`;
+}

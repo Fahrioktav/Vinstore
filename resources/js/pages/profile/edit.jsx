@@ -2,13 +2,12 @@ import { useForm, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import { EditPhotoIcon } from '@/components/icons';
+import { getUserImage } from '@/lib/utils';
 
 export default function EditProfilePage() {
   const { user, errors } = usePage().props;
 
-  const [photoPreview, setPhotoPreview] = useState(
-    user.photo ? `/storage/${user.photo}` : 'https://via.placeholder.com/150'
-  );
+  const [photoPreview, setPhotoPreview] = useState(getUserImage(user));
 
   const { data, setData, post, processing } = useForm({
     username: user.username || '',
