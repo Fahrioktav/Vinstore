@@ -197,15 +197,15 @@ function ProductRow({ product }) {
         <div className="flex justify-center gap-2">
           <Link
             href={`/admin/products/${product.id}/edit`}
-            className="rounded-lg bg-[#53685B] px-3 py-1 text-xs text-white transition hover:bg-[#3c4a3e]"
+            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
           >
-            Edit
+            ✏️ Edit
           </Link>
           <button
             onClick={handleDelete}
-            className="rounded-lg bg-red-500 px-3 py-1 text-xs text-white transition hover:bg-red-600"
+            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
           >
-            Delete
+            🗑️ Hapus
           </button>
         </div>
       </td>

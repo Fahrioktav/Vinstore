@@ -1,9 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import {
-  formatIDR,
-  getProductImage,
-} from '@/lib/utils';
+import { cn, formatIDR, getProductImage } from '@/lib/utils';
 import { BadgeIcon } from '@/components/icons';
 
 export default function AdminProducts() {
@@ -76,7 +73,10 @@ export default function AdminProducts() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${getStockColor(product.stock)}`}
+                          className={cn(
+                            'rounded-full px-2 py-1 text-center text-xs font-semibold',
+                            getStockColor(product.stock)
+                          )}
                         >
                           {product.stock}
                         </span>
@@ -84,7 +84,7 @@ export default function AdminProducts() {
                       <td className="px-4 py-3 font-bold text-[#53685B]">
                         {formatIDR(product.price)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
                           {product.category}
                         </span>
@@ -102,9 +102,7 @@ export default function AdminProducts() {
                             Lihat
                           </a>
                         ) : (
-                          <span className="text-xs text-gray-400">
-                            Tidak ada
-                          </span>
+                          <span className="text-xs text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -117,7 +115,7 @@ export default function AdminProducts() {
                           </Link>
                           <button
                             onClick={() => handleDelete(product.id)}
-                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-600 hover:shadow-md"
+                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus
                           </button>
