@@ -3,7 +3,7 @@ import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 
 export default function EditProfilePage() {
-  const { user, sessions, errors } = usePage().props;
+  const { user, errors } = usePage().props;
 
   const [photoPreview, setPhotoPreview] = useState(
     user.photo ? `/storage/${user.photo}` : 'https://via.placeholder.com/150'
@@ -43,24 +43,10 @@ export default function EditProfilePage() {
 
   return (
     <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
-      <div className="my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl">
+      <div className="my-auto w-full max-w-5xl rounded-2xl bg-gray-50 p-8 shadow-xl">
         <h2 className="font-poppins mb-6 text-2xl font-bold text-[#2F3E46]">
           👤 Edit Profile
         </h2>
-
-        {/* Success Message */}
-        {sessions?.success && (
-          <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700 shadow-sm">
-            <p className="font-semibold">✓ {sessions.success}</p>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {sessions?.error && (
-          <div className="mb-6 rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-red-700 shadow-sm">
-            <p className="font-semibold">✗ {sessions.error}</p>
-          </div>
-        )}
 
         <div className="grid items-start gap-6 md:grid-cols-3">
           {/* <!-- Foto Profil --> */}
@@ -139,7 +125,7 @@ export default function EditProfilePage() {
             <div className="mt-6 space-y-3">
               {user.role === 'seller' && (
                 <Link
-                  href="/store/edit"
+                  href="/seller/store/edit"
                   className="block rounded-md bg-[#B77C4C] px-6 py-2 text-center font-semibold text-white hover:bg-[#a0683d]"
                 >
                   ✏️ Edit Toko
@@ -147,7 +133,7 @@ export default function EditProfilePage() {
               )}
               {user.role !== 'seller' && user.role !== 'admin' && (
                 <Link
-                  href="/store/register"
+                  href="/seller/store/register"
                   className="block rounded-md bg-[#53685B] px-6 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
                 >
                   🏪 Buka Toko

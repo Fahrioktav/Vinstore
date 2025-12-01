@@ -1,23 +1,11 @@
-import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
+import { Link, useForm, usePage, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 
 export default function SellerDashboard() {
-  const { products, orders, productCount, orderCount, flash } = usePage().props;
-
-  React.useEffect(() => {
-    if (flash?.success) {
-      toast.success(flash.success);
-    }
-
-    if (flash?.error) {
-      toast.error(flash.error);
-    }
-  }, [flash]);
-
+  const { products, orders, productCount, orderCount } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   const handleSelectProduct = (productId) => {
@@ -296,7 +284,7 @@ function OrderRow({ order }) {
 
     // Post dengan router.post
     router.post(
-      `/orders/${order.id}/status`,
+      `/seller/orders/${order.id}/status`,
       { status: newStatus },
       {
         preserveScroll: true,
@@ -316,7 +304,7 @@ function OrderRow({ order }) {
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus order ini?')) {
-      router.delete(`/orders/${order.id}`, {
+      router.delete(`/seller/orders/${order.id}`, {
         preserveScroll: true,
       });
     }

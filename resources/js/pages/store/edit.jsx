@@ -1,12 +1,15 @@
 import { useForm, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
+import { AuthInput, AuthTextArea } from '@/components/auth/auth-layout';
 
 export default function StoreEditPage() {
   const { store, errors } = usePage().props;
-  
+
   const [photoPreview, setPhotoPreview] = useState(
-    store.photo ? `/storage/${store.photo}` : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko'
+    store.photo
+      ? `/storage/${store.photo}`
+      : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko'
   );
 
   const { data, setData, post, processing } = useForm({
@@ -35,7 +38,7 @@ export default function StoreEditPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post('/store/update', {
+    post('/seller/store/update', {
       forceFormData: true,
       preserveScroll: true,
       onSuccess: () => {
@@ -48,29 +51,27 @@ export default function StoreEditPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl">
-      {/* Header */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-      >
+    <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Header */}
+        <form
+          onSubmit={handleSubmit}
+          className="overflow-hidden rounded-3xl bg-white shadow-2xl"
+        >
           {/* Foto Toko Section */}
-          <div className="relative h-72 md:h-80 bg-gradient-to-r from-[#53685B] to-[#3c4a3e] overflow-hidden">
+          <div className="relative h-72 overflow-hidden bg-gradient-to-r from-[#53685B] to-[#3c4a3e] md:h-80">
             <img
               src={photoPreview}
               alt="Store Photo"
-              className="w-full h-full object-cover opacity-90"
+              className="h-full w-full object-cover opacity-90"
             />
-            <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-              <label
-                htmlFor="photo-upload"
-                className="cursor-pointer group"
-              >
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg transform transition-all hover:scale-105 hover:bg-white">
+            <div className="bg-opacity-30 absolute inset-0 flex items-center justify-center bg-black/20">
+              <label htmlFor="photo-upload" className="group cursor-pointer">
+                <div className="transform rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm transition-all hover:scale-105">
                   <div className="flex items-center gap-3">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6 text-[#53685B] group-hover:text-[#3c4a3e] transition-colors"
+                      className="h-6 w-6 text-[#53685B] transition-colors group-hover:text-[#3c4a3e]"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -88,13 +89,13 @@ export default function StoreEditPage() {
                         d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    <span className="font-semibold text-[#53685B] group-hover:text-[#3c4a3e] transition-colors">
+                    <span className="font-semibold text-[#53685B] transition-colors group-hover:text-[#3c4a3e]">
                       Ubah Foto Toko
                     </span>
                   </div>
                 </div>
               </label>
-              <input
+              <AuthInput
                 id="photo-upload"
                 type="file"
                 accept="image/*"
@@ -103,8 +104,8 @@ export default function StoreEditPage() {
               />
             </div>
             {errors?.photo && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                <p className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 transform">
+                <p className="rounded-lg bg-red-500 px-4 py-2 text-sm text-white shadow-lg">
                   {errors.photo}
                 </p>
               </div>
@@ -112,53 +113,68 @@ export default function StoreEditPage() {
           </div>
 
           {/* Form Fields */}
-          <div className="p-8 md:p-12 space-y-8">
-
+          <div className="flex flex-col gap-4 p-8 md:p-12">
             {/* Nama Toko */}
             <div className="group">
-              <label className="flex items-center gap-2 text-sm font-bold text-[#2F3E46] mb-2">
+              <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
                 <span className="text-xl">🏪</span>
                 Nama Toko
               </label>
-              <input
+              <AuthInput
                 type="text"
                 name="store_name"
                 value={data.store_name}
                 onChange={(e) => setData('store_name', e.target.value)}
-                className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:ring-4 focus:ring-[#E9E19E]/50 focus:border-[#53685B] focus:outline-none ${errors?.store_name ? 'border-red-500' : 'border-gray-200 hover:border-[#53685B]/30'}`}
+                className={errors?.store_name ? 'border-red-500' : ''}
                 placeholder="Masukkan nama toko Anda"
                 required
               />
               {errors?.store_name && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   {errors.store_name}
                 </p>
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-6 md:grid-cols-2">
               {/* Kategori Toko */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#2F3E46] mb-2">
+                <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
                   <span className="text-xl">📂</span>
                   Kategori
                 </label>
-                <input
+                <AuthInput
                   type="text"
                   name="category"
                   value={data.category}
                   onChange={(e) => setData('category', e.target.value)}
                   placeholder="Antik, Elektronik, Buku..."
-                  className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:ring-4 focus:ring-[#E9E19E]/50 focus:border-[#53685B] focus:outline-none ${errors?.category ? 'border-red-500' : 'border-gray-200 hover:border-[#53685B]/30'}`}
+                  className={errors?.category ? 'border-red-500' : ''}
                   required
                 />
                 {errors?.category && (
                   <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     {errors.category}
                   </p>
@@ -167,23 +183,31 @@ export default function StoreEditPage() {
 
               {/* Lokasi Toko */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#2F3E46] mb-2">
+                <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
                   <span className="text-xl">📍</span>
                   Lokasi Toko
                 </label>
-                <input
+                <AuthInput
                   type="text"
                   name="location"
                   value={data.location}
                   onChange={(e) => setData('location', e.target.value)}
                   placeholder="Alamat lengkap toko"
-                  className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:ring-4 focus:ring-[#E9E19E]/50 focus:border-[#53685B] focus:outline-none ${errors?.location ? 'border-red-500' : 'border-gray-200 hover:border-[#53685B]/30'}`}
+                  className={errors?.location ? 'border-red-500' : ''}
                   required
                 />
                 {errors?.location && (
                   <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     {errors.location}
                   </p>
@@ -193,23 +217,31 @@ export default function StoreEditPage() {
 
             {/* Deskripsi */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-bold text-[#2F3E46] mb-2">
+              <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
                 <span className="text-xl">📝</span>
                 Deskripsi Toko
               </label>
-              <textarea
+              <AuthTextArea
                 name="description"
                 value={data.description}
                 onChange={(e) => setData('description', e.target.value)}
                 rows="4"
                 placeholder="Ceritakan tentang toko Anda..."
-                className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:ring-4 focus:ring-[#E9E19E]/50 focus:border-[#53685B] focus:outline-none resize-none ${errors?.description ? 'border-red-500' : 'border-gray-200 hover:border-[#53685B]/30'}`}
+                className={errors?.description ? 'border-red-500' : ''}
                 required
               />
               {errors?.description && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   {errors.description}
                 </p>
@@ -217,30 +249,52 @@ export default function StoreEditPage() {
             </div>
 
             {/* Button Submit */}
-            <div className="flex gap-4 pt-6 border-t border-gray-100">
+            <div className="flex gap-4 border-t border-gray-100 pt-6">
               <Link
                 href="/seller/dashboard"
-                className="flex-1 text-center rounded-xl border-2 border-gray-300 px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                className="flex-1 rounded-xl border-2 border-gray-300 px-6 py-3 text-center font-semibold text-gray-700 transition-all hover:bg-gray-50"
               >
                 Batal
               </Link>
               <button
                 type="submit"
                 disabled={processing}
-                className="flex-1 rounded-xl bg-gradient-to-r from-[#53685B] to-[#3c4a3e] px-6 py-3 font-semibold text-white hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="flex-1 transform rounded-xl bg-gradient-to-r from-[#53685B] to-[#3c4a3e] px-6 py-3 font-semibold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {processing ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
                     </svg>
                     Menyimpan...
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     Simpan Perubahan
                   </span>
@@ -249,8 +303,11 @@ export default function StoreEditPage() {
             </div>
           </div>
         </form>
-    </div>
+      </div>
+    </section>
   );
 }
 
-StoreEditPage.layout = (page) => <FormLayout title="Edit Toko">{page}</FormLayout>;
+StoreEditPage.layout = (page) => (
+  <FormLayout title="Edit Toko">{page}</FormLayout>
+);

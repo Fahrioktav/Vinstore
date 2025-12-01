@@ -17,8 +17,8 @@ class AdminUserController extends Controller
 
     public function edit($id)
     {
-        $user = User::where('role', 'user')->findOrFail($id);
-        return Inertia::render('admin/users/edit', compact('user'));
+        $editedUser = User::where('role', 'user')->findOrFail($id);
+        return Inertia::render('admin/users/edit', compact('editedUser'));
     }
 
     public function update(Request $request, $id)

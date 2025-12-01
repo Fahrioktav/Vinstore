@@ -10,8 +10,6 @@ import {
 } from '@/components/auth/auth-layout';
 
 export default function SellerCreateProductPage() {
-  const { sessions } = usePage().props;
-
   return (
     <section className="flex w-full max-w-2xl grow px-6 py-8">
       <Card className="my-auto w-full shadow-md transition hover:shadow-lg">
@@ -20,17 +18,8 @@ export default function SellerCreateProductPage() {
             Tambah Produk
           </h2>
 
-          {sessions ? (
-            <>
-              <p>{sessions.success}</p>
-              <p>{sessions.error}</p>
-            </>
-          ) : (
-            'Sessions kosong'
-          )}
-
           <Form
-            action="/products"
+            action="/seller/products"
             method="POST"
             encType="multipart/form-data"
             className="flex flex-col gap-4"
@@ -110,6 +99,7 @@ export default function SellerCreateProductPage() {
                     type="file"
                     name="image"
                     accept="image/*"
+                    required
                   />
                 </div>
                 <div>

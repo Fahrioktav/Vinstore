@@ -10,10 +10,24 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $paginatedProducts = Product::latest()->paginate(12);
-        return Inertia::render('products/index', compact('paginatedProducts'));
+        $keyword = $request->query('q');
+        $query = Product::latest();
+
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                ->orWhere('category', 'like', "%{$keyword}%")
+                ->orWhere('description', 'like', "%{$keyword}%");
+            });
+        }
+
+        $paginatedProducts = $query->paginate(12);
+        return Inertia::render('products/index', [
+            'paginatedProducts' => $paginatedProducts,
+            'showSearch' => true,
+        ]);
     }
 
     public function store(Request $request)
@@ -123,6 +137,8 @@ class ProductController extends Controller
 
         $product->stock = $request->stock;
         $product->save();   
+
+        return back()->with('success', 'Stok produk berhasil diperbarui.');
     }
 
     public function destroy($id)

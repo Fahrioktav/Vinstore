@@ -56,7 +56,7 @@ export default function Navbar() {
       )}
     >
       {/* {-- WRAPPER TANPA MAX-W --}  */}
-      <div className="flex w-full items-center justify-between px-6 py-4 md:px-12 lg:px-20 xl:px-32">
+      <div className="flex w-full items-center justify-between px-6 py-4 md:px-16">
         {/* {-- LOGO --} */}
         <Link
           href={

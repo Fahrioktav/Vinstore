@@ -1,77 +1,84 @@
 import { Form } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
+import {
+  AuthInput,
+  AuthLabel,
+  AuthTextArea,
+} from '@/components/auth/auth-layout';
 
 export default function StoreRegisterPage() {
   return (
-    <div className="mt-8 flex justify-center px-4">
-      <Form
-        action="/store/register"
-        method="POST"
-        className="w-full max-w-2xl space-y-4"
-        options={{ forceFormData: true }}
-      >
-        <h2 className="font-poppins mb-4 text-center text-2xl font-bold">
-          Form Registrasi Toko
-        </h2>
+    <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
+      <div className="my-auto w-full max-w-2xl rounded-2xl bg-white p-8 shadow-xl">
+        <Form
+          action="/store/register"
+          method="POST"
+          className="flex flex-col gap-4"
+          options={{ forceFormData: true }}
+        >
+          <h2 className="font-poppins mb-4 text-center text-2xl font-bold">
+            Form Registrasi Toko
+          </h2>
 
-        {/* <!-- Nama Toko --> */}
-        <input
-          type="text"
-          name="store_name"
-          placeholder="Nama Toko"
-          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
-          required
-        />
-
-        {/* <!-- Kategori Toko --> */}
-        <input
-          type="text"
-          name="category"
-          placeholder="Kategori (contoh: Antik, Elektronik, Buku)"
-          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
-          required
-        />
-
-        {/* <!-- Deskripsi --> */}
-        <textarea
-          name="description"
-          placeholder="Deskripsi Toko"
-          rows="3"
-          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
-          required
-        />
-
-        {/* <!-- Lokasi Toko --> */}
-        <input
-          type="text"
-          name="location"
-          placeholder="Alamat atau Lokasi Toko"
-          className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
-          required
-        />
-
-        {/* <!-- Foto Toko --> */}
-        <div>
-          <label className="block text-sm font-semibold mb-1">Foto Toko (Opsional)</label>
-          <input
-            type="file"
-            name="photo"
-            accept="image/*"
-            className="font-poppins w-full rounded-md border border-gray-400 px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] focus:outline-none"
+          {/* <!-- Nama Toko --> */}
+          <AuthInput
+            size="sm"
+            type="text"
+            name="store_name"
+            placeholder="Nama Toko"
+            required
           />
-        </div>
 
-        {/* <!-- Tombol Submit --> */}
-        <div className="text-center">
-          <button
-            type="submit"
-            className="font-poppins rounded-md bg-[#4a5b4d] px-10 py-3 font-semibold text-white transition-all hover:bg-[#3c4a3e]"
-          >
-            Daftarkan Toko
-          </button>
-        </div>
-      </Form>
-    </div>
+          {/* <!-- Kategori Toko --> */}
+          <AuthInput
+            size="sm"
+            type="text"
+            name="category"
+            placeholder="Kategori (contoh: Antik, Elektronik, Buku)"
+            required
+          />
+
+          {/* <!-- Deskripsi --> */}
+          <AuthTextArea
+            name="description"
+            placeholder="Deskripsi Toko"
+            rows="3"
+            required
+          />
+
+          {/* <!-- Lokasi Toko --> */}
+          <AuthInput
+            size="sm"
+            type="text"
+            name="location"
+            placeholder="Alamat atau Lokasi Toko"
+            required
+          />
+
+          {/* <!-- Foto Toko --> */}
+          <div>
+            <AuthLabel htmlFor="photo">Foto Toko (Opsional)</AuthLabel>
+            <AuthInput
+              id="photo"
+              size="sm"
+              type="file"
+              name="photo"
+              accept="image/*"
+            />
+          </div>
+
+          {/* <!-- Tombol Submit --> */}
+          <div className="text-center">
+            <button
+              type="submit"
+              className="font-poppins rounded-md bg-[#4a5b4d] px-10 py-3 font-semibold text-white transition-all hover:bg-[#3c4a3e]"
+            >
+              Daftarkan Toko
+            </button>
+          </div>
+        </Form>
+      </div>
+    </section>
   );
 }
 

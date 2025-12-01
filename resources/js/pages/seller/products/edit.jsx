@@ -1,4 +1,4 @@
-import { Form, Link, usePage } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -19,12 +19,13 @@ export default function SellerEditProductPage() {
           <h2 className="font-poppins mb-6 text-2xl font-bold">Edit Produk</h2>
 
           <Form
-            action={`/products/${product.id}`}
-            method="PUT"
+            action={`/seller/products/${product.id}`}
+            method="POST"
             encType="multipart/form-data"
             className="flex flex-col gap-4"
             disableWhileProcessing={true}
             options={{ preserveScroll: true }}
+            transform={(data) => ({ ...data, _method: 'PUT' })}
           >
             <div>
               <AuthLabel htmlFor="name">Nama Produk</AuthLabel>
