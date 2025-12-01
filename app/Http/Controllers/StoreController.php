@@ -26,9 +26,21 @@ class StoreController extends Controller
         return Inertia::render('store/register');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $stores = Store::latest()->get(); // Ambil semua toko
+        $keyword = $request->query('q');
+        $query = Store::latest();
+
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('store_name', 'like', "%{$keyword}%")
+                ->orWhere('description', 'like', "%{$keyword}%")
+                ->orWhere('category', 'like', "%{$keyword}%")
+                ->orWhere('location', 'like', "%{$keyword}%");
+            });
+        }
+        
+        $stores = $query->get();
 
         return Inertia::render('toko', [
             'stores' => $stores,
@@ -79,20 +91,20 @@ class StoreController extends Controller
         return redirect('/profile')->with('success', 'Toko berhasil didaftarkan!');
     }
 
-    public function dashboard()
-    {
-        $user = Auth::user();
-        $store = $user->store;
+    // public function dashboard()
+    // {
+    //     $user = Auth::user();
+    //     $store = $user->store;
 
-        if (!$store) {
-            return redirect()->route('profile.edit')->with('error', 'Anda belum memiliki toko.');
-        }
+    //     if (!$store) {
+    //         return redirect()->route('profile.edit')->with('error', 'Anda belum memiliki toko.');
+    //     }
 
-        $orders = Order::where('store_id', $store->id)->latest()->get();
-        $products = Product::where('store_id', $store->id)->get();
+    //     $orders = Order::where('store_id', $store->id)->latest()->get();
+    //     $products = Product::where('store_id', $store->id)->get();
 
-        return view('seller.dashboard', compact('store', 'orders', 'products'));
-    }
+    //     return view('seller.dashboard', compact('store', 'orders', 'products'));
+    // }
 
     public function show($id)
     {

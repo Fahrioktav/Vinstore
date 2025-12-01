@@ -2,19 +2,19 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 
 export default function EditUser() {
-  const { user, errors: serverErrors } = usePage().props;
+  const { editedUser, errors: serverErrors } = usePage().props;
   const { data, setData, put, processing, errors } = useForm({
-    username: user.username || '',
-    first_name: user.first_name || '',
-    last_name: user.last_name || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    address: user.address || '',
+    username: editedUser.username || '',
+    first_name: editedUser.first_name || '',
+    last_name: editedUser.last_name || '',
+    email: editedUser.email || '',
+    phone: editedUser.phone || '',
+    address: editedUser.address || '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    put(`/admin/users/${user.id}`, {
+    put(`/admin/users/${editedUser.id}`, {
       preserveScroll: true,
     });
   };

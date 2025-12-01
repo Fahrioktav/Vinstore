@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR } from '@/lib/utils';
+import { cn, formatIDR, getProductImage } from '@/lib/utils';
+import { BadgeIcon } from '@/components/icons';
 
 export default function AdminProducts() {
   const { products, success } = usePage().props;
@@ -53,7 +54,7 @@ export default function AdminProducts() {
                     <tr key={product.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <img
-                          src={`/${product.image}`}
+                          src={getProductImage(product)}
                           className="h-16 w-16 rounded-lg object-cover shadow-sm"
                           alt={product.name}
                         />
@@ -72,7 +73,10 @@ export default function AdminProducts() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${getStockColor(product.stock)}`}
+                          className={cn(
+                            'rounded-full px-2 py-1 text-center text-xs font-semibold',
+                            getStockColor(product.stock)
+                          )}
                         >
                           {product.stock}
                         </span>
@@ -80,27 +84,25 @@ export default function AdminProducts() {
                       <td className="px-4 py-3 font-bold text-[#53685B]">
                         {formatIDR(product.price)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
                           {product.category}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
                         {product.certificate ? (
-                          <a 
-                            href={`/${product.certificate}`} 
+                          <a
+                            href={`/${product.certificate}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-200"
                             title="Lihat Sertifikat"
                           >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
+                            <BadgeIcon className="h-4 w-4" />
                             Lihat
                           </a>
                         ) : (
-                          <span className="text-xs text-gray-400">Tidak ada</span>
+                          <span className="text-xs text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -113,7 +115,7 @@ export default function AdminProducts() {
                           </Link>
                           <button
                             onClick={() => handleDelete(product.id)}
-                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-600 hover:shadow-md"
+                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus
                           </button>

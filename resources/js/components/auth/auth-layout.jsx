@@ -85,7 +85,7 @@ const labelVariants = cva('mb-1 block text-sm font-semibold', {
   variants: {
     variant: {
       brown: 'text-[#3E2723]',
-      green: '',
+      green: 'text-[#2F3E46]',
     },
   },
   defaultVariants: {
@@ -106,16 +106,21 @@ export function AuthLabel({ htmlFor, children, className, variant, ...props }) {
 }
 
 const inputVariants = cva(
-  'w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:ring-2 focus:outline-none',
+  'w-full rounded-lg border border-gray-300 px-4 text-gray-700 focus:ring-2 focus:outline-none',
   {
     variants: {
       variant: {
         brown: 'focus:ring-[#B77C4C]',
         green: 'focus:ring-[#E9E19E]',
       },
+      size: {
+        sm: 'py-2',
+        md: 'py-3',
+      },
     },
     defaultVariants: {
       variant: 'green',
+      size: 'md',
     },
   }
 );
@@ -129,10 +134,11 @@ export function AuthInput({
   className,
   placeholder,
   required = false,
-  variant,
   min,
   max,
   step,
+  variant,
+  size,
   ...props
 }) {
   return (
@@ -143,7 +149,7 @@ export function AuthInput({
       value={value}
       defaultValue={defaultValue}
       placeholder={placeholder}
-      className={cn(inputVariants({ variant, className }))}
+      className={cn(inputVariants({ variant, size, className }))}
       required={required}
       min={min}
       step={step}
@@ -169,7 +175,7 @@ export function AuthTextArea({
       name={name}
       rows={rows}
       placeholder={placeholder}
-      className={cn(inputVariants({ variant, className }))}
+      className={cn('max-h-40', inputVariants({ variant, className }))}
       required={required}
       {...props}
     />
@@ -186,9 +192,14 @@ const buttonVariants = cva(
         green: 'bg-green-600 hover:bg-green-700',
         link: 'bg-muted text-muted-foreground hover:underline',
       },
+      size: {
+        sm: 'py-2',
+        md: 'py-3',
+      },
     },
     defaultVariants: {
       variant: 'green',
+      size: 'md',
     },
   }
 );
@@ -198,12 +209,13 @@ export function AuthButton({
   className,
   children,
   variant,
+  size,
   ...props
 }) {
   return (
     <button
       type={type}
-      className={cn(buttonVariants({ variant }), className)}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     >
       {children}

@@ -1,4 +1,4 @@
-import { Form, Link, usePage } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -8,6 +8,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import { CertificateIcon } from '@/components/icons';
 
 export default function SellerEditProductPage() {
   const { product } = usePage().props;
@@ -19,12 +20,13 @@ export default function SellerEditProductPage() {
           <h2 className="font-poppins mb-6 text-2xl font-bold">Edit Produk</h2>
 
           <Form
-            action={`/products/${product.id}`}
-            method="PUT"
+            action={`/seller/products/${product.id}`}
+            method="POST"
             encType="multipart/form-data"
             className="flex flex-col gap-4"
             disableWhileProcessing={true}
             options={{ preserveScroll: true }}
+            transform={(data) => ({ ...data, _method: 'PUT' })}
           >
             <div>
               <AuthLabel htmlFor="name">Nama Produk</AuthLabel>
@@ -121,13 +123,7 @@ export default function SellerEditProductPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
-                    <svg
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-                    </svg>
+                    <CertificateIcon />
                     Lihat Sertifikat Saat Ini
                   </a>
                 </div>

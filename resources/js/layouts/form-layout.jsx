@@ -3,8 +3,22 @@ import Navbar from '@/components/layout/navbar';
 import Footer from '@/components/layout/footer';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function FormLayout({ children, title }) {
+  const { flash } = usePage().props;
+
+  useEffect(() => {
+    if (flash?.success) {
+      toast.success(flash.success);
+    }
+
+    if (flash?.error) {
+      toast.error(flash.error);
+    }
+  }, [flash]);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <div className="font-poppins flex min-h-screen flex-col bg-gray-50 text-gray-800">

@@ -1,5 +1,6 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge"
+import { usePage } from '@inertiajs/react';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -14,4 +15,29 @@ const rupiah = new Intl.NumberFormat('id-ID', {
 
 export function formatIDR(number) {
   return rupiah.format(number);
+}
+
+export function useParams() {
+  const { url } = usePage();
+  const params = new URLSearchParams(url.split('?')[1]);
+
+  return params;
+}
+
+export function getProductImage(product) {
+  return product.image
+    ? `/${product.image}`
+    : 'https://placehold.co/600x500/53685B/FFFFFF?text=Foto+Produk';
+}
+
+export function getStoreImage(store) {
+  return store.image
+    ? `/${store.image}`
+    : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko';
+}
+
+export function getUserImage(user) {
+  return user.image
+    ? `/${user.image}`
+    : `https://avatar.iran.liara.run/username?username=${user.username}`;
 }

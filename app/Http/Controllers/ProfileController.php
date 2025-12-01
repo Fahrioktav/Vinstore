@@ -16,11 +16,7 @@ class ProfileController extends Controller
         $userId = Auth::id();
         $user = User::with('store')->find($userId);
         
-        $sessions = [
-            'error' => session('error'),
-            'success' => session('success'),
-        ];
-        return Inertia::render('profile/edit', compact('user', 'sessions'));
+        return Inertia::render('profile/edit', compact('user'));
     }
 
     public function update(Request $request)

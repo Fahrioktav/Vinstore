@@ -1,23 +1,12 @@
-import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
+import { Link, useForm, usePage, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { BadgeIcon } from '@/components/icons';
 
 export default function SellerDashboard() {
-  const { products, orders, productCount, orderCount, flash } = usePage().props;
-
-  React.useEffect(() => {
-    if (flash?.success) {
-      toast.success(flash.success);
-    }
-
-    if (flash?.error) {
-      toast.error(flash.error);
-    }
-  }, [flash]);
-
+  const { products, orders, productCount, orderCount } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   const handleSelectProduct = (productId) => {
@@ -248,13 +237,7 @@ function ProductRow({ product, isSelected, onSelect }) {
             className="inline-flex items-center gap-1 text-green-600 hover:text-green-800"
             title="Lihat Sertifikat"
           >
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <BadgeIcon className="h-5 w-5" />
           </a>
         ) : (
           <span className="text-xs text-gray-400">-</span>
@@ -296,7 +279,7 @@ function OrderRow({ order }) {
 
     // Post dengan router.post
     router.post(
-      `/orders/${order.id}/status`,
+      `/seller/orders/${order.id}/status`,
       { status: newStatus },
       {
         preserveScroll: true,
@@ -316,7 +299,7 @@ function OrderRow({ order }) {
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus order ini?')) {
-      router.delete(`/orders/${order.id}`, {
+      router.delete(`/seller/orders/${order.id}`, {
         preserveScroll: true,
       });
     }

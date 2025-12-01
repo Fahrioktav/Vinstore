@@ -11,13 +11,11 @@ export default function Footer() {
       <span>VINSTORE.id © 2025 — All Rights Reserved</span>
       <>
         {links.map((link) => (
-          <a
-            key={link.label}
-            href={link.href}
-            className="underline [:first-of-type]:border-l [&:not(:last-of-type)]:border-r"
-          >
-            {link.label}
-          </a>
+          <span key={link.label} className="border-l">
+            <a href={link.href} className="hover:underline">
+              {link.label}
+            </a>
+          </span>
         ))}
       </>
     </footer>

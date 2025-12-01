@@ -33,7 +33,7 @@ export default function ContactPage() {
   return (
     <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
       {/* <div className="my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl"></div> */}
-      <div className="my-auto grid max-w-6xl items-end gap-12 rounded-2xl bg-gray-50 p-16 shadow-xl md:grid-cols-2">
+      <div className="my-auto grid max-w-6xl items-start gap-12 rounded-2xl bg-gray-50 p-16 shadow-xl md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
           <h3 className="text-4xl font-bold text-[#4a5b4d]">Hubungi Kami</h3>
@@ -74,7 +74,7 @@ export default function ContactPage() {
         </div>
 
         {/* {-- Formulir Kanan --} */}
-        <Form className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md">
+        <Form className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md md:mt-10">
           <h3 className="mb-3 text-2xl font-semibold text-[#4a5b4d]">
             Kirim Pesan
           </h3>
@@ -98,7 +98,7 @@ export default function ContactPage() {
           <textarea
             rows="5"
             placeholder="Tulis pesanmu di sini..."
-            className={inputClassName}
+            className={cn(inputClassName, 'max-h-40')}
           />
 
           <button
