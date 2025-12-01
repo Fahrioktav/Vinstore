@@ -9,22 +9,31 @@ import {
 } from '../ui/dropdown-menu';
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
-const links = [
-  { label: 'Home', href: '/', requireAuth: false },
-  { label: 'Toko', href: '/toko', requireAuth: false },
-  { label: 'Produk', href: '/products', requireAuth: false },
-  { label: 'Order', href: '/order', requireAuth: true },
-  { label: 'Contact', href: '/contact', requireAuth: false },
-];
+const links = {
+  default: [
+    { label: 'Home', href: '/' },
+    { label: 'Toko', href: '/toko' },
+    { label: 'Produk', href: '/products' },
+    { label: 'Order', href: '/order' },
+    { label: 'Contact', href: '/contact' },
+  ],
+  admin: [{ label: 'Dashboard', href: '/admin/dashboard' }],
+};
 
-const userMenus = [
-  { label: '👤 Profil', href: '/profile' },
-  { label: '🛒 Keranjang', href: '/cart' },
-];
+const baseMenus = [{ label: '👤 Profil', href: '/profile' }];
+const menus = {
+  default: [...baseMenus, { label: '🛒 Keranjang', href: '/cart' }],
+  admin: baseMenus,
+};
 
 export default function Navbar() {
   const { user } = usePage().props;
   const url = usePage().url;
+
+  const displayMenus =
+    user?.role === 'admin' ? menus['admin'] : menus['default'];
+  const displayLinks =
+    user?.role === 'admin' ? links['admin'] : links['default'];
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -71,7 +80,7 @@ export default function Navbar() {
 
         {/* {-- MENU UTAMA --} */}
         <ul className="hidden items-center gap-5 text-sm font-semibold text-white transition-all md:flex lg:gap-10">
-          {links.map((link) => (
+          {displayLinks.map((link) => (
             <li key={link.label}>
               <Link
                 href={link.href}
@@ -98,7 +107,7 @@ export default function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="shadow-lgshadow-lg mt-2 w-44 border-0 p-0">
-                {userMenus.map((menu, i) => (
+                {displayMenus.map((menu, i) => (
                   <DropdownMenuItem
                     key={i}
                     className={DropdownMenuItemStyle}
@@ -145,7 +154,7 @@ export default function Navbar() {
             !scrolled ? 'bg-[#2F3E46]' : 'bg-transparent'
           )}
         >
-          {links.map((link) => (
+          {displayLinks.map((link) => (
             <Link
               key={link.label}
               href={link.href}

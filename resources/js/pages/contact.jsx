@@ -31,8 +31,9 @@ export default function ContactPage() {
   const { user } = usePage().props;
 
   return (
-    <section className="flex w-full grow bg-gray-50">
-      <div className="mx-auto my-auto grid max-w-6xl items-start gap-12 p-16 md:grid-cols-2">
+    <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
+      {/* <div className="my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl"></div> */}
+      <div className="my-auto grid max-w-6xl items-end gap-12 rounded-2xl bg-gray-50 p-16 shadow-xl md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
           <h3 className="text-4xl font-bold text-[#4a5b4d]">Hubungi Kami</h3>

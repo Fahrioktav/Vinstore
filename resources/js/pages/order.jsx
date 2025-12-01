@@ -25,7 +25,7 @@ export default function OrderPage() {
         <h2 className="mb-10 text-center text-4xl font-bold">📦 Pesananmu</h2>
         {orders.length === 0 ? (
           <div className="py-20 text-center text-lg text-[#E9E19E]/90 italic">
-            Belum ada pesanan yang masuk 🕯️
+            Kamu belum memesan apapun 🕯️
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 shadow-xl backdrop-blur-md">

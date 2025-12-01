@@ -56,7 +56,7 @@ export default function HomePage() {
           {categories.length === 0 ? (
             <p className="text-gray-500">Belum ada kategori</p>
           ) : (
-            categories.map((category) => (
+            categories.slice(0, 5).map((category) => (
               <div
                 className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
                 key={category.id}
@@ -89,14 +89,17 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
           </h2>
-          <Link href="/products" className="text-[#B77C4C] hover:underline">
+          <Link
+            href="/products"
+            className="text-right text-[#B77C4C] hover:underline"
+          >
             Lihat Semua
           </Link>
         </div>
 
         {products.length > 0 ? (
           <div className="grid grid-cols-1 gap-8 pt-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {products.map((product, i) => (
+            {products.slice(0, 4).map((product, i) => (
               <Card
                 key={i}
                 className="gap-0 py-4 shadow-md transition hover:shadow-lg"
@@ -111,9 +114,17 @@ export default function HomePage() {
                       Antik
                     </span>
                     {product.certificate && (
-                      <span className="absolute top-2 right-2 rounded-md bg-green-600 px-2 py-1 text-xs text-white shadow flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <span className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-xs text-white shadow">
+                        <svg
+                          className="h-3 w-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                         Bersertifikat
                       </span>
@@ -129,11 +140,13 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-auto border-t border-gray-200 pt-3">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2 flex items-center justify-between">
                       <span className="font-bold text-[#B77C4C]">
                         {formatIDR(product.price)}
                       </span>
-                      <span className={`text-xs font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                      <span
+                        className={`text-xs font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}
+                      >
                         {product.stock > 0 ? `Stok: ${product.stock}` : 'Habis'}
                       </span>
                     </div>
@@ -145,7 +158,10 @@ export default function HomePage() {
                         </button>
                       </Link>
                     ) : (
-                      <button disabled className="w-full rounded-md bg-gray-400 px-3 py-3 text-sm font-medium text-white cursor-not-allowed">
+                      <button
+                        disabled
+                        className="w-full cursor-not-allowed rounded-md bg-gray-400 px-3 py-3 text-sm font-medium text-white"
+                      >
                         Stok Habis
                       </button>
                     )}
@@ -171,7 +187,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-6">
-            {products.slice(0, 3).map((recommendation) => (
+            {products.slice(0, 2).map((recommendation) => (
               <Card
                 key={recommendation.id}
                 className="w-72 rounded-xl bg-white py-4 shadow-md transition hover:shadow-lg"

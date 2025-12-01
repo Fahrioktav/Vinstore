@@ -149,7 +149,6 @@ class ProductController extends Controller
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        // return view('seller.products.edit', compact('product'));
         return Inertia::render('seller/products/edit', compact('product'));
 
         $product->update($data);

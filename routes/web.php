@@ -51,12 +51,8 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/items', fn() => view('items', [
-    'heroText' => 'Temukan Barang Favoritmu!',
-    'showSearch' => true
-]));
-
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
+Route::get('/toko/{store}', [StoreController::class, 'show'])->name('toko.show');
 
 Route::get('/contact', fn() => Inertia::render('contact', [
     'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
@@ -64,39 +60,80 @@ Route::get('/contact', fn() => Inertia::render('contact', [
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
-Route::get('/register', fn() => Inertia::render('auth/register', [
-    'heroText' => 'Halo!, Selamat Datang di VINSTORE'
-]))->name('register.form');
+/*
+|--------------------------------------------------------------------------
+| Guest Only Routes (Yang Udah Login Dilarang Masuk)
+|--------------------------------------------------------------------------
+*/
 
-Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
+Route::middleware(['role:guestOnly'])->group(function () {
+    // Register
+    Route::get('/register', fn() => Inertia::render('auth/register', [
+        'heroText' => 'Halo!, Selamat Datang di VINSTORE'
+    ]))->name('register.form');
+    Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
 
-Route::get('/login', fn() => Inertia::render('auth/login', [
-    'heroText' => 'Selamat Datang Kembali!'
-]))->name('login.form');
-
-Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
-
-Route::post('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/');
-})->name('logout');
+    // Login
+    Route::get('/login', fn() => Inertia::render('auth/login', [
+        'heroText' => 'Selamat Datang Kembali!'
+    ]))->name('login.form');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+});
 
 /*
 |--------------------------------------------------------------------------
 | Protected Routes (Login Required)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
 
+// All authenticated user can access
+Route::middleware(['auth'])->group(function () {
     // Profil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
+    // Logout
+    Route::post('/logout', function () {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+        return redirect('/');
+    })->name('logout');
+});
+
+// Only role = user can access
+Route::middleware(['auth', 'role:user'])->group(function () {
     // Register Toko
     Route::get('/store/register', [StoreController::class, 'showRegisterForm'])->name('store.register');
     Route::post('/store/register', [StoreController::class, 'register'])->name('store.register.submit');
+});
+
+// Both role user and seller can access
+Route::middleware(['auth', 'role:user,seller'])->group(function () {
+    // Lihat, tambahkan, atau hapus barang dari keranjang
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
+    Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
+
+    // Untuk checkout satu produk (menampilkan halaman konfirmasi pembelian)
+    Route::get('/checkout/show/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
+
+    // ✅ Checkout satu produk langsung dari detail produk
+    Route::get('/checkout/product/{product}', [OrderController::class, 'showCheckout'])->name('checkout.product');
+    Route::post('/checkout/product/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
+
+    // ✅ Checkout dari keranjang (semua item)
+    Route::post('/checkout/cart', [OrderController::class, 'checkoutFromCart'])->name('checkout.fromCart');
+
+    // User order
+    Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
+    Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
+});
+
+// Only role = seller can access
+Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
+    // Dashboard Seller
+    Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
     
     // Edit Toko
     Route::get('/store/edit', [StoreController::class, 'edit'])->name('store.edit');
@@ -109,40 +146,13 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{id}', [ProductController::class, 'updateStock'])->name('products.updateStock');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
-
+    
     // Order Status & Delete
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
-    Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
-    Route::delete('/order/{id}/cancel', [OrderController::class, 'cancel'])->name('order.cancel');
-
-    // Tambah ke keranjang
-    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
-
-    // Untuk checkout satu produk (menampilkan halaman konfirmasi pembelian)
-    Route::get('/checkout/show/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
-
-    // ✅ Checkout satu produk langsung dari detail produk
-    Route::get('/checkout/product/{product}', [OrderController::class, 'showCheckout'])->name('checkout.product');
-    Route::post('/checkout/product/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
-
-    // ✅ Checkout dari keranjang (semua item)
-    Route::post('/checkout/cart', [OrderController::class, 'checkoutFromCart'])->name('checkout.fromCart');
-
-    Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
-
-    Route::get('/toko/{store}', [StoreController::class, 'show'])->name('store.show');
-
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
-    Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
 });
 
-Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
-    // Dashboard Seller
-    Route::get('dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
-});
-
+// Only role = admin can access
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard Admin
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
