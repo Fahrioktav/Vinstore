@@ -1,6 +1,7 @@
 import { useForm, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
+import { EditPhotoIcon } from '@/components/icons';
 
 export default function EditProfilePage() {
   const { user, errors } = usePage().props;
@@ -61,20 +62,7 @@ export default function EditProfilePage() {
                 htmlFor="photo-upload"
                 className="flex cursor-pointer items-center justify-center gap-1 font-semibold text-blue-600 hover:underline"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6M13 7H7v6M6 6h.01"
-                  />
-                </svg>
+                <EditPhotoIcon />
                 Edit Photo
               </label>
               <input

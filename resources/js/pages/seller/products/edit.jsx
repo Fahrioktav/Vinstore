@@ -8,6 +8,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import { CertificateIcon } from '@/components/icons';
 
 export default function SellerEditProductPage() {
   const { product } = usePage().props;
@@ -122,13 +123,7 @@ export default function SellerEditProductPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
-                    <svg
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-                    </svg>
+                    <CertificateIcon />
                     Lihat Sertifikat Saat Ini
                   </a>
                 </div>

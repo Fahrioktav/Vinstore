@@ -6,7 +6,6 @@ import SearchInput from '@/components/search-input';
 
 export default function ProductsPage() {
   const { paginatedProducts, showSearch } = usePage().props;
-  console.log(paginatedProducts);
   const products = paginatedProducts.data;
 
   // Keyword pencarian nama, kategori, deskripsi barang

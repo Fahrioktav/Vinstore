@@ -23,3 +23,15 @@ export function useParams() {
 
   return params;
 }
+
+export function getProductImage(product) {
+  return product.image
+    ? `/${product.image}`
+    : 'https://placehold.co/600x500/53685B/FFFFFF?text=Foto+Produk';
+}
+
+export function getStoreImage(store) {
+  return store.image
+    ? `/${store.image}`
+    : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko';
+}

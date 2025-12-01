@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const {
@@ -163,7 +163,7 @@ function ProductRow({ product }) {
     <tr className="border-t border-gray-100 transition hover:bg-gray-50">
       <td className="px-4 py-3">
         <img
-          src={`/${product.image}`}
+          src={getProductImage(product)}
           className="h-16 w-16 rounded-lg object-cover shadow-sm"
           alt={product.name}
         />

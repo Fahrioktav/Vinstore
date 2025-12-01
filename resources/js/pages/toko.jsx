@@ -1,6 +1,6 @@
 import { Form, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { useParams } from '@/lib/utils';
+import { getStoreImage, useParams } from '@/lib/utils';
 import SearchInput from '@/components/search-input';
 
 export default function TokoPage() {
@@ -33,11 +33,7 @@ export default function TokoPage() {
             >
               {/* {-- GAMBAR TOKO --} */}
               <img
-                src={
-                  store.photo
-                    ? `/storage/${store.photo}`
-                    : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko'
-                }
+                src={getStoreImage(store)}
                 alt={store.store_name}
                 className="h-48 w-full object-cover"
               />
