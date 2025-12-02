@@ -22,6 +22,13 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
+        $user = Auth::user();
+
+        // Cek apakah user adalah seller dan mencoba membeli produk dari toko sendiri
+        if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
+            return back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
+        }
+
         // Cek stok produk
         if ($product->stock <= 0) {
             return back()->with('error', 'Maaf, produk ini sudah habis!');

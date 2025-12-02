@@ -10,6 +10,7 @@ export default function AdminDashboard() {
     totalProducts,
     totalOrders,
     totalCategories,
+    totalContacts,
     products,
   } = usePage().props;
 
@@ -55,6 +56,13 @@ export default function AdminDashboard() {
       icon: '/assets/6.png',
       href: '/admin/categories',
       color: 'from-indigo-500 to-indigo-600',
+    },
+    {
+      label: 'Messages',
+      value: totalContacts,
+      icon: '/assets/icons/social-whatsapp.png',
+      href: '/admin/contacts',
+      color: 'from-teal-500 to-teal-600',
     },
   ];
 

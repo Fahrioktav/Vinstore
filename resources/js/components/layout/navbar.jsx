@@ -32,8 +32,16 @@ export default function Navbar() {
 
   const displayMenus =
     user?.role === 'admin' ? menus['admin'] : menus['default'];
-  const displayLinks =
-    user?.role === 'admin' ? links['admin'] : links['default'];
+  
+  // Untuk seller, ganti link Toko ke halaman detail toko mereka sendiri
+  let displayLinks = user?.role === 'admin' ? links['admin'] : links['default'];
+  if (user?.role === 'seller' && user?.store) {
+    displayLinks = displayLinks.map(link => 
+      link.label === 'Toko' 
+        ? { label: 'Toko Saya', href: `/toko/${user.store.id}` }
+        : link
+    );
+  }
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);

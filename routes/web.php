@@ -19,7 +19,9 @@ use App\Http\Controllers\Admin\AdminStoreController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminContactController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ContactController;
 use App\Models\Category;
 use Inertia\Inertia;
 
@@ -54,9 +56,8 @@ Route::get('/', function () {
 Route::get('/toko', [StoreController::class, 'index'])->name('toko.index');
 Route::get('/toko/{store}', [StoreController::class, 'show'])->name('toko.show');
 
-Route::get('/contact', fn() => Inertia::render('contact', [
-    'heroText' => 'Butuh Sesuatu? Hubungi Kami!'
-]));
+Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
@@ -110,6 +111,9 @@ Route::middleware(['auth', 'role:user'])->group(function () {
 
 // Both role user and seller can access
 Route::middleware(['auth', 'role:user,seller'])->group(function () {
+    // Riwayat pesan contact untuk user/seller
+    Route::get('/my-contacts', [ContactController::class, 'userContacts'])->name('user.contacts');
+
     // Lihat, tambahkan, atau hapus barang dari keranjang
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
@@ -172,4 +176,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('orders', AdminOrderController::class)->only(['index', 'edit', 'update', 'destroy']);
 
     Route::resource('categories', AdminCategoryController::class)->except(['show']);
+
+    // Kelola Pesan Contact
+    Route::get('contacts', [AdminContactController::class, 'index'])->name('contacts.index');
+    Route::post('contacts/{id}/reply', [AdminContactController::class, 'reply'])->name('contacts.reply');
+    Route::post('contacts/{id}/status', [AdminContactController::class, 'updateStatus'])->name('contacts.status');
+    Route::delete('contacts/{id}', [AdminContactController::class, 'destroy'])->name('contacts.destroy');
 });
