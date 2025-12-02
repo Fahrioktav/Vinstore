@@ -31,8 +31,8 @@ export function getProductImage(product) {
 }
 
 export function getStoreImage(store) {
-  return store.image
-    ? `/${store.image}`
+  return store.photo
+    ? `/storage/${store.photo}`
     : 'https://placehold.co/600x400/53685B/FFFFFF?text=Foto+Toko';
 }
 
