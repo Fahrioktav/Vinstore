@@ -17,12 +17,17 @@ const links = {
     { label: 'Order', href: '/order' },
     { label: 'Contact', href: '/contact' },
   ],
+  seller: [
+    { label: 'Home', href: '/' },
+    { label: 'Contact', href: '/contact' },
+  ],
   admin: [{ label: 'Dashboard', href: '/admin/dashboard' }],
 };
 
 const baseMenus = [{ label: '👤 Profil', href: '/profile' }];
 const menus = {
   default: [...baseMenus, { label: '🛒 Keranjang', href: '/cart' }],
+  seller: baseMenus,
   admin: baseMenus,
 };
 
@@ -30,18 +35,17 @@ export default function Navbar() {
   const { user } = usePage().props;
   const url = usePage().url;
 
-  const displayMenus =
-    user?.role === 'admin' ? menus['admin'] : menus['default'];
+  const displayMenus = user?.role === 'admin' 
+    ? menus['admin'] 
+    : user?.role === 'seller' 
+    ? menus['seller'] 
+    : menus['default'];
   
-  // Untuk seller, ganti link Toko ke halaman detail toko mereka sendiri
-  let displayLinks = user?.role === 'admin' ? links['admin'] : links['default'];
-  if (user?.role === 'seller' && user?.store) {
-    displayLinks = displayLinks.map(link => 
-      link.label === 'Toko' 
-        ? { label: 'Toko Saya', href: `/toko/${user.store.id}` }
-        : link
-    );
-  }
+  const displayLinks = user?.role === 'admin' 
+    ? links['admin'] 
+    : user?.role === 'seller' 
+    ? links['seller'] 
+    : links['default'];
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
