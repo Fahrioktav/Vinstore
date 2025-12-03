@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Contact;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Product;
@@ -27,11 +28,12 @@ class AdminDashboardController extends Controller
         $totalProducts = Product::count();
         $totalOrders = Order::count();
         $totalCategories = Category::count();
+        $totalContacts = Contact::count();
         $products = Product::with('store')->latest()->get();
 
         return Inertia::render('admin/dashboard', compact(
             'totalUsers', 'totalSellers', 'totalStores', 'totalProducts',
-            'totalOrders', 'totalCategories', 'products'
+            'totalOrders', 'totalCategories', 'totalContacts', 'products'
         ));
     }
 }

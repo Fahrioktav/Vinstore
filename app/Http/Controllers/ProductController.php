@@ -5,14 +5,29 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $paginatedProducts = Product::latest()->paginate(12);
-        return Inertia::render('products/index', compact('paginatedProducts'));
+        $keyword = $request->query('q');
+        $query = Product::latest();
+
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                ->orWhere('category', 'like', "%{$keyword}%")
+                ->orWhere('description', 'like', "%{$keyword}%");
+            });
+        }
+
+        $paginatedProducts = $query->paginate(12);
+        return Inertia::render('products/index', [
+            'paginatedProducts' => $paginatedProducts,
+            'showSearch' => true,
+        ]);
     }
 
     public function store(Request $request)
@@ -24,16 +39,25 @@ class ProductController extends Controller
             'category' => 'required',
             'description' => 'required',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $storeId = Auth::user()->store->id;
         $imagePath = null;
+        $certificatePath = null;
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('uploads/products'), $imageName);
             $imagePath = 'uploads/products/' . $imageName;
+        }
+
+        if ($request->hasFile('certificate')) {
+            $certificate = $request->file('certificate');
+            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificate->move(public_path('uploads/certificates'), $certificateName);
+            $certificatePath = 'uploads/certificates/' . $certificateName;
         }
 
         Product::create([
@@ -43,10 +67,11 @@ class ProductController extends Controller
             'price' => $request->price,
             'category' => $request->category,
             'description' => $request->description,
-            'image' => $imagePath
+            'image' => $imagePath,
+            'certificate' => $certificatePath
         ]);
 
-        return back()->with('success', 'Produk berhasil ditambahkan.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil ditambahkan.');
     }
 
     public function update(Request $request, $id)
@@ -58,6 +83,7 @@ class ProductController extends Controller
             'category' => 'required',
             'description' => 'required',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $product = Product::findOrFail($id);
@@ -75,6 +101,14 @@ class ProductController extends Controller
             $product->image = 'uploads/products/' . $imageName;
         }
 
+        // Update sertifikat jika ada sertifikat baru
+        if ($request->hasFile('certificate')) {
+            $certificate = $request->file('certificate');
+            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificate->move(public_path('uploads/certificates'), $certificateName);
+            $product->certificate = 'uploads/certificates/' . $certificateName;
+        }
+
         $product->name = $request->name;
         $product->stock = $request->stock;
         $product->price = $request->price;
@@ -82,7 +116,29 @@ class ProductController extends Controller
         $product->description = $request->description;
         $product->save();
 
-        return back()->with('success', 'Produk berhasil diperbarui.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');
+    }
+
+    public function updateStock(Request $request, $id) {
+        $validator = Validator::make($request->all(), [
+            'stock' => 'required|integer',
+        ]);
+        
+        if ($validator->fails()) {
+            return back()->with('error', $validator->errors());
+        }
+
+        $product = Product::findOrFail($id);
+
+        // Pastikan hanya pemilik toko yang bisa update produk ini
+        if ($product->store->user_id !== Auth::id()) {
+            abort(403, 'Anda tidak memiliki akses ke produk ini.');
+        }
+
+        $product->stock = $request->stock;
+        $product->save();   
+
+        return back()->with('success', 'Stok produk berhasil diperbarui.');
     }
 
     public function destroy($id)
@@ -109,7 +165,6 @@ class ProductController extends Controller
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        // return view('seller.products.edit', compact('product'));
         return Inertia::render('seller/products/edit', compact('product'));
 
         $product->update($data);

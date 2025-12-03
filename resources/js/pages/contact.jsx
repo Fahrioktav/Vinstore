@@ -1,4 +1,4 @@
-import { Form, usePage } from '@inertiajs/react';
+import { useForm, usePage, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { cn } from '@/lib/utils';
 
@@ -7,16 +7,19 @@ const contacts = [
     imgSrc: '/assets/icons/social-whatsapp.png',
     imgAlt: 'WhatsApp',
     label: '082113472156',
+    href: 'https://wa.me',
   },
   {
     imgSrc: '/assets/icons/social-instagram.png',
     imgAlt: 'Instagram',
     label: 'Instagram',
+    href: 'https://instagram.com/vinstore.id',
   },
   {
     imgSrc: '/assets/icons/social-twitter.png',
     imgAlt: 'Twitter',
     label: 'Twitter',
+    href: 'https://twitter.com/vinstore.id',
   },
 ];
 
@@ -25,11 +28,28 @@ const inputClassName = cn(
 );
 
 export default function ContactPage() {
-  const { user } = usePage().props;
+  const { user, flash } = usePage().props;
+  
+  const { data, setData, post, processing, errors, reset } = useForm({
+    name: user ? `${user.first_name} ${user.last_name}` : '',
+    email: user?.email || '',
+    subject: '',
+    message: '',
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    post('/contact', {
+      onSuccess: () => {
+        reset('subject', 'message');
+      },
+    });
+  };
 
   return (
-    <section className="my-auto bg-gray-50 px-6 py-16 text-gray-800 md:px-20">
-      <div className="mx-auto grid max-w-6xl items-start gap-12 md:grid-cols-2">
+    <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
+      {/* <div className="my-auto w-full max-w-5xl rounded-2xl bg-white p-8 shadow-xl"></div> */}
+      <div className="my-auto grid max-w-6xl items-start gap-12 rounded-2xl bg-gray-50 p-16 shadow-xl md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
           <h3 className="text-4xl font-bold text-[#4a5b4d]">Hubungi Kami</h3>
@@ -39,10 +59,27 @@ export default function ContactPage() {
             formulir di samping.
           </p>
 
+          {flash?.success && (
+            <div className="rounded-lg bg-green-100 border border-green-400 px-4 py-3 text-green-700">
+              {flash.success}
+            </div>
+          )}
+
+          {user && (
+            <Link
+              href="/my-contacts"
+              className="inline-block rounded-lg bg-[#5A6E5A] px-5 py-2 text-white transition hover:bg-[#6d7f6d]"
+            >
+              📋 Lihat Riwayat Pesan Saya
+            </Link>
+          )}
+
           <div className="mt-8 space-y-4">
             {contacts.map((contact, idx) => (
-              <div
+              <a
                 key={idx}
+                href={contact.href}
+                target="_blank"
                 className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-3 shadow-sm transition hover:shadow-md"
               >
                 <img
@@ -51,7 +88,7 @@ export default function ContactPage() {
                   className="h-6 w-6"
                 />
                 <span className="text-gray-700">{contact.label}</span>
-              </div>
+              </a>
             ))}
           </div>
 
@@ -68,40 +105,69 @@ export default function ContactPage() {
         </div>
 
         {/* {-- Formulir Kanan --} */}
-        <Form className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md md:mt-10">
           <h3 className="mb-3 text-2xl font-semibold text-[#4a5b4d]">
             Kirim Pesan
           </h3>
 
-          <input
-            type="text"
-            defaultValue={user ? user?.first_name + ' ' + user?.last_name : ''}
-            placeholder="Nama Lengkap"
-            className={inputClassName}
-            readOnly={!!user}
-          />
+          <div>
+            <input
+              type="text"
+              value={data.name}
+              onChange={(e) => setData('name', e.target.value)}
+              placeholder="Nama Lengkap"
+              className={inputClassName}
+              readOnly={!!user}
+              required
+            />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+          </div>
 
-          <input
-            type="email"
-            placeholder="Alamat Email"
-            defaultValue={user?.email}
-            className={inputClassName}
-            readOnly={!!user}
-          />
+          <div>
+            <input
+              type="email"
+              placeholder="Alamat Email"
+              value={data.email}
+              onChange={(e) => setData('email', e.target.value)}
+              className={inputClassName}
+              readOnly={!!user}
+              required
+            />
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+          </div>
 
-          <textarea
-            rows="5"
-            placeholder="Tulis pesanmu di sini..."
-            className={inputClassName}
-          />
+          <div>
+            <input
+              type="text"
+              value={data.subject}
+              onChange={(e) => setData('subject', e.target.value)}
+              placeholder="Subjek (contoh: Keluhan Produk, Pertanyaan, dll)"
+              className={inputClassName}
+              required
+            />
+            {errors.subject && <p className="mt-1 text-xs text-red-500">{errors.subject}</p>}
+          </div>
+
+          <div>
+            <textarea
+              rows="5"
+              value={data.message}
+              onChange={(e) => setData('message', e.target.value)}
+              placeholder="Tulis pesanmu di sini..."
+              className={cn(inputClassName, 'max-h-40')}
+              required
+            />
+            {errors.message && <p className="mt-1 text-xs text-red-500">{errors.message}</p>}
+          </div>
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-[#5A6E5A] py-3 font-semibold tracking-wide text-white transition hover:bg-[#6d7f6d]"
+            disabled={processing}
+            className="w-full rounded-lg bg-[#5A6E5A] py-3 font-semibold tracking-wide text-white transition hover:bg-[#6d7f6d] disabled:opacity-50"
           >
-            Kirim Pesan
+            {processing ? 'Mengirim...' : 'Kirim Pesan'}
           </button>
-        </Form>
+        </form>
       </div>
     </section>
   );

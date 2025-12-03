@@ -58,8 +58,8 @@ class AdminCategoryController extends Controller
 
         if ($request->hasFile('image')) {
             // Hapus gambar lama jika ada
-            if ($category->image && \Storage::disk('public')->exists($category->image)) {
-                \Storage::disk('public')->delete($category->image);
+            if ($category->image && Storage::disk('public')->exists($category->image)) {
+                Storage::disk('public')->delete($category->image);
             }
             $imagePath = $request->file('image')->store('categories', 'public');
             $data['image'] = $imagePath;
@@ -75,8 +75,8 @@ class AdminCategoryController extends Controller
         $category = Category::findOrFail($id);
         
         // Hapus gambar jika ada
-        if ($category->image && \Storage::disk('public')->exists($category->image)) {
-            \Storage::disk('public')->delete($category->image);
+        if ($category->image && Storage::disk('public')->exists($category->image)) {
+            Storage::disk('public')->delete($category->image);
         }
         
         $category->delete();

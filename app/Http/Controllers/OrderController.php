@@ -19,18 +19,33 @@ class OrderController extends Controller
 
     public function showCheckout(Product $product)
     {
+        $user = Auth::user();
+
+        // Cek apakah user adalah seller dan mencoba checkout produk dari toko sendiri
+        if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
+            return redirect()->back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
+        }
+
         return Inertia::render('checkout', compact('product'));
     }
     
     // Update status pesanan oleh seller
     public function updateStatus(Request $request, $id)
     {
-        $request->validate(['status' => 'required']);
+        $request->validate(['status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled']);
+        
         $order = Order::findOrFail($id);
-        $order->status = $request->status;
-        $order->save();
+        
+        // Pastikan hanya seller yang memiliki toko ini yang bisa update
+        if ($order->store_id !== Auth::user()->store->id) {
+            abort(403, 'Anda tidak memiliki akses untuk mengupdate order ini.');
+        }
+        
+        $order->update([
+            'status' => $request->status
+        ]);
 
-        return back()->with('success', 'Status pesanan diperbarui.');
+        return back()->with('success', 'Status pesanan berhasil diperbarui.');
     }
 
     // Delete order
@@ -51,6 +66,11 @@ class OrderController extends Controller
         ]);
 
         $user = Auth::user();
+
+        // Cek apakah user adalah seller dan mencoba membeli produk dari toko sendiri
+        if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
+            return back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
+        }
 
         // 🔒 Cek apakah stok mencukupi
         if ($product->stock < $request->quantity) {
@@ -80,12 +100,12 @@ class OrderController extends Controller
 
     public function userOrders()
     {
-        $user = Auth::user(); // ← Pasti ada method user()
+        $user = Auth::user();
         if (!$user) {
             return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        $orders = Order::with('product')
+        $orders = Order::with(['product', 'store'])
             ->where('user_id', $user->id)
             ->latest()
             ->get();
@@ -118,6 +138,17 @@ class OrderController extends Controller
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Keranjang kamu kosong.');
+        }
+
+        // Cek apakah user adalah seller dan ada produk dari toko sendiri di keranjang
+        if ($user->role === 'seller' && $user->store) {
+            $ownProducts = $cartItems->filter(function($item) use ($user) {
+                return $item->product->store_id === $user->store->id;
+            });
+
+            if ($ownProducts->isNotEmpty()) {
+                return redirect()->route('cart.index')->with('error', 'Keranjang Anda mengandung produk dari toko Anda sendiri. Silakan hapus produk tersebut terlebih dahulu.');
+            }
         }
 
         $total = 0;

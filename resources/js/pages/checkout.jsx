@@ -1,6 +1,7 @@
 import { Form, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
+import { BadgeIcon, CertificateIcon } from '@/components/icons';
 
 export default function CheckoutPage() {
   const { product } = usePage().props;
@@ -23,6 +24,23 @@ export default function CheckoutPage() {
           <p className="mt-4 text-lg font-bold">
             Harga: {formatIDR(product.price)}
           </p>
+          {product.certificate && (
+            <div className="mt-4 rounded-lg bg-green-50 border border-green-200 p-3">
+              <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
+                <BadgeIcon className="h-5 w-5" />
+                Produk Bersertifikat
+              </p>
+              <a 
+                href={`/${product.certificate}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+              >
+                <CertificateIcon />
+                Lihat Sertifikat Keaslian
+              </a>
+            </div>
+          )}
         </div>
       </div>
 

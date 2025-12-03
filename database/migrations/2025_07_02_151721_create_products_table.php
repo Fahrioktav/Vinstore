@@ -18,7 +18,6 @@ return new class extends Migration
             $table->text('description');
             $table->string('image')->nullable(); // simpan nama file / path foto
             $table->timestamps();
-
             $table->foreign('store_id')->references('id')->on('stores')->onDelete('cascade');
         });
     }

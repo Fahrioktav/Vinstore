@@ -1,105 +1,148 @@
-import { Form, Link, usePage } from '@inertiajs/react';
-import MainLayout from '@/layouts/main-layout';
+import { Form, usePage } from '@inertiajs/react';
+import FormLayout from '@/layouts/form-layout';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  AuthButton,
+  AuthButtonLink,
+  AuthInput,
+  AuthLabel,
+  AuthTextArea,
+} from '@/components/auth/auth-layout';
+import { CertificateIcon } from '@/components/icons';
 
 export default function SellerEditProductPage() {
   const { product } = usePage().props;
 
   return (
-    <div className="mx-auto max-w-xl rounded bg-white p-6 shadow">
-      <h2 className="mb-4 text-xl font-bold">Edit Produk</h2>
+    <section className="flex w-full max-w-2xl grow px-6 py-8">
+      <Card className="my-auto w-full shadow-md transition hover:shadow-lg">
+        <CardContent>
+          <h2 className="font-poppins mb-6 text-2xl font-bold">Edit Produk</h2>
 
-      <Form
-        action={`/products/${product.id}`}
-        method="PUT"
-        encType="multipart/form-data"
-        disableWhileProcessing={true}
-        options={{ preserveScroll: true }}
-      >
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">
-            Nama Produk
-          </label>
-          <input
-            type="text"
-            name="name"
-            defaultValue={product.name}
-            className="w-full rounded border p-2"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">Stok</label>
-          <input
-            type="number"
-            name="stock"
-            defaultValue={product.stock}
-            className="w-full rounded border p-2"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">Harga</label>
-          <input
-            type="number"
-            name="price"
-            defaultValue={product.price}
-            className="w-full rounded border p-2"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">Kategori</label>
-          <input
-            type="text"
-            name="category"
-            defaultValue={product.category}
-            className="w-full rounded border p-2"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">Deskripsi</label>
-          <textarea
-            name="description"
-            defaultValue={product.description}
-            rows="4"
-            className="w-full rounded border p-2"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-semibold">
-            Gambar Produk (opsional)
-          </label>
-          <input type="file" name="image" className="w-full" />
-          {product.image && (
-            <div className="mt-2">
-              <img
-                src={`/${product.image}`}
-                className="h-24 w-24 object-cover"
+          <Form
+            action={`/seller/products/${product.id}`}
+            method="POST"
+            encType="multipart/form-data"
+            className="flex flex-col gap-4"
+            disableWhileProcessing={true}
+            options={{ preserveScroll: true }}
+            transform={(data) => ({ ...data, _method: 'PUT' })}
+          >
+            <div>
+              <AuthLabel htmlFor="name">Nama Produk</AuthLabel>
+              <AuthInput
+                id="name"
+                type="text"
+                name="name"
+                defaultValue={product.name}
+                required
               />
             </div>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-        >
-          Simpan Perubahan
-        </button>
-        <Link
-          href="/seller/dashboard"
-          className="ml-4 text-gray-600 hover:underline"
-        >
-          Kembali
-        </Link>
-      </Form>
-    </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <AuthLabel htmlFor="stock">Stok</AuthLabel>
+                <AuthInput
+                  id="stock"
+                  type="number"
+                  name="stock"
+                  defaultValue={product.stock}
+                  required
+                />
+              </div>
+
+              <div>
+                <AuthLabel htmlFor="price">Harga</AuthLabel>
+                <AuthInput
+                  id="price"
+                  type="number"
+                  name="price"
+                  defaultValue={product.price}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="category">Kategori</AuthLabel>
+              <AuthInput
+                id="category"
+                type="text"
+                name="category"
+                defaultValue={product.category}
+                required
+              />
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="description">Deskripsi</AuthLabel>
+              <AuthTextArea
+                id="description"
+                name="description"
+                defaultValue={product.description}
+                rows="4"
+                required
+              />
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="image">Gambar Produk (Opsional)</AuthLabel>
+              <div className="flex flex-row-reverse items-start gap-4">
+                <AuthInput id="image" type="file" name="image" />
+                {product.image && (
+                  <div className="">
+                    <img
+                      src={`/${product.image}`}
+                      className="h-24 w-28 rounded-lg object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="certificate">
+                📜 Sertifikat Keaslian (Opsional)
+              </AuthLabel>
+              <div>
+                <AuthInput
+                  id="certificate"
+                  type="file"
+                  name="certificate"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Format: PDF, JPG, PNG (Max 5MB)
+                </p>
+              </div>
+              {product.certificate && (
+                <div className="mt-2">
+                  <a
+                    href={`/${product.certificate}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-blue-600 hover:underline"
+                  >
+                    <CertificateIcon />
+                    Lihat Sertifikat Saat Ini
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <AuthButtonLink href="/seller/dashboard">Kembali</AuthButtonLink>
+              <AuthButton type="submit">Simpan Perubahan</AuthButton>
+            </div>
+          </Form>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
 SellerEditProductPage.layout = (page) => (
-  <MainLayout title="Seller Dashboard" heroText="Edit Produk">
+  <FormLayout title="Seller Dashboard" heroText="Edit Produk">
     {page}
-  </MainLayout>
+  </FormLayout>
 );

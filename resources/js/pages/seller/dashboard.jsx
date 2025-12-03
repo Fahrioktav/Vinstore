@@ -1,11 +1,13 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Link, useForm, usePage, router } from '@inertiajs/react';
+import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { BadgeIcon } from '@/components/icons';
 
 export default function SellerDashboard() {
-  const { products, orders, productCount, orderCount, store } = usePage().props;
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const { products, orders, productCount, orderCount } = usePage().props;
+  const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   const handleSelectProduct = (productId) => {
     setSelectedProducts((prev) =>
@@ -25,7 +27,6 @@ export default function SellerDashboard() {
 
   return (
     <>
-      <Head title="Seller Dashboard" />
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header Stats */}
         <div className="mb-8 grid gap-6 md:grid-cols-2">
@@ -84,12 +85,14 @@ export default function SellerDashboard() {
             <h2 className="text-2xl font-bold text-[#53685B]">
               🛍️ Daftar Barang
             </h2>
-            <Link
-              href="/products/create"
-              className="rounded-lg bg-[#53685B] px-6 py-2 font-semibold text-white transition hover:bg-[#3c4a3e]"
-            >
-              + Add Barang
-            </Link>
+            <button>
+              <Link
+                href="/seller/products/create"
+                className="rounded-lg bg-[#53685B] px-6 py-2 font-semibold text-white transition hover:bg-[#3c4a3e]"
+              >
+                + Add Barang
+              </Link>
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -111,6 +114,7 @@ export default function SellerDashboard() {
                   <th className="px-4 py-3 text-left">Harga</th>
                   <th className="px-4 py-3 text-left">Kategori</th>
                   <th className="px-4 py-3 text-left">Deskripsi</th>
+                  <th className="px-4 py-3 text-center">Sertifikat</th>
                   <th className="px-4 py-3 text-center">Action</th>
                 </tr>
               </thead>
@@ -139,104 +143,27 @@ export default function SellerDashboard() {
     </>
   );
 }
-
-function OrderRow({ order }) {
-  const { post, data, setData, processing } = useForm({
-    status: order.status,
-  });
-
-  const handleStatusChange = (e) => {
-    const newStatus = e.target.value;
-    setData('status', newStatus);
-    post(`/orders/${order.id}/status`, {
-      preserveScroll: true,
-    });
-  };
-
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus order ini?')) {
-      post(`/orders/${order.id}`, {
-        _method: 'DELETE',
-        preserveScroll: true,
-      });
-    }
-  };
-
-  const statusColors = {
-    Waiting: 'bg-yellow-100 text-yellow-700',
-    'On The Way': 'bg-blue-100 text-blue-700',
-    Processing: 'bg-blue-100 text-blue-700',
-    Delivered: 'bg-green-100 text-green-700',
-    Completed: 'bg-green-100 text-green-700',
-    Cancelled: 'bg-red-100 text-red-700',
-  };
-
-  return (
-    <tr className="border-t hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <p className="font-semibold">
-          {order.user.first_name} {order.user.last_name}
-        </p>
-        <p className="text-xs text-gray-500">{order.user.email}</p>
-      </td>
-      <td className="px-4 py-3">{order.product.name}</td>
-      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
-      <td className="px-4 py-3 font-bold text-[#53685B]">
-        {formatIDR(order.price)}
-      </td>
-      <td className="px-4 py-3">
-        <select
-          value={data.status}
-          onChange={handleStatusChange}
-          disabled={processing}
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[data.status] || 'bg-gray-100 text-gray-700'}`}
-        >
-          <option value="Waiting">⏳ Waiting</option>
-          <option value="Processing">🔄 Processing</option>
-          <option value="On The Way">🚚 On The Way</option>
-          <option value="Delivered">✅ Delivered</option>
-          <option value="Cancelled">❌ Cancelled</option>
-        </select>
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-600">
-        {new Date(order.created_at).toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </td>
-      <td className="px-4 py-3 text-center">
-        <button
-          onClick={handleDelete}
-          className="text-red-600 transition hover:text-red-800"
-          disabled={processing}
-        >
-          🗑️
-        </button>
-      </td>
-    </tr>
-  );
-}
-
 function ProductRow({ product, isSelected, onSelect }) {
-  const { post, data, setData, processing } = useForm({
-    stock: product.stock,
+  const {
+    patch,
+    delete: destroy,
+    data,
+    setData,
+    processing,
+  } = useForm({
+    ...product,
   });
 
   const handleStockUpdate = (e) => {
     e.preventDefault();
-    post(`/products/${product.id}`, {
-      _method: 'PUT',
+    patch(`/seller/products/${product.id}`, {
       preserveScroll: true,
     });
   };
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      post(`/products/${product.id}`, {
-        _method: 'DELETE',
+      destroy(`/seller/products/${product.id}`, {
         preserveScroll: true,
       });
     }
@@ -278,13 +205,15 @@ function ProductRow({ product, isSelected, onSelect }) {
             className="w-16 rounded border border-gray-300 px-2 py-1 text-center text-sm"
             disabled={processing}
           />
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             type="submit"
             disabled={processing}
             className="text-green-600 hover:text-green-800"
           >
             ✓
-          </button>
+          </Button>
         </form>
       </td>
       <td className="px-4 py-3 font-semibold text-[#53685B]">
@@ -299,22 +228,138 @@ function ProductRow({ product, isSelected, onSelect }) {
         {product.description?.substring(0, 40)}
         {product.description?.length > 40 ? '...' : ''}
       </td>
+      <td className="px-4 py-3 text-center">
+        {product.certificate ? (
+          <a
+            href={`/${product.certificate}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-green-600 hover:text-green-800"
+            title="Lihat Sertifikat"
+          >
+            <BadgeIcon className="h-5 w-5" />
+          </a>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )}
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-center gap-2">
-          <Link
-            href={`/products/${product.id}/edit`}
-            className="text-blue-600 transition hover:text-blue-800"
-          >
-            ✏️
-          </Link>
-          <button
+          <Button variant="ghost" size="icon-sm" asChild>
+            <Link
+              href={`/seller/products/${product.id}/edit`}
+              className="text-blue-600 transition hover:text-blue-800"
+            >
+              ✏️
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleDelete}
             className="text-red-600 transition hover:text-red-800"
             disabled={processing}
           >
             🗑️
-          </button>
+          </Button>
         </div>
+      </td>
+    </tr>
+  );
+}
+
+function OrderRow({ order }) {
+  const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleStatusChange = (e) => {
+    const newStatus = e.target.value;
+    setCurrentStatus(newStatus); // Update UI immediately
+    setIsUpdating(true);
+
+    // Post dengan router.post
+    router.post(
+      `/seller/orders/${order.id}/status`,
+      { status: newStatus },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setIsUpdating(false);
+          console.log('Status updated successfully');
+        },
+        onError: (errors) => {
+          // Revert jika error
+          setCurrentStatus(order.status);
+          setIsUpdating(false);
+          console.error('Failed to update status:', errors);
+        },
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    if (confirm('Yakin ingin menghapus order ini?')) {
+      router.delete(`/seller/orders/${order.id}`, {
+        preserveScroll: true,
+      });
+    }
+  };
+
+  const statusColors = {
+    Waiting: 'bg-yellow-100 text-yellow-700',
+    'On The Way': 'bg-blue-100 text-blue-700',
+    Processing: 'bg-blue-100 text-blue-700',
+    Delivered: 'bg-green-100 text-green-700',
+    Completed: 'bg-green-100 text-green-700',
+    Cancelled: 'bg-red-100 text-red-700',
+  };
+
+  return (
+    <tr className="border-t hover:bg-gray-50">
+      <td className="px-4 py-3">
+        <p className="font-semibold">
+          {order.user.first_name} {order.user.last_name}
+        </p>
+        <p className="text-xs text-gray-500">{order.user.email}</p>
+      </td>
+      <td className="px-4 py-3">{order.product.name}</td>
+      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
+      <td className="px-4 py-3 font-bold text-[#53685B]">
+        {formatIDR(order.price)}
+      </td>
+      <td className="px-4 py-3">
+        <select
+          value={currentStatus}
+          onChange={handleStatusChange}
+          disabled={isUpdating}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'}`}
+        >
+          <option value="Waiting">⏳ Waiting</option>
+          <option value="Processing">🔄 Processing</option>
+          <option value="On The Way">🚚 On The Way</option>
+          <option value="Delivered">✅ Delivered</option>
+          <option value="Cancelled">❌ Cancelled</option>
+        </select>
+      </td>
+      <td className="px-4 py-3 text-xs text-gray-600">
+        {new Date(order.created_at).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </td>
+      <td className="px-4 py-3 text-center">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleDelete}
+          className="text-red-600 transition hover:text-red-800"
+          disabled={isUpdating}
+        >
+          🗑️
+        </Button>
       </td>
     </tr>
   );

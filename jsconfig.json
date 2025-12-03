@@ -1,3 +1,4 @@
+// It must exactly match the resolved aliases path in vite.config.js
 {
   "compilerOptions": {
     "paths": {

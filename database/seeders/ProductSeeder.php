@@ -17,7 +17,7 @@ class ProductSeeder extends Seeder
         Product::create([
             'store_id' => 1,
             'name' => 'Guci Premium',
-            'stock' => 1,
+            'stock' => 10,
             'price' => 1000000.00,
             'category' => 'Antik',
             'description' => 'Guci premium kualitas tinggi',

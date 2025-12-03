@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import ProductCard from '@/components/product-card';
 
 export default function HomePage() {
   const {
@@ -15,8 +16,8 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* <!-- HERO SECTION -. */}
-      <section className="font-poppins relative flex min-h-screen items-center bg-[#2F3E46] pt-24 text-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 md:flex-row md:px-10">
+      <section className="font-poppins relative -mt-20 flex min-h-screen items-center bg-[#2F3E46] px-6 py-20 text-white md:px-16">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between md:flex-row">
           {/* {-- LEFT TEXT --} */}
           <div className="md:w-1/2">
             <h1 className="text-4xl leading-tight font-extrabold md:text-6xl">
@@ -56,14 +57,14 @@ export default function HomePage() {
           {categories.length === 0 ? (
             <p className="text-gray-500">Belum ada kategori</p>
           ) : (
-            categories.map((category) => (
+            categories.slice(0, 5).map((category) => (
               <div
                 className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
                 key={category.id}
               >
                 {category.image ? (
                   <img
-                    src={`/storage/${category.image}`}
+                    src={`/${category.image}`}
                     alt={category.name}
                     className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />
@@ -89,52 +90,18 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-[#3E2723]">
             Barang Paling Populer
           </h2>
-          <Link href="/products" className="text-[#B77C4C] hover:underline">
+          <Link
+            href="/products"
+            className="text-right text-[#B77C4C] hover:underline"
+          >
             Lihat Semua
           </Link>
         </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8 pt-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {products.map((product, i) => (
-              <Card
-                key={i}
-                className="gap-0 py-4 shadow-md transition hover:shadow-lg"
-              >
-                <CardContent className="px-4">
-                  <div className="relative">
-                    <img
-                      src={product.image}
-                      className="mb-4 h-48 w-full rounded-md object-cover"
-                    />
-                    <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
-                      Antik
-                    </span>
-                  </div>
-                  <div className="flex-grow">
-                    <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-                      {product.name}
-                    </h3>
-                    <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-                      {product.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-3">
-                    <span className="font-bold text-[#B77C4C]">
-                      {formatIDR(product.price)}
-                    </span>
-
-                    <Link
-                      href={user ? `/checkout/show/${product.id}` : `/login`}
-                    >
-                      <button className="rounded-md bg-[#B77C4C] px-3 py-1 text-sm font-medium text-white transition hover:bg-[#a0683d]">
-                        Order
-                      </button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 gap-8 pt-5 sm:grid-cols-2 lg:grid-cols-4">
+            {products.slice(0, 4).map((product, i) => (
+              <ProductCard key={i} product={product} />
             ))}
           </div>
         ) : (
@@ -154,7 +121,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-6">
-            {products.slice(0, 3).map((recommendation) => (
+            {products.slice(0, 2).map((recommendation) => (
               <Card
                 key={recommendation.id}
                 className="w-72 rounded-xl bg-white py-4 shadow-md transition hover:shadow-lg"

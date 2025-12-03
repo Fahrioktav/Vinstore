@@ -18,7 +18,7 @@ return new class extends Migration {
 
             $table->integer('quantity')->default(1);
             $table->decimal('price', 12, 2); // harga total = quantity * harga satuan
-            $table->enum('status', ['Waiting', 'On The Way', 'Delivered', 'Cancelled'])->default('Waiting');
+            $table->enum('status', ['Waiting', 'Processing', 'On The Way', 'Delivered', 'Cancelled'])->default('Waiting');
 
             $table->timestamps();
         });

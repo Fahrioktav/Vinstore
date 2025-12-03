@@ -24,14 +24,35 @@ class CartController extends Controller
 
         $user = Auth::user();
 
+        // Cek apakah user adalah seller dan mencoba membeli produk dari toko sendiri
+        if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
+            return back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
+        }
+
+        // Cek stok produk
+        if ($product->stock <= 0) {
+            return back()->with('error', 'Maaf, produk ini sudah habis!');
+        }
+
+        if ($product->stock < $request->quantity) {
+            return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product->stock);
+        }
+
+        $user = Auth::user();
+
         // Cek apakah produk sudah ada di keranjang
         $existing = Cart::where('user_id', $user->id)
             ->where('product_id', $product->id)
             ->first();
 
         if ($existing) {
+            // Cek total quantity tidak melebihi stok
+            $totalQuantity = $existing->quantity + $request->quantity;
+            if ($totalQuantity > $product->stock) {
+                return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product->stock . ', di keranjang: ' . $existing->quantity);
+            }
             // Tambah kuantitas jika sudah ada
-            $existing->quantity += $request->quantity;
+            $existing->quantity = $totalQuantity;
             $existing->save();
         } else {
             // Tambah item baru
