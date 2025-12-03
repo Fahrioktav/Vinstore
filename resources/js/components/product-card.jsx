@@ -6,29 +6,31 @@ import { BadgeIcon } from './icons';
 export default function ProductCard({ product }) {
   return (
     <Card className="gap-0 py-4 shadow-md transition hover:shadow-lg">
-      <CardContent className="px-4">
-        <div className="relative">
-          <img
-            src={getProductImage(product)}
-            className="mb-4 h-48 w-full rounded-md object-cover"
-          />
-          <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
-            {product.category}
-          </span>
-          {product.certificate && (
-            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-xs text-white shadow">
-              <BadgeIcon />
-              Bersertifikat
+      <CardContent className="flex grow flex-col justify-between px-4">
+        <div>
+          <div className="relative">
+            <img
+              src={getProductImage(product)}
+              className="mb-4 h-48 w-full rounded-md object-cover"
+            />
+            <span className="absolute top-2 left-2 rounded-md bg-[#B77C4C] px-2 py-1 text-xs text-white shadow">
+              {product.category}
             </span>
-          )}
-        </div>
-        <div className="flex-grow">
-          <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
-            {product.name}
-          </h3>
-          <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-            {product.description}
-          </p>
+            {product.certificate && (
+              <span className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-xs text-white shadow">
+                <BadgeIcon />
+                Bersertifikat
+              </span>
+            )}
+          </div>
+          <div className="flex-grow">
+            <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
+              {product.name}
+            </h3>
+            <p className="mb-3 line-clamp-3 text-sm text-gray-600">
+              {product.description}
+            </p>
+          </div>
         </div>
 
         <div className="mt-auto border-t border-gray-200 pt-3">
