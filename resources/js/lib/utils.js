@@ -39,5 +39,5 @@ export function getStoreImage(store) {
 export function getUserImage(user) {
   return user.image
     ? `/${user.image}`
-    : `https://avatar.iran.liara.run/username?username=${user.username}`;
+    : `https://ui-avatars.com/api/?name=${user.username}&size=128`;
 }
