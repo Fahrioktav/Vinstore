@@ -37,7 +37,7 @@ export function getStoreImage(store) {
 }
 
 export function getUserImage(user) {
-  return user.image
-    ? `/${user.image}`
+  return user.photo
+    ? `/storage/${user.photo}`
     : `https://ui-avatars.com/api/?name=${user.username}&size=128`;
 }
