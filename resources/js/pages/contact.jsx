@@ -29,7 +29,7 @@ const inputClassName = cn(
 
 export default function ContactPage() {
   const { user, flash } = usePage().props;
-  
+
   const { data, setData, post, processing, errors, reset } = useForm({
     name: user ? `${user.first_name} ${user.last_name}` : '',
     email: user?.email || '',
@@ -60,7 +60,7 @@ export default function ContactPage() {
           </p>
 
           {flash?.success && (
-            <div className="rounded-lg bg-green-100 border border-green-400 px-4 py-3 text-green-700">
+            <div className="rounded-lg border border-green-400 bg-green-100 px-4 py-3 text-green-700">
               {flash.success}
             </div>
           )}
@@ -105,7 +105,10 @@ export default function ContactPage() {
         </div>
 
         {/* {-- Formulir Kanan --} */}
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md md:mt-10">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-md md:mt-10"
+        >
           <h3 className="mb-3 text-2xl font-semibold text-[#4a5b4d]">
             Kirim Pesan
           </h3>
@@ -120,7 +123,9 @@ export default function ContactPage() {
               readOnly={!!user}
               required
             />
-            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+            )}
           </div>
 
           <div>
@@ -133,7 +138,9 @@ export default function ContactPage() {
               readOnly={!!user}
               required
             />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+            )}
           </div>
 
           <div>
@@ -145,7 +152,9 @@ export default function ContactPage() {
               className={inputClassName}
               required
             />
-            {errors.subject && <p className="mt-1 text-xs text-red-500">{errors.subject}</p>}
+            {errors.subject && (
+              <p className="mt-1 text-xs text-red-500">{errors.subject}</p>
+            )}
           </div>
 
           <div>
@@ -157,7 +166,9 @@ export default function ContactPage() {
               className={cn(inputClassName, 'max-h-40')}
               required
             />
-            {errors.message && <p className="mt-1 text-xs text-red-500">{errors.message}</p>}
+            {errors.message && (
+              <p className="mt-1 text-xs text-red-500">{errors.message}</p>
+            )}
           </div>
 
           <button

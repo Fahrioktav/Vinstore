@@ -3,7 +3,12 @@ import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import { AuthInput, AuthTextArea } from '@/components/auth/auth-layout';
 import { Camera } from 'lucide-react';
-import { CheckIcon, ErrorIcon, SpinnerIcon } from '@/components/icons';
+import {
+  CameraIcon,
+  CheckIcon,
+  ErrorIcon,
+  SpinnerIcon,
+} from '@/components/icons';
 import { getStoreImage } from '@/lib/utils';
 
 export default function StoreEditPage() {
@@ -67,7 +72,7 @@ export default function StoreEditPage() {
               <label htmlFor="photo-upload" className="group cursor-pointer">
                 <div className="transform rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm transition-all hover:scale-105">
                   <div className="flex items-center gap-3">
-                    <ErrorIcon />
+                    <CameraIcon />
                     <span className="font-semibold text-[#53685B] transition-colors group-hover:text-[#3c4a3e]">
                       Ubah Foto Toko
                     </span>

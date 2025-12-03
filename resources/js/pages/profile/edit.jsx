@@ -2,7 +2,7 @@ import { useForm, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import { EditPhotoIcon } from '@/components/icons';
-import { getUserImage } from '@/lib/utils';
+import { getStoreImage, getUserImage } from '@/lib/utils';
 
 export default function EditProfilePage() {
   const { user, errors } = usePage().props;
@@ -85,11 +85,7 @@ export default function EditProfilePage() {
                 <div className="space-y-3">
                   <div className="overflow-hidden rounded-lg border border-gray-200">
                     <img
-                      src={
-                        user.store.photo
-                          ? `/storage/${user.store.photo}`
-                          : 'https://placehold.co/400x200/53685B/FFFFFF?text=Foto+Toko'
-                      }
+                      src={getStoreImage(user.store)}
                       alt={user.store.store_name}
                       className="h-32 w-full object-cover"
                     />
@@ -112,7 +108,7 @@ export default function EditProfilePage() {
             <div className="mt-6 space-y-3">
               {user.role === 'seller' && (
                 <Link
-                  href="/store/edit"
+                  href="/seller/store/edit"
                   className="block rounded-md bg-[#B77C4C] px-6 py-2 text-center font-semibold text-white hover:bg-[#a0683d]"
                 >
                   ✏️ Edit Toko
