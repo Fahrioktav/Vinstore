@@ -112,7 +112,7 @@ export default function EditProfilePage() {
             <div className="mt-6 space-y-3">
               {user.role === 'seller' && (
                 <Link
-                  href="/seller/store/edit"
+                  href="/store/edit"
                   className="block rounded-md bg-[#B77C4C] px-6 py-2 text-center font-semibold text-white hover:bg-[#a0683d]"
                 >
                   ✏️ Edit Toko
@@ -120,7 +120,7 @@ export default function EditProfilePage() {
               )}
               {user.role !== 'seller' && user.role !== 'admin' && (
                 <Link
-                  href="/seller/store/register"
+                  href="/store/register"
                   className="block rounded-md bg-[#53685B] px-6 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
                 >
                   🏪 Buka Toko
