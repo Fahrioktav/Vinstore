@@ -1,4 +1,5 @@
 {
+    "name": "vinstore",
     "private": true,
     "type": "module",
     "scripts": {
