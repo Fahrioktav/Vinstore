@@ -1,7 +1,7 @@
 import { Link, useForm, usePage, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR, getProductImage } from '@/lib/utils';
+import { formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BadgeIcon } from '@/components/icons';
 
@@ -231,7 +231,7 @@ function ProductRow({ product, isSelected, onSelect }) {
       <td className="px-4 py-3 text-center">
         {product.certificate ? (
           <a
-            href={`/${product.certificate}`}
+            href={getProductCertificate(product)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-green-600 hover:text-green-800"

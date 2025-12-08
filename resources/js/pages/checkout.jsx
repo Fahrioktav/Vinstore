@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR, getProductImage } from '@/lib/utils';
+import { formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { BadgeIcon, CertificateIcon } from '@/components/icons';
 
 export default function CheckoutPage() {
@@ -31,7 +31,7 @@ export default function CheckoutPage() {
                 Produk Bersertifikat
               </p>
               <a 
-                href={`/${product.certificate}`} 
+                href={getProductCertificate(product)} 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-blue-600 hover:underline flex items-center gap-1"

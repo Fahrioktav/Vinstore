@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { cn, formatIDR, getProductImage } from '@/lib/utils';
+import { cn, formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { BadgeIcon } from '@/components/icons';
 
 export default function AdminProducts() {
@@ -92,7 +92,7 @@ export default function AdminProducts() {
                       <td className="px-4 py-3 text-center">
                         {product.certificate ? (
                           <a
-                            href={`/${product.certificate}`}
+                            href={getProductCertificate(product)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-200"
