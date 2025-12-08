@@ -3,6 +3,7 @@ import { formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import ProductCard from '@/components/product-card';
+import { getCategoryImage } from '../lib/utils';
 
 export default function HomePage() {
   const {
@@ -64,7 +65,7 @@ export default function HomePage() {
               >
                 {category.image ? (
                   <img
-                    src={`/${category.image}`}
+                    src={getCategoryImage(category)}
                     alt={category.name}
                     className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />

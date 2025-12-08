@@ -24,6 +24,12 @@ export function useParams() {
   return params;
 }
 
+export function getCategoryImage(category) {
+  return category.image
+    ? `/storage/${category.image}`
+    : 'https://placehold.co/600x500/53685B/FFFFFF?text=Foto+Kategori';
+}
+
 export function getProductImage(product) {
   return product.image
     ? `/storage/${product.image}`

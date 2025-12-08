@@ -25,9 +25,6 @@ export default function CategoriesCreate() {
     e.preventDefault();
     post('/admin/categories', {
       forceFormData: true,
-      onSuccess: () => {
-        alert('Kategori berhasil ditambahkan!');
-      },
     });
   };
 

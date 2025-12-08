@@ -16,63 +16,63 @@ class CategorySeeder extends Seeder
         $categories = [
             [
                 'name' => 'Guci Antik',
-                'image' => 'assets/categories/guci-antik.jpg'
+                'image' => 'categories/guci-antik.jpg'
             ],
             [
                 'name' => 'Furniture Antik',
-                'image' => 'assets/categories/furniture-antik.jpg'
+                'image' => 'categories/furniture-antik.jpg'
             ],
             [
                 'name' => 'Keramik & Porselen',
-                'image' => 'assets/categories/keramik-porselen.jpg'
+                'image' => 'categories/keramik-porselen.jpg'
             ],
             [
                 'name' => 'Lukisan Klasik',
-                'image' => 'assets/categories/lukisan-klasik.jpg'
+                'image' => 'categories/lukisan-klasik.jpg'
             ],
             [
                 'name' => 'Perhiasan Antik',
-                'image' => 'assets/categories/perhiasan-antik.jpeg'
+                'image' => 'categories/perhiasan-antik.jpeg'
             ],
             [
                 'name' => 'Jam Antik',
-                'image' => 'assets/categories/jam-antik.jpg'
+                'image' => 'categories/jam-antik.jpg'
             ],
             [
                 'name' => 'Tekstil Antik',
-                'image' => 'assets/categories/tekstil-antik.jpg'
+                'image' => 'categories/tekstil-antik.jpg'
             ],
             [
                 'name' => 'Alat Musik Klasik',
-                'image' => 'assets/categories/alat-musik-klasik.jpg'
+                'image' => 'categories/alat-musik-klasik.jpg'
             ],
             [
                 'name' => 'Buku & Manuskrip',
-                'image' => 'assets/categories/buku-manuskrip.jpeg'
+                'image' => 'categories/buku-manuskrip.jpeg'
             ],
             [
                 'name' => 'Peralatan Rumah Tangga',
-                'image' => 'assets/categories/peralatan-rumah-tangga.jpg'
+                'image' => 'categories/peralatan-rumah-tangga.jpg'
             ],
             [
                 'name' => 'Patung & Arca',
-                'image' => 'assets/categories/patung-arca.jpg'
+                'image' => 'categories/patung-arca.jpg'
             ],
             [
                 'name' => 'Uang Kuno',
-                'image' => 'assets/categories/uang-kuno.jpg'
+                'image' => 'categories/uang-kuno.jpg'
             ],
             [
                 'name' => 'Senjata Tradisional',
-                'image' => 'assets/categories/senjata-tradisional.jpg'
+                'image' => 'categories/senjata-tradisional.jpg'
             ],
             [
                 'name' => 'Perabotan Dapur',
-                'image' => 'assets/categories/perabotan-dapur.jpeg'
+                'image' => 'categories/perabotan-dapur.jpeg'
             ],
             [
                 'name' => 'Aksesoris Vintage',
-                'image' => 'assets/categories/aksesoris-vintage.jpg'
+                'image' => 'categories/aksesoris-vintage.jpg'
             ],
         ];
 

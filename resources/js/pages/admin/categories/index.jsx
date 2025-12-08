@@ -1,15 +1,12 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { getCategoryImage } from '@/lib/utils';
 
 export default function CategoriesIndex({ categories }) {
   const handleDelete = (id, name) => {
     if (confirm(`Apakah Anda yakin ingin menghapus kategori "${name}"?`)) {
-      router.delete(`/admin/categories/${id}`, {
-        onSuccess: () => {
-          alert('Kategori berhasil dihapus!');
-        },
-      });
+      router.delete(`/admin/categories/${id}`);
     }
   };
 
@@ -69,7 +66,7 @@ export default function CategoriesIndex({ categories }) {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {category.image ? (
                           <img
-                            src={`/${category.image}`}
+                            src={getCategoryImage(category)}
                             alt={category.name}
                             className="h-16 w-16 rounded-lg object-cover"
                           />

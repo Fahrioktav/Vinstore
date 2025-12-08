@@ -1,9 +1,15 @@
 import { Link, usePage } from '@inertiajs/react';
-import { formatIDR } from '../../lib/utils';
+import { formatIDR, getCategoryImage } from '../../lib/utils';
 import MainLayout from '../../layouts/main-layout';
 
 export default function UserIndex() {
-  const { heroText, showSearch, products = [], categories = [], auth } = usePage().props;
+  const {
+    heroText,
+    showSearch,
+    products = [],
+    categories = [],
+    auth,
+  } = usePage().props;
 
   return (
     <>
@@ -56,9 +62,9 @@ export default function UserIndex() {
               >
                 {category.image ? (
                   <img
-                    src={`/${category.image}`}
+                    src={getCategoryImage(category)}
                     alt={category.name}
-                    className="mb-3 h-16 w-16 object-cover rounded-full transition-transform group-hover:scale-110"
+                    className="mb-3 h-16 w-16 rounded-full object-cover transition-transform group-hover:scale-110"
                   />
                 ) : (
                   <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#53685B] to-[#B77C4C] transition-transform group-hover:scale-110">
@@ -143,7 +149,8 @@ export default function UserIndex() {
             Rekomendasi Untukmu
           </h2>
           <p className="mb-10 text-gray-700">
-            Berdasarkan minatmu, kami pilihkan produk antik yang mungkin kamu suka.
+            Berdasarkan minatmu, kami pilihkan produk antik yang mungkin kamu
+            suka.
           </p>
 
           <div className="flex flex-wrap justify-center gap-6">
@@ -166,7 +173,7 @@ export default function UserIndex() {
               </div>
             ))}
           </div>
-          
+
           <Link
             href="/inertia/login"
             className="mt-8 inline-block rounded-lg bg-[#53685B] px-8 py-3 font-semibold text-white transition hover:bg-[#2F3E46]"

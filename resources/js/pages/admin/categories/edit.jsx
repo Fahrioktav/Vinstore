@@ -1,10 +1,11 @@
 import React from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { getCategoryImage } from '../../../lib/utils';
 
 export default function CategoriesEdit({ category }) {
   const [imagePreview, setImagePreview] = React.useState(
-    category.image ? `/${category.image}` : null
+    category.image ? getCategoryImage(category) : null
   );
   const { data, setData, post, processing, errors } = useForm({
     name: category.name || '',
@@ -28,9 +29,6 @@ export default function CategoriesEdit({ category }) {
     e.preventDefault();
     post(`/admin/categories/${category.id}`, {
       forceFormData: true,
-      onSuccess: () => {
-        alert('Kategori berhasil diupdate!');
-      },
     });
   };
 
