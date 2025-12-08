@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import ProductCard from '@/components/product-card';
@@ -129,7 +129,7 @@ export default function HomePage() {
               >
                 <CardContent className="px-4">
                   <img
-                    src={recommendation.image}
+                    src={getProductImage(recommendation)}
                     className="mb-3 h-40 w-full rounded-md object-cover"
                   />
                   <h3 className="mb-1 text-lg font-semibold text-[#3E2723]">
