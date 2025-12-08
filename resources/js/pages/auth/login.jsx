@@ -2,7 +2,6 @@ import FormLayout from '@/layouts/form-layout';
 import { Form, Link } from '@inertiajs/react';
 import {
   AuthButton,
-  AuthErrorMessage,
   AuthInput,
   AuthLabel,
   AuthLayout,
@@ -30,9 +29,6 @@ export default function LoginPage() {
         >
           {({ errors, hasErrors }) => (
             <>
-              {/* {-- ERROR MESSAGE --} */}
-              <AuthErrorMessage errors={errors} hasErrors={hasErrors} />
-
               {/* {-- Username / Email --} */}
               <div>
                 <AuthLabel variant="brown" htmlFor="login">
@@ -61,6 +57,9 @@ export default function LoginPage() {
                   placeholder="Masukkan password"
                   required
                 />
+                {errors.login && (
+                  <p className="mt-1 text-xs text-red-500">{errors.login}</p>
+                )}
               </div>
 
               {/* {-- Tombol Login --} */}

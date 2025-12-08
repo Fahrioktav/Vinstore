@@ -2,7 +2,6 @@ import { Form, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import {
   AuthButton,
-  AuthErrorMessage,
   AuthInput,
   AuthLabel,
   AuthLayout,
@@ -29,11 +28,8 @@ export default function RegisterPage() {
           options={{ preserveScroll: true }}
           disableWhileProcessing={true}
         >
-          {({ errors, hasErrors }) => (
+          {({ errors }) => (
             <>
-              {/* {-- ERROR MESSAGE --} */}
-              <AuthErrorMessage errors={errors} hasErrors={hasErrors} />
-
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* {-- Username --} */}
                 <div className="md:col-span-2">
@@ -48,6 +44,11 @@ export default function RegisterPage() {
                     placeholder="Masukkan username"
                     required
                   />
+                  {errors.username && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.username}
+                    </p>
+                  )}
                 </div>
 
                 {/* {-- Nama Depan & Belakang --} */}
@@ -63,6 +64,11 @@ export default function RegisterPage() {
                     placeholder="Nama depan"
                     required
                   />
+                  {errors.first_name && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.first_name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <AuthLabel variant="brown" htmlFor="last_name">
@@ -76,6 +82,11 @@ export default function RegisterPage() {
                     placeholder="Nama belakang"
                     required
                   />
+                  {errors.last_name && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.last_name}
+                    </p>
+                  )}
                 </div>
 
                 {/* {-- Email & Telepon --} */}
@@ -91,6 +102,9 @@ export default function RegisterPage() {
                     placeholder="Masukkan email"
                     required
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                  )}
                 </div>
                 <div>
                   <AuthLabel variant="brown" htmlFor="phone">
@@ -104,6 +118,9 @@ export default function RegisterPage() {
                     placeholder="Masukkan nomor telepon"
                     required
                   />
+                  {errors.phone && (
+                    <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
+                  )}
                 </div>
 
                 {/* {-- Password & Konfirmasi --} */}
@@ -119,6 +136,11 @@ export default function RegisterPage() {
                     placeholder="Masukkan password"
                     required
                   />
+                  {errors.password && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <AuthLabel variant="brown" htmlFor="password_confirmation">
@@ -132,6 +154,11 @@ export default function RegisterPage() {
                     placeholder="Ulangi password"
                     required
                   />
+                  {errors.password_confirmation && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.password_confirmation}
+                    </p>
+                  )}
                 </div>
 
                 {/* {-- Alamat --} */}
@@ -146,6 +173,11 @@ export default function RegisterPage() {
                     placeholder="Masukkan alamat lengkap"
                     required
                   />
+                  {errors.address && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.address}
+                    </p>
+                  )}
                 </div>
               </div>
 
