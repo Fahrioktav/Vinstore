@@ -1,56 +1,28 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR, getProductImage } from '@/lib/utils';
+import ProductCard from '@/components/product-card';
 
 export default function StoreShowPage() {
   const { store } = usePage().props;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="px-6 py-10 md:px-16">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">Toko: {store.name}</h2>
-        <p className="text-gray-600">
-          Pemilik: {store.user.first_name} {store.user.last_name}
+        <h2 className="text-2xl font-bold">
+          <span className="text-[#E9E19E]">Toko: </span>
+          <span className="text-gray-100">{store.store_name}</span>
+        </h2>
+        <p>
+          <span className="text-[#E9E19E]">Pemilik: </span>
+          <span className="text-gray-100">
+            {store.user.first_name} {store.user.last_name}
+          </span>
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         {store.products.length > 0 ? (
-          store.products.map((product) => (
-            <div className="rounded-xl bg-white p-4 shadow-md" key={product.id}>
-              <img
-                src={getProductImage(product)}
-                className="mb-3 h-48 w-full rounded object-cover"
-                alt="Produk"
-              />
-              <h3 className="text-lg font-semibold">{product.name}</h3>
-              <p className="mb-1 text-sm text-gray-600">
-                Kategori: {product.category}
-              </p>
-              <p className="mb-1 font-bold text-gray-800">
-                {formatIDR(product.price)}
-              </p>
-              <p className="mb-1 text-sm text-gray-600">
-                Stok: {product.stock}
-              </p>
-              <p className="mb-2 text-sm text-gray-700">
-                {product.description.substring(100)}
-              </p>
-
-              {product.stock > 0 ? (
-                <Link
-                  href={`/checkout/show/${product.id}`}
-                  className="block rounded-md bg-[#53685B] px-4 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
-                >
-                  Pesan Sekarang
-                </Link>
-              ) : (
-                <div className="text-center font-semibold text-red-500">
-                  Stok Habis
-                </div>
-              )}
-            </div>
-          ))
+          store.products.map((product) => <ProductCard product={product} />)
         ) : (
           <p>Toko ini belum memiliki produk.</p>
         )}
