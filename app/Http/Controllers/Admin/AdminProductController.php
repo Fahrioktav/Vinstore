@@ -43,14 +43,14 @@ class AdminProductController extends Controller
             if ($product->image && file_exists(public_path($product->image))) {
                 unlink(public_path($product->image));
             }
-            
+            // Simpan foto baru
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('uploads/products'), $imageName);
-            $validated['image'] = 'uploads/products/' . $imageName;
+            $imagePath = $image->storeAs('products', $imageName, 'public');
+            $product->image = $imagePath;
         }
 
-        $product->update($validated);
+        $product->save();
 
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil diperbarui.');
     }

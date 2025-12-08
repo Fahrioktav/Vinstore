@@ -26,8 +26,14 @@ export function useParams() {
 
 export function getProductImage(product) {
   return product.image
-    ? `/${product.image}`
+    ? `/storage/${product.image}`
     : 'https://placehold.co/600x500/53685B/FFFFFF?text=Foto+Produk';
+}
+
+export function getProductCertificate(product) {
+  return product.certificate
+    ? `/storage/${product.certificate}`
+    : 'https://placehold.co/600x500/53685B/FFFFFF?text=Foto+Sertifikat';
 }
 
 export function getStoreImage(store) {

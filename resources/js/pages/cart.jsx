@@ -1,5 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
 
 export default function CartPage() {
@@ -23,7 +23,7 @@ export default function CartPage() {
             >
               {/* <!-- Gambar Produk -. */}
               <img
-                src={`/${item.product.image}`}
+                src={getProductImage(item.product)}
                 alt={item.product.name}
                 className="h-28 w-28 rounded-md border object-cover"
               />

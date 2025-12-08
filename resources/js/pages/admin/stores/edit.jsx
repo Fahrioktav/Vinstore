@@ -5,12 +5,14 @@ export default function EditStore() {
   const { store, errors: serverErrors } = usePage().props;
   const { data, setData, put, processing, errors } = useForm({
     store_name: store.store_name || '',
+    category: store.category || '',
     location: store.location || '',
     description: store.description || '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log(data);
     put(`/admin/stores/${store.id}`, {
       preserveScroll: true,
     });
@@ -50,6 +52,22 @@ export default function EditStore() {
               />
               {errors.store_name && (
                 <p className="mt-1 text-xs text-red-500">{errors.store_name}</p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-semibold">
+                Kategori
+              </label>
+              <input
+                type="text"
+                value={data.category}
+                onChange={(e) => setData('category', e.target.value)}
+                className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.store_name ? 'border-red-500' : 'border-gray-300'}`}
+                required
+              />
+              {errors.category && (
+                <p className="mt-1 text-xs text-red-500">{errors.category}</p>
               )}
             </div>
 

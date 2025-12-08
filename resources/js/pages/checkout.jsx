@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 import { BadgeIcon, CertificateIcon } from '@/components/icons';
 
 export default function CheckoutPage() {
@@ -13,7 +13,7 @@ export default function CheckoutPage() {
       <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
           <img
-            src={`/${product.image}`}
+            src={getProductImage(product)}
             className="h-48 w-full rounded-md object-contain"
             alt={product.name}
           />

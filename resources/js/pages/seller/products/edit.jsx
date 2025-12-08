@@ -9,6 +9,7 @@ import {
   AuthTextArea,
 } from '@/components/auth/auth-layout';
 import { CertificateIcon } from '@/components/icons';
+import { getProductCertificate, getProductImage } from '@/lib/utils';
 
 export default function SellerEditProductPage() {
   const { product } = usePage().props;
@@ -88,11 +89,16 @@ export default function SellerEditProductPage() {
             <div>
               <AuthLabel htmlFor="image">Gambar Produk (Opsional)</AuthLabel>
               <div className="flex flex-row-reverse items-start gap-4">
-                <AuthInput id="image" type="file" name="image" />
+                <AuthInput
+                  id="image"
+                  type="file"
+                  name="image"
+                  accept=".jpg,.jpeg,.png"
+                />
                 {product.image && (
                   <div className="">
                     <img
-                      src={`/${product.image}`}
+                      src={getProductImage(product)}
                       className="h-24 w-28 rounded-lg object-cover"
                     />
                   </div>
@@ -118,7 +124,7 @@ export default function SellerEditProductPage() {
               {product.certificate && (
                 <div className="mt-2">
                   <a
-                    href={`/${product.certificate}`}
+                    href={getProductCertificate(product)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-blue-600 hover:underline"

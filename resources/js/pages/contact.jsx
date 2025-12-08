@@ -28,7 +28,7 @@ const inputClassName = cn(
 );
 
 export default function ContactPage() {
-  const { user, flash } = usePage().props;
+  const { user } = usePage().props;
 
   const { data, setData, post, processing, errors, reset } = useForm({
     name: user ? `${user.first_name} ${user.last_name}` : '',
@@ -43,6 +43,7 @@ export default function ContactPage() {
       onSuccess: () => {
         reset('subject', 'message');
       },
+      preserveScroll: true,
     });
   };
 
@@ -58,12 +59,6 @@ export default function ContactPage() {
             kamu! Hubungi kami melalui media sosial atau kirim pesan melalui
             formulir di samping.
           </p>
-
-          {flash?.success && (
-            <div className="rounded-lg border border-green-400 bg-green-100 px-4 py-3 text-green-700">
-              {flash.success}
-            </div>
-          )}
 
           {user && (
             <Link

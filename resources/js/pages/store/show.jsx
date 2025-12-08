@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 
 export default function StoreShowPage() {
   const { store } = usePage().props;
@@ -19,7 +19,7 @@ export default function StoreShowPage() {
           store.products.map((product) => (
             <div className="rounded-xl bg-white p-4 shadow-md" key={product.id}>
               <img
-                src={`/${product.image}`}
+                src={getProductImage(product)}
                 className="mb-3 h-48 w-full rounded object-cover"
                 alt="Produk"
               />

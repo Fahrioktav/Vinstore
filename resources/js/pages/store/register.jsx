@@ -3,7 +3,6 @@ import FormLayout from '@/layouts/form-layout';
 import { useState } from 'react';
 
 export default function StoreRegisterPage() {
-  const { flash } = usePage().props;
   const [photoPreview, setPhotoPreview] = useState(null);
 
   const { data, setData, post, processing, errors } = useForm({
@@ -43,12 +42,6 @@ export default function StoreRegisterPage() {
         <p className="mb-6 text-center text-gray-600">
           Lengkapi formulir di bawah untuk mendaftarkan toko Anda
         </p>
-
-        {flash?.error && (
-          <div className="mb-4 rounded-lg bg-red-100 border border-red-400 px-4 py-3 text-red-700">
-            {flash.error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Nama Toko */}

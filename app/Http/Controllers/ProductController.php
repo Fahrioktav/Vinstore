@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -49,15 +50,13 @@ class ProductController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('uploads/products'), $imageName);
-            $imagePath = 'uploads/products/' . $imageName;
+            $imagePath = $image->storeAs('products', $imageName, 'public');
         }
 
         if ($request->hasFile('certificate')) {
             $certificate = $request->file('certificate');
             $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
-            $certificate->move(public_path('uploads/certificates'), $certificateName);
-            $certificatePath = 'uploads/certificates/' . $certificateName;
+            $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
         }
 
         Product::create([
@@ -95,18 +94,28 @@ class ProductController extends Controller
 
         // Update gambar jika ada gambar baru
         if ($request->hasFile('image')) {
+            // Hapus gambar lama jika ada
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+            // Upload gambar baru
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('uploads/products'), $imageName);
-            $product->image = 'uploads/products/' . $imageName;
+            $imagePath = $image->storeAs('products', $imageName, 'public');
+            $product->image = $imagePath;
         }
 
         // Update sertifikat jika ada sertifikat baru
         if ($request->hasFile('certificate')) {
+            // Hapus gambar lama jika ada
+            if ($product->certificate && Storage::disk('public')->exists($product->certificate)) {
+                Storage::disk('public')->delete($product->certificate);
+            }
+            // Upload gambar baru
             $certificate = $request->file('certificate');
             $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
-            $certificate->move(public_path('uploads/certificates'), $certificateName);
-            $product->certificate = 'uploads/certificates/' . $certificateName;
+            $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
+            $product->certificate = $certificatePath;
         }
 
         $product->name = $request->name;

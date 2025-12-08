@@ -21,7 +21,7 @@ class ProductSeeder extends Seeder
             'price' => 1000000.00,
             'category' => 'Antik',
             'description' => 'Guci premium kualitas tinggi',
-            'image' => 'uploads/products/1760163165_guci.jpeg',
+            'image' => '/products/1760163165_guci.jpeg',
             'created_at' => '2025-10-10 23:12:45',
             'updated_at' => '2025-10-10 23:12:45',
         ]);

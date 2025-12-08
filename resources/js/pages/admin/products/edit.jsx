@@ -1,11 +1,12 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
+import { getProductImage } from '@/lib/utils';
 
 export default function EditProduct() {
   const { product, errors: serverErrors } = usePage().props;
   const [imagePreview, setImagePreview] = useState(
-    product.image ? `/${product.image}` : null
+    product.image ? getProductImage(product) : null
   );
 
   const { data, setData, post, processing, errors } = useForm({
@@ -32,6 +33,7 @@ export default function EditProduct() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log(data);
     post(`/admin/products/${product.id}`, {
       preserveScroll: true,
       forceFormData: true,

@@ -1,7 +1,7 @@
 import { Link, useForm, usePage, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR } from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BadgeIcon } from '@/components/icons';
 
@@ -181,7 +181,7 @@ function ProductRow({ product, isSelected, onSelect }) {
       <td className="px-4 py-3">
         {product.image ? (
           <img
-            src={`/${product.image}`}
+            src={getProductImage(product)}
             alt={product.name}
             className="h-16 w-16 rounded-lg object-cover"
           />
