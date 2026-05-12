@@ -18,7 +18,7 @@ export default function CartPage() {
         <div className="space-y-6 text-gray-100">
           {cartItems.map((item) => (
             <div
-              key={item.id}
+              key={item.public_id}
               className="flex flex-col items-center gap-6 border-b pb-4 sm:flex-row"
             >
               {/* <!-- Gambar Produk -. */}
@@ -48,7 +48,7 @@ export default function CartPage() {
                   </div>
 
                   {/* <!-- Tombol Hapus -. */}
-                  <Form method="DELETE" action={`/cart/${item.id}`}>
+                  <Form method="DELETE" action={`/cart/${item.public_id}`}>
                     <button className="mt-1 text-sm font-medium text-red-500 hover:text-red-700">
                       Hapus
                     </button>

@@ -14,7 +14,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $keyword = $request->query('q');
-        $query = Product::latest();
+        $query = Product::approved()->latest();
 
         if (!empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
@@ -67,10 +67,11 @@ class ProductController extends Controller
             'category' => $request->category,
             'description' => $request->description,
             'image' => $imagePath,
-            'certificate' => $certificatePath
+            'certificate' => $certificatePath,
+            'approval_status' => 'pending',
         ]);
 
-        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil ditambahkan.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil dikirim dan menunggu persetujuan admin.');
     }
 
     public function update(Request $request, $id)
@@ -85,7 +86,7 @@ class ProductController extends Controller
             'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        $product = Product::findOrFail($id);
+        $product = Product::where('public_id', $id)->firstOrFail();
 
         // Pastikan hanya pemilik toko yang bisa update produk ini
         if ($product->store->user_id !== Auth::id()) {
@@ -123,9 +124,13 @@ class ProductController extends Controller
         $product->price = $request->price;
         $product->category = $request->category;
         $product->description = $request->description;
+        $product->approval_status = 'pending';
+        $product->approved_at = null;
+        $product->approved_by = null;
+        $product->rejection_reason = null;
         $product->save();
 
-        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');
+        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui dan menunggu persetujuan admin.');
     }
 
     public function updateStock(Request $request, $id) {
@@ -137,7 +142,7 @@ class ProductController extends Controller
             return back()->with('error', $validator->errors());
         }
 
-        $product = Product::findOrFail($id);
+        $product = Product::where('public_id', $id)->firstOrFail();
 
         // Pastikan hanya pemilik toko yang bisa update produk ini
         if ($product->store->user_id !== Auth::id()) {
@@ -152,7 +157,7 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::where('public_id', $id)->firstOrFail();
 
         // Pastikan hanya pemilik toko yang bisa hapus
         if ($product->store->user_id !== Auth::id()) {
@@ -173,7 +178,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::where('public_id', $id)->firstOrFail();
         return Inertia::render('seller/products/edit', compact('product'));
 
         $product->update($data);

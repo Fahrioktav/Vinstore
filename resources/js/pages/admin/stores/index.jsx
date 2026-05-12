@@ -4,13 +4,13 @@ import MainLayout from '@/layouts/main-layout';
 export default function AdminStores() {
   const { stores, success } = usePage().props;
 
-  const handleDelete = (id) => {
+  const handleDelete = (publicId) => {
     if (
       confirm(
         'Yakin ingin menghapus toko ini? Semua produknya juga akan terhapus.'
       )
     ) {
-      router.delete(`/admin/stores/${id}`, {
+      router.delete(`/admin/stores/${publicId}`, {
         preserveScroll: true,
       });
     }
@@ -44,8 +44,8 @@ export default function AdminStores() {
               <tbody>
                 {stores.length > 0 ? (
                   stores.map((store) => (
-                    <tr key={store.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{store.id}</td>
+                    <tr key={store.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold">{store.public_id}</td>
                       <td className="px-4 py-3 font-semibold">
                         {store.store_name}
                       </td>
@@ -58,13 +58,13 @@ export default function AdminStores() {
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-2">
                           <Link
-                            href={`/admin/stores/${store.id}/edit`}
+                            href={`/admin/stores/${store.public_id}/edit`}
                             className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
                           >
                             ✏️ Edit
                           </Link>
                           <button
-                            onClick={() => handleDelete(store.id)}
+                            onClick={() => handleDelete(store.public_id)}
                             className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus

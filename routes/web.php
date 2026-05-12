@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SellerDashboardController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminContactController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\MidtransNotificationController;
 use App\Models\Category;
 use Inertia\Inertia;
 
@@ -43,7 +47,7 @@ Route::get('/', function () {
         // User biasa tetap ke home
     }
     
-    $products = Product::latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
+    $products = Product::approved()->latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
     $categories = Category::latest()->take(12)->get(); // Ambil 6 produk terbaru dari database
     return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
@@ -60,6 +64,8 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact.index
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+
+Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
 
 /*
 |--------------------------------------------------------------------------
@@ -79,6 +85,18 @@ Route::middleware(['role:guestOnly'])->group(function () {
         'heroText' => 'Selamat Datang Kembali!'
     ]))->name('login.form');
     Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+
+    // Google OAuth
+    Route::get('/auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
+    // Forgot Password
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+
+    // Reset Password
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 });
 
 /*
@@ -132,6 +150,9 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // User order
     Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
     Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
+    
+    // Invoice
+    Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
 });
 
 // Only role = seller can access
@@ -172,6 +193,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Kelola Produk
     Route::resource('products', AdminProductController::class)->only(['index', 'edit', 'update', 'destroy']);
+    Route::post('products/{id}/approve', [AdminProductController::class, 'approve'])->name('products.approve');
+    Route::post('products/{id}/reject', [AdminProductController::class, 'reject'])->name('products.reject');
 
     Route::resource('orders', AdminOrderController::class)->only(['index', 'edit', 'update', 'destroy']);
 

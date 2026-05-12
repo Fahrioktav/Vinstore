@@ -20,7 +20,7 @@ class AdminContactController extends Controller
 
     public function show($id)
     {
-        $contact = Contact::with('user')->findOrFail($id);
+        $contact = Contact::with('user')->where('public_id', $id)->firstOrFail();
 
         return Inertia::render('admin/contacts/show', compact('contact'));
     }
@@ -31,7 +31,7 @@ class AdminContactController extends Controller
             'admin_reply' => 'required|string',
         ]);
 
-        $contact = Contact::findOrFail($id);
+        $contact = Contact::where('public_id', $id)->firstOrFail();
         $contact->update([
             'admin_reply' => $request->admin_reply,
             'status' => 'replied',
@@ -46,7 +46,7 @@ class AdminContactController extends Controller
             'status' => 'required|in:pending,replied,closed',
         ]);
 
-        $contact = Contact::findOrFail($id);
+        $contact = Contact::where('public_id', $id)->firstOrFail();
         $contact->update(['status' => $request->status]);
 
         return redirect()->back()->with('success', 'Status berhasil diperbarui!');
@@ -54,7 +54,7 @@ class AdminContactController extends Controller
 
     public function destroy($id)
     {
-        $contact = Contact::findOrFail($id);
+        $contact = Contact::where('public_id', $id)->firstOrFail();
         $contact->delete();
 
         return redirect()->route('admin.contacts.index')->with('success', 'Pesan berhasil dihapus!');

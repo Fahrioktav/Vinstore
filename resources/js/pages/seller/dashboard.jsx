@@ -4,9 +4,30 @@ import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BadgeIcon } from '@/components/icons';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 export default function SellerDashboard() {
-  const { products, orders, productCount, orderCount } = usePage().props;
+  const {
+    products,
+    orders,
+    productCount,
+    orderCount,
+    totalIncome,
+    monthlyIncome,
+    monthlyIncomeData,
+    productIncome,
+  } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   const handleSelectProduct = (productId) => {
@@ -19,7 +40,7 @@ export default function SellerDashboard() {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedProducts(products.map((p) => p.id));
+      setSelectedProducts(products.map((p) => p.public_id));
     } else {
       setSelectedProducts([]);
     }
@@ -29,7 +50,7 @@ export default function SellerDashboard() {
     <>
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header Stats */}
-        <div className="mb-8 grid gap-6 md:grid-cols-2">
+        <div className="mb-8 grid gap-6 md:grid-cols-4">
           <div className="rounded-2xl bg-gradient-to-br from-[#53685B] to-[#3c4a3e] p-6 text-white shadow-lg">
             <h3 className="mb-2 text-sm font-semibold opacity-90">
               Total Produk
@@ -41,6 +62,105 @@ export default function SellerDashboard() {
               Total Order
             </h3>
             <p className="text-4xl font-bold">{orderCount}</p>
+          </div>
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg">
+            <h3 className="mb-2 text-sm font-semibold opacity-90">
+              💰 Total Pendapatan
+            </h3>
+            <p className="text-2xl font-bold">{formatIDR(totalIncome || 0)}</p>
+          </div>
+          <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-6 text-white shadow-lg">
+            <h3 className="mb-2 text-sm font-semibold opacity-90">
+              📊 Pendapatan Bulan Ini
+            </h3>
+            <p className="text-2xl font-bold">
+              {formatIDR(monthlyIncome || 0)}
+            </p>
+          </div>
+        </div>
+
+        {/* Income Charts */}
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          {/* Monthly Income Chart */}
+          <div className="rounded-2xl bg-white p-6 shadow-md">
+            <h2 className="mb-6 text-xl font-bold text-[#53685B]">
+              Grafik Pendapatan Bulanan
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={monthlyIncomeData}>
+                <defs>
+                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  style={{ fontSize: '12px' }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) =>
+                    `Rp ${(value / 1000000).toFixed(1)}M`
+                  }
+                />
+                <Tooltip
+                  formatter={(value) => formatIDR(value)}
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="income"
+                  stroke="#10b981"
+                  fillOpacity={1}
+                  fill="url(#colorIncome)"
+                  name="Pendapatan"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Top Products Income */}
+          <div className="rounded-2xl bg-white p-6 shadow-md">
+            <h2 className="mb-6 text-xl font-bold text-[#53685B]">
+              Top 5 Produk Terlaris
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={productIncome}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  style={{ fontSize: '11px' }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
+                <YAxis
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) =>
+                    `Rp ${(value / 1000000).toFixed(1)}M`
+                  }
+                />
+                <Tooltip
+                  formatter={(value) => formatIDR(value)}
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="income" fill="#B77C4C" name="Pendapatan" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -57,6 +177,7 @@ export default function SellerDashboard() {
                   <th className="px-4 py-3 text-left">Product</th>
                   <th className="px-4 py-3 text-center">Qty</th>
                   <th className="px-4 py-3 text-left">Total</th>
+                  <th className="px-4 py-3 text-left">Payment</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-center">Action</th>
@@ -65,11 +186,11 @@ export default function SellerDashboard() {
               <tbody>
                 {orders.length > 0 ? (
                   orders.map((order) => (
-                    <OrderRow key={order.id} order={order} />
+                    <OrderRow key={order.public_id} order={order} />
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-gray-500">
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
                       📭 Belum ada pesanan
                     </td>
                   </tr>
@@ -112,6 +233,7 @@ export default function SellerDashboard() {
                   <th className="px-4 py-3 text-left">Nama</th>
                   <th className="px-4 py-3 text-center">Stok</th>
                   <th className="px-4 py-3 text-left">Harga</th>
+                  <th className="px-4 py-3 text-left">Approval</th>
                   <th className="px-4 py-3 text-left">Kategori</th>
                   <th className="px-4 py-3 text-left">Deskripsi</th>
                   <th className="px-4 py-3 text-center">Sertifikat</th>
@@ -122,15 +244,15 @@ export default function SellerDashboard() {
                 {products.length > 0 ? (
                   products.map((product) => (
                     <ProductRow
-                      key={product.id}
+                      key={product.public_id}
                       product={product}
-                      isSelected={selectedProducts.includes(product.id)}
+                      isSelected={selectedProducts.includes(product.public_id)}
                       onSelect={handleSelectProduct}
                     />
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                    <td colSpan="9" className="py-8 text-center text-gray-500">
                       📦 Belum ada produk
                     </td>
                   </tr>
@@ -156,17 +278,23 @@ function ProductRow({ product, isSelected, onSelect }) {
 
   const handleStockUpdate = (e) => {
     e.preventDefault();
-    patch(`/seller/products/${product.id}`, {
+    patch(`/seller/products/${product.public_id}`, {
       preserveScroll: true,
     });
   };
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      destroy(`/seller/products/${product.id}`, {
+      destroy(`/seller/products/${product.public_id}`, {
         preserveScroll: true,
       });
     }
+  };
+
+  const approvalColors = {
+    approved: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    rejected: 'bg-red-100 text-red-700',
   };
 
   return (
@@ -175,7 +303,7 @@ function ProductRow({ product, isSelected, onSelect }) {
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={() => onSelect(product.id)}
+          onChange={() => onSelect(product.public_id)}
         />
       </td>
       <td className="px-4 py-3">
@@ -193,31 +321,26 @@ function ProductRow({ product, isSelected, onSelect }) {
       </td>
       <td className="px-4 py-3 font-semibold">{product.name}</td>
       <td className="px-4 py-3">
-        <form
-          onSubmit={handleStockUpdate}
-          className="flex items-center justify-center gap-2"
-        >
-          <input
-            type="number"
-            value={data.stock}
-            onChange={(e) => setData('stock', e.target.value)}
-            min="0"
-            className="w-16 rounded border border-gray-300 px-2 py-1 text-center text-sm"
-            disabled={processing}
-          />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            type="submit"
-            disabled={processing}
-            className="text-green-600 hover:text-green-800"
-          >
-            ✓
-          </Button>
-        </form>
+        <div className="flex items-center justify-center">
+          <span className="rounded border border-gray-300 bg-gray-50 px-3 py-1 text-center text-sm font-semibold text-gray-700">
+            {product.stock}
+          </span>
+        </div>
       </td>
       <td className="px-4 py-3 font-semibold text-[#53685B]">
         {formatIDR(product.price)}
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
+        >
+          {product.approval_status || 'pending'}
+        </span>
+        {product.rejection_reason && (
+          <p className="mt-1 max-w-40 text-xs text-red-600">
+            {product.rejection_reason}
+          </p>
+        )}
       </td>
       <td className="px-4 py-3">
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
@@ -247,7 +370,7 @@ function ProductRow({ product, isSelected, onSelect }) {
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="icon-sm" asChild>
             <Link
-              href={`/seller/products/${product.id}/edit`}
+              href={`/seller/products/${product.public_id}/edit`}
               className="text-blue-600 transition hover:text-blue-800"
             >
               ✏️
@@ -279,7 +402,7 @@ function OrderRow({ order }) {
 
     // Post dengan router.post
     router.post(
-      `/seller/orders/${order.id}/status`,
+      `/seller/orders/${order.public_id}/status`,
       { status: newStatus },
       {
         preserveScroll: true,
@@ -299,7 +422,7 @@ function OrderRow({ order }) {
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus order ini?')) {
-      router.delete(`/seller/orders/${order.id}`, {
+      router.delete(`/seller/orders/${order.public_id}`, {
         preserveScroll: true,
       });
     }
@@ -314,6 +437,16 @@ function OrderRow({ order }) {
     Cancelled: 'bg-red-100 text-red-700',
   };
 
+  const paymentColors = {
+    paid: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    unpaid: 'bg-gray-100 text-gray-700',
+    cancelled: 'bg-red-100 text-red-700',
+    denied: 'bg-red-100 text-red-700',
+    expired: 'bg-red-100 text-red-700',
+    refunded: 'bg-blue-100 text-blue-700',
+  };
+
   return (
     <tr className="border-t hover:bg-gray-50">
       <td className="px-4 py-3">
@@ -326,6 +459,13 @@ function OrderRow({ order }) {
       <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
       <td className="px-4 py-3 font-bold text-[#53685B]">
         {formatIDR(order.price)}
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${paymentColors[order.payment_status] || 'bg-gray-100 text-gray-700'}`}
+        >
+          {order.payment_status || 'unpaid'}
+        </span>
       </td>
       <td className="px-4 py-3">
         <select

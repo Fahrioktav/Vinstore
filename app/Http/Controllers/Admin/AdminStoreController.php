@@ -17,13 +17,13 @@ class AdminStoreController extends Controller
 
     public function edit($id)
     {
-        $store = Store::with('user')->findOrFail($id);
+        $store = Store::with('user')->where('public_id', $id)->firstOrFail();
         return Inertia::render('admin/stores/edit', compact('store'));
     }
 
     public function update(Request $request, $id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::where('public_id', $id)->firstOrFail();
         
         $validated = $request->validate([
             'store_name' => 'required|string|max:255',
@@ -39,7 +39,7 @@ class AdminStoreController extends Controller
 
     public function destroy($id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::where('public_id', $id)->firstOrFail();
         
         // Hapus semua produk terkait
         $store->products()->delete();

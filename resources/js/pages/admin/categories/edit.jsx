@@ -27,7 +27,7 @@ export default function CategoriesEdit({ category }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post(`/admin/categories/${category.id}`, {
+    post(`/admin/categories/${category.public_id}`, {
       forceFormData: true,
     });
   };

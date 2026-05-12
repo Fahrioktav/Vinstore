@@ -46,7 +46,7 @@ export default function ProductCard({ product }) {
           </div>
 
           {product.stock > 0 ? (
-            <Link href={`/checkout/show/${product.id}`}>
+            <Link href={`/checkout/show/${product.public_id}`}>
               <button className="w-full rounded-md bg-[#B77C4C] px-3 py-3 text-sm font-medium text-white transition hover:cursor-pointer hover:bg-[#a0683d]">
                 Order
               </button>

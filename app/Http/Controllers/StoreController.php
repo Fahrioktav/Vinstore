@@ -108,7 +108,9 @@ class StoreController extends Controller
 
     public function show($id)
     {
-        $store = Store::with('products', 'user')->findOrFail($id);
+        $store = Store::with(['products' => fn ($query) => $query->approved()->latest(), 'user'])
+            ->where('public_id', $id)
+            ->firstOrFail();
         return Inertia::render('store/show', compact('store'));
     }
 

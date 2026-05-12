@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#1f2937" rx="64"/>
+  
+  <!-- V Letter -->
+  <path d="M150 120 L220 320 L256 220 L292 320 L362 120" 
+        stroke="#f59e0b" 
+        stroke-width="24" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Store Icon -->
+  <rect x="180" y="340" width="152" height="80" fill="#f59e0b" rx="8"/>
+  <rect x="180" y="360" width="152" height="20" fill="#d97706"/>
+  <path d="M170 340 L256 300 L342 340" fill="#f59e0b"/>
+  
+  <!-- Window Details -->
+  <rect x="200" y="370" width="40" height="40" fill="#1f2937" rx="4"/>
+  <rect x="272" y="370" width="40" height="40" fill="#1f2937" rx="4"/>
+  
+  <!-- Text -->
+  <text x="256" y="470" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">
+    VINSTORE
+  </text>
+</svg>

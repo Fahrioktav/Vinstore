@@ -46,7 +46,7 @@ export default function UserContacts({ contacts }) {
         <div className="space-y-4">
           {contacts.map((contact) => (
             <div
-              key={contact.id}
+              key={contact.public_id}
               className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
             >
               <div className="mb-3 flex items-start justify-between">

@@ -101,8 +101,8 @@ export default function AdminContacts({ contacts }) {
             <tbody className="divide-y divide-gray-200 bg-white">
               {contacts.map((contact) => (
                 <>
-                  <tr key={contact.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={contact.public_id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-6 py-4">
                       <div>
                         <p className="font-medium text-gray-900">
                           {contact.name}
@@ -140,17 +140,17 @@ export default function AdminContacts({ contacts }) {
                       <button
                         onClick={() =>
                           setSelectedContact(
-                            selectedContact === contact.id ? null : contact.id
+                            selectedContact === contact.public_id ? null : contact.public_id
                           )
                         }
                         className="mr-2 rounded bg-blue-500 px-3 py-1 text-xs text-white hover:bg-blue-600"
                       >
-                        {selectedContact === contact.id ? 'Tutup' : 'Detail'}
+                        {selectedContact === contact.public_id ? 'Tutup' : 'Detail'}
                       </button>
                       <select
                         value={contact.status}
                         onChange={(e) =>
-                          handleStatusChange(contact.id, e.target.value)
+                          handleStatusChange(contact.public_id, e.target.value)
                         }
                         className="mr-2 rounded border px-2 py-1 text-xs"
                       >
@@ -159,14 +159,14 @@ export default function AdminContacts({ contacts }) {
                         <option value="closed">Tutup</option>
                       </select>
                       <button
-                        onClick={() => handleDelete(contact.id)}
+                        onClick={() => handleDelete(contact.public_id)}
                         className="rounded bg-red-500 px-3 py-1 text-xs text-white hover:bg-red-600"
                       >
                         Hapus
                       </button>
                     </td>
                   </tr>
-                  {selectedContact === contact.id && (
+                  {selectedContact === contact.public_id && (
                     <tr>
                       <td colSpan="5" className="bg-gray-50 px-6 py-4">
                         <div className="space-y-4">
@@ -201,7 +201,7 @@ export default function AdminContacts({ contacts }) {
                                 placeholder="Tulis balasan untuk user..."
                               />
                               <button
-                                onClick={() => handleReply(contact.id)}
+                                onClick={() => handleReply(contact.public_id)}
                                 disabled={isReplying}
                                 className="mt-2 rounded-lg bg-[#5A6E5A] px-4 py-2 text-white hover:bg-[#6d7f6d] disabled:opacity-50"
                               >

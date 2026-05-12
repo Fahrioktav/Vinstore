@@ -22,7 +22,9 @@ export default function StoreShowPage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         {store.products.length > 0 ? (
-          store.products.map((product) => <ProductCard product={product} />)
+          store.products.map((product) => (
+            <ProductCard product={product} key={product.public_id} />
+          ))
         ) : (
           <p>Toko ini belum memiliki produk.</p>
         )}

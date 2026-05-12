@@ -24,6 +24,10 @@ class CartController extends Controller
 
         $user = Auth::user();
 
+        if ($product->approval_status !== 'approved') {
+            return back()->with('error', 'Produk ini belum disetujui admin.');
+        }
+
         // Cek apakah user adalah seller dan mencoba membeli produk dari toko sendiri
         if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
             return back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');

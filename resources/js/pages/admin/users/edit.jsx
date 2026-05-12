@@ -14,7 +14,7 @@ export default function EditUser() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    put(`/admin/users/${editedUser.id}`, {
+    put(`/admin/users/${editedUser.public_id}`, {
       preserveScroll: true,
     });
   };

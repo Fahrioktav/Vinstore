@@ -16,19 +16,19 @@ class AdminSellerController extends Controller
 
     public function edit($id)
     {
-        $seller = User::where('role', 'seller')->findOrFail($id);
+        $seller = User::where('role', 'seller')->where('public_id', $id)->firstOrFail();
         return Inertia::render('admin/sellers/edit', compact('seller'));
     }
 
     public function update(Request $request, $id)
     {
-        $seller = User::where('role', 'seller')->findOrFail($id);
+        $seller = User::where('role', 'seller')->where('public_id', $id)->firstOrFail();
         
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users,username,' . $id,
+            'username' => 'required|string|max:255|unique:users,username,' . $seller->getKey(),
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
+            'email' => 'required|email|unique:users,email,' . $seller->getKey(),
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
         ]);
@@ -40,7 +40,7 @@ class AdminSellerController extends Controller
 
     public function destroy($id)
     {
-        $seller = User::where('role', 'seller')->findOrFail($id);
+        $seller = User::where('role', 'seller')->where('public_id', $id)->firstOrFail();
         
         // Hapus store dan produk yang terkait
         if ($seller->store) {

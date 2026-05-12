@@ -30,7 +30,7 @@ export default function TokoPage() {
           {stores.map((store) => (
             <div
               className="overflow-hidden rounded-2xl border border-gray-200 bg-white/90 shadow-lg backdrop-blur-md transition-transform duration-300 hover:scale-105"
-              key={store.id}
+              key={store.public_id}
             >
               {/* {-- GAMBAR TOKO --} */}
               <img
@@ -48,7 +48,7 @@ export default function TokoPage() {
                   📍 {store.location}
                 </p>
                 <Link
-                  href={`/toko/${store.id}`}
+                  href={`/toko/${store.public_id}`}
                   className="block rounded-lg bg-[#B77C4C] py-2 text-center font-semibold text-white transition-all duration-200 hover:bg-[#9e6538]"
                 >
                   Lihat Toko

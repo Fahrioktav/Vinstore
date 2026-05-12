@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -16,10 +17,12 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'public_id',
         'username',
         'first_name',
         'last_name',
         'email',
+        'google_id',
         'phone',
         'address',
         'photo',
@@ -33,9 +36,28 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
+        'id',
         'password',
         'remember_token',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (empty($user->public_id)) {
+                $user->public_id = self::generatePublicId();
+            }
+        });
+    }
+
+    public static function generatePublicId(): string
+    {
+        do {
+            $publicId = (string) random_int(1000000000, 9999999999);
+        } while (DB::table('users')->where('public_id', $publicId)->exists());
+
+        return $publicId;
+    }
 
     /**
      * Tipe data untuk kolom tertentu.

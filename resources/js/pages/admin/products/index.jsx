@@ -6,18 +6,40 @@ import { BadgeIcon } from '@/components/icons';
 export default function AdminProducts() {
   const { products, success } = usePage().props;
 
-  const handleDelete = (id) => {
+  const handleDelete = (publicId) => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      router.delete(`/admin/products/${id}`, {
+      router.delete(`/admin/products/${publicId}`, {
         preserveScroll: true,
       });
     }
+  };
+
+  const handleApprove = (publicId) => {
+    router.post(`/admin/products/${publicId}/approve`, {}, {
+      preserveScroll: true,
+    });
+  };
+
+  const handleReject = (publicId) => {
+    const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
+
+    router.post(
+      `/admin/products/${publicId}/reject`,
+      { rejection_reason: rejectionReason },
+      { preserveScroll: true }
+    );
   };
 
   const getStockColor = (stock) => {
     if (stock > 10) return 'bg-green-100 text-green-700';
     if (stock > 0) return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-700';
+  };
+
+  const approvalColors = {
+    approved: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    rejected: 'bg-red-100 text-red-700',
   };
 
   return (
@@ -44,6 +66,7 @@ export default function AdminProducts() {
                   <th className="px-4 py-3 text-left">Stok</th>
                   <th className="px-4 py-3 text-left">Harga</th>
                   <th className="px-4 py-3 text-left">Kategori</th>
+                  <th className="px-4 py-3 text-left">Approval</th>
                   <th className="px-4 py-3 text-center">Sertifikat</th>
                   <th className="px-4 py-3 text-center">Aksi</th>
                 </tr>
@@ -51,7 +74,7 @@ export default function AdminProducts() {
               <tbody>
                 {products.length > 0 ? (
                   products.map((product) => (
-                    <tr key={product.id} className="border-t hover:bg-gray-50">
+                    <tr key={product.public_id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <img
                           src={getProductImage(product)}
@@ -89,6 +112,18 @@ export default function AdminProducts() {
                           {product.category}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {product.approval_status || 'pending'}
+                        </span>
+                        {product.rejection_reason && (
+                          <p className="mt-1 max-w-40 text-xs text-red-600">
+                            {product.rejection_reason}
+                          </p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {product.certificate ? (
                           <a
@@ -107,14 +142,30 @@ export default function AdminProducts() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-2">
+                          {product.approval_status !== 'approved' && (
+                            <button
+                              onClick={() => handleApprove(product.public_id)}
+                              className="rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700"
+                            >
+                              Setujui
+                            </button>
+                          )}
+                          {product.approval_status !== 'rejected' && (
+                            <button
+                              onClick={() => handleReject(product.public_id)}
+                              className="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-yellow-600"
+                            >
+                              Tolak
+                            </button>
+                          )}
                           <Link
-                            href={`/admin/products/${product.id}/edit`}
+                            href={`/admin/products/${product.public_id}/edit`}
                             className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
                           >
                             ✏️ Edit
                           </Link>
                           <button
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDelete(product.public_id)}
                             className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus
@@ -126,7 +177,7 @@ export default function AdminProducts() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="9"
                       className="px-4 py-8 text-center text-gray-500"
                     >
                       <p className="text-lg">📦 Belum ada produk</p>

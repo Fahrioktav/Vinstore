@@ -10,7 +10,7 @@ export default function EditOrder() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    put(`/admin/orders/${order.id}`, {
+    put(`/admin/orders/${order.public_id}`, {
       preserveScroll: true,
     });
   };
@@ -21,7 +21,7 @@ export default function EditOrder() {
       <div className="mx-auto max-w-4xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            ✏️ Edit Order #{order.id}
+            ✏️ Edit Order {order.public_id}
           </h2>
 
           <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-6">

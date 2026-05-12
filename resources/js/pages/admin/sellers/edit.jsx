@@ -14,7 +14,7 @@ export default function EditSeller() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    put(`/admin/sellers/${seller.id}`, {
+    put(`/admin/sellers/${seller.public_id}`, {
       preserveScroll: true,
     });
   };

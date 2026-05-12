@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->redirectGuestsTo('/login');
 
+        $middleware->validateCsrfTokens(except: [
+            'midtrans/notification',
+        ]);
+
         $middleware->alias([
             'role' => CheckRole::class,
         ]);

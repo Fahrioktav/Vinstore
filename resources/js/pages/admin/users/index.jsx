@@ -5,9 +5,9 @@ import MainLayout from '@/layouts/main-layout';
 export default function AdminUsers() {
   const { users, success } = usePage().props;
 
-  const handleDelete = (id) => {
+  const handleDelete = (publicId) => {
     if (confirm('Yakin ingin menghapus user ini?')) {
-      router.delete(`/admin/users/${id}`, {
+      router.delete(`/admin/users/${publicId}`, {
         preserveScroll: true,
       });
     }
@@ -41,8 +41,8 @@ export default function AdminUsers() {
               <tbody>
                 {users.length > 0 ? (
                   users.map((user) => (
-                    <tr key={user.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{user.id}</td>
+                    <tr key={user.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold">{user.public_id}</td>
                       <td className="px-4 py-3">{user.username}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {user.email}
@@ -55,13 +55,13 @@ export default function AdminUsers() {
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-2">
                           <Link
-                            href={`/admin/users/${user.id}/edit`}
+                            href={`/admin/users/${user.public_id}/edit`}
                             className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
                           >
                             ✏️ Edit
                           </Link>
                           <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(user.public_id)}
                             className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus

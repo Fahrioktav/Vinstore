@@ -25,16 +25,16 @@ export default function CheckoutPage() {
             Harga: {formatIDR(product.price)}
           </p>
           {product.certificate && (
-            <div className="mt-4 rounded-lg bg-green-50 border border-green-200 p-3">
-              <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-800">
                 <BadgeIcon className="h-5 w-5" />
                 Produk Bersertifikat
               </p>
-              <a 
-                href={getProductCertificate(product)} 
+              <a
+                href={getProductCertificate(product)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
               >
                 <CertificateIcon />
                 Lihat Sertifikat Keaslian
@@ -44,40 +44,20 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <Form method="POST" action={`/cart/add/${product.id}`}>
-        <input type="hidden" name="quantity" defaultValue="1" />
-        <button className="rounded-md bg-yellow-300 px-6 py-2 font-semibold text-black hover:cursor-pointer hover:bg-yellow-400">
-          🛒 Masukkan Keranjang
-        </button>
-      </Form>
+      <div className="flex flex-wrap gap-3">
+        <Form method="POST" action={`/cart/add/${product.public_id}`}>
+          <input type="hidden" name="quantity" defaultValue="1" />
+          <button className="rounded-md bg-yellow-300 px-6 py-2 font-semibold text-black hover:cursor-pointer hover:bg-yellow-400">
+            Masukkan Keranjang
+          </button>
+        </Form>
 
-      <Form method="POST" action={`/checkout/product/${product.id}`}>
-        <input type="hidden" name="quantity" defaultValue="1" />
-        <input type="hidden" name="payment_method" defaultValue="transfer" />
-        {/* <!-- default / JS ganti -. */}
-        <button className="my-2 rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:cursor-pointer hover:bg-[#3c4a3e]">
-          ✅ Selesaikan Pesanan
-        </button>
-      </Form>
-
-      <div className="mb-4">
-        <label htmlFor="payment_method" className="block text-sm font-semibold">
-          Metode Pembayaran
-        </label>
-        <select
-          name="payment_method"
-          id="payment_method"
-          className="w-full rounded-md border border-gray-400 px-4 py-2"
-          required
-          defaultValue=""
-        >
-          <option value="" disabled>
-            -- Pilih Metode Pembayaran --
-          </option>
-          <option value="transfer">Transfer Bank</option>
-          <option value="cod">Cash on Delivery</option>
-          <option value="ewallet">E-Wallet (OVO, GoPay, DANA)</option>
-        </select>
+        <Form method="POST" action={`/checkout/product/${product.public_id}`}>
+          <input type="hidden" name="quantity" defaultValue="1" />
+          <button className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:cursor-pointer hover:bg-[#3c4a3e]">
+            Bayar dengan Midtrans Sandbox
+          </button>
+        </Form>
       </div>
     </div>
   );

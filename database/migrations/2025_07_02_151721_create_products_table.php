@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('store_id'); // Foreign key ke tabel stores
             $table->string('name');
-            $table->integer('stock');
+            $table->integer('stock')->default(0)->unsigned(); // Tidak bisa negatif
             $table->decimal('price', 12, 2);
             $table->string('category');
             $table->text('description');

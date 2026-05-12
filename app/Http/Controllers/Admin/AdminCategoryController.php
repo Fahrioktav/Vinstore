@@ -42,7 +42,7 @@ class AdminCategoryController extends Controller
 
     public function edit($id)
     {
-        $category = Category::findOrFail($id);
+        $category = Category::where('public_id', $id)->firstOrFail();
         return Inertia::render('admin/categories/edit', compact('category'));
     }
 
@@ -53,7 +53,7 @@ class AdminCategoryController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
-        $category = Category::findOrFail($id);
+        $category = Category::where('public_id', $id)->firstOrFail();
         $data = ['name' => $request->name];
 
         if ($request->hasFile('image')) {
@@ -72,7 +72,7 @@ class AdminCategoryController extends Controller
 
     public function destroy($id)
     {
-        $category = Category::findOrFail($id);
+        $category = Category::where('public_id', $id)->firstOrFail();
         
         // Hapus gambar jika ada
         if ($category->image && Storage::disk('public')->exists($category->image)) {

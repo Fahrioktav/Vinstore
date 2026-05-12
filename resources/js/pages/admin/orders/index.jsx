@@ -5,9 +5,9 @@ import { formatIDR } from '@/lib/utils';
 export default function AdminOrders() {
   const { orders, success } = usePage().props;
 
-  const handleDelete = (id) => {
+  const handleDelete = (publicId) => {
     if (confirm('Yakin ingin menghapus order ini?')) {
-      router.delete(`/admin/orders/${id}`, {
+      router.delete(`/admin/orders/${publicId}`, {
         preserveScroll: true,
       });
     }
@@ -18,6 +18,16 @@ export default function AdminOrders() {
     Processing: 'bg-blue-100 text-blue-700',
     Completed: 'bg-green-100 text-green-700',
     Cancelled: 'bg-red-100 text-red-700',
+  };
+
+  const paymentColors = {
+    paid: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    unpaid: 'bg-gray-100 text-gray-700',
+    cancelled: 'bg-red-100 text-red-700',
+    denied: 'bg-red-100 text-red-700',
+    expired: 'bg-red-100 text-red-700',
+    refunded: 'bg-blue-100 text-blue-700',
   };
 
   return (
@@ -44,6 +54,7 @@ export default function AdminOrders() {
                   <th className="px-4 py-3 text-left">Toko</th>
                   <th className="px-4 py-3 text-left">Qty</th>
                   <th className="px-4 py-3 text-left">Total Harga</th>
+                  <th className="px-4 py-3 text-left">Pembayaran</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Tanggal</th>
                   <th className="px-4 py-3 text-center">Aksi</th>
@@ -52,8 +63,8 @@ export default function AdminOrders() {
               <tbody>
                 {orders.length > 0 ? (
                   orders.map((order) => (
-                    <tr key={order.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">#{order.id}</td>
+                    <tr key={order.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold">{order.public_id}</td>
                       <td className="px-4 py-3">
                         <p className="font-semibold">
                           {order.user.first_name} {order.user.last_name}
@@ -71,6 +82,13 @@ export default function AdminOrders() {
                       <td className="px-4 py-3">{order.quantity}</td>
                       <td className="px-4 py-3 font-bold text-[#53685B]">
                         {formatIDR(order.price)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${paymentColors[order.payment_status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {order.payment_status || 'unpaid'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -94,13 +112,13 @@ export default function AdminOrders() {
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-2">
                           <Link
-                            href={`/admin/orders/${order.id}/edit`}
+                            href={`/admin/orders/${order.public_id}/edit`}
                             className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
                           >
                             ✏️ Edit
                           </Link>
                           <button
-                            onClick={() => handleDelete(order.id)}
+                            onClick={() => handleDelete(order.public_id)}
                             className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
                           >
                             🗑️ Hapus
@@ -112,7 +130,7 @@ export default function AdminOrders() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="9"
+                      colSpan="10"
                       className="px-4 py-8 text-center text-gray-500"
                     >
                       <p className="text-lg">📦 Belum ada order</p>

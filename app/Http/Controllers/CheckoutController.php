@@ -11,7 +11,7 @@ class CheckoutController extends Controller
 {
     public function show($productId)
     {
-        $product = Product::findOrFail($productId);
+        $product = Product::where('public_id', $productId)->firstOrFail();
         return view('checkout', compact('product'));
     }
 
@@ -22,7 +22,7 @@ class CheckoutController extends Controller
             'quantity' => 'required|integer|min:1'
         ]);
 
-        $product = Product::findOrFail($request->product_id);
+        $product = Product::where('public_id', $request->product_id)->firstOrFail();
 
         // Cek apakah stok tersedia
         if ($product->stock < $request->quantity) {

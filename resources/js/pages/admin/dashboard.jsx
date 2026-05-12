@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
 
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
               <tbody>
                 {products.length > 0 ? (
                   products.map((product) => (
-                    <ProductRow key={product.id} product={product} />
+                    <ProductRow key={product.public_id} product={product} />
                   ))
                 ) : (
                   <tr>
@@ -162,8 +162,9 @@ function ProductRow({ product }) {
 
   const handleDelete = () => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      // Using Inertia's delete method
-      window.location.href = `/admin/products/${product.id}/delete`;
+      router.delete(`/admin/products/${product.public_id}`, {
+        preserveScroll: true,
+      });
     }
   };
 
@@ -204,7 +205,7 @@ function ProductRow({ product }) {
       <td className="px-4 py-3">
         <div className="flex justify-center gap-2">
           <Link
-            href={`/admin/products/${product.id}/edit`}
+            href={`/admin/products/${product.public_id}/edit`}
             className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
           >
             ✏️ Edit

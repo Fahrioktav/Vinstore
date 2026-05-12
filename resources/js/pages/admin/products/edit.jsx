@@ -33,8 +33,7 @@ export default function EditProduct() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log(data);
-    post(`/admin/products/${product.id}`, {
+    post(`/admin/products/${product.public_id}`, {
       preserveScroll: true,
       forceFormData: true,
     });

@@ -21,7 +21,7 @@ export default function SellerEditProductPage() {
           <h2 className="font-poppins mb-6 text-2xl font-bold">Edit Produk</h2>
 
           <Form
-            action={`/seller/products/${product.id}`}
+            action={`/seller/products/${product.public_id}`}
             method="POST"
             encType="multipart/form-data"
             className="flex flex-col gap-4"

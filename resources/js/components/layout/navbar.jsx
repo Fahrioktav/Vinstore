@@ -14,7 +14,7 @@ const links = {
     { label: 'Home', href: '/' },
     { label: 'Toko', href: '/toko' },
     { label: 'Produk', href: '/products' },
-    { label: 'Order', href: '/order' },
+    { label: 'Riwayat Order', href: '/order' },
     { label: 'Contact', href: '/contact' },
   ],
   seller: [

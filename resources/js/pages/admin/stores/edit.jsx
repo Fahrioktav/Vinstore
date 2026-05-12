@@ -12,8 +12,7 @@ export default function EditStore() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log(data);
-    put(`/admin/stores/${store.id}`, {
+    put(`/admin/stores/${store.public_id}`, {
       preserveScroll: true,
     });
   };

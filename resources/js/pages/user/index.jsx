@@ -58,7 +58,7 @@ export default function UserIndex() {
             categories.map((category) => (
               <div
                 className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
-                key={category.id}
+                key={category.public_id}
               >
                 {category.image ? (
                   <img
@@ -101,7 +101,7 @@ export default function UserIndex() {
             {products.map((product) => (
               <div
                 className="flex flex-col rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
-                key={product.id}
+                key={product.public_id}
               >
                 <div className="relative">
                   <img
@@ -156,7 +156,7 @@ export default function UserIndex() {
           <div className="flex flex-wrap justify-center gap-6">
             {products.slice(0, 3).map((recommendation) => (
               <div
-                key={recommendation.id}
+                key={recommendation.public_id}
                 className="w-72 rounded-xl bg-white p-4 shadow-md transition hover:shadow-lg"
               >
                 <img
