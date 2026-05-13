@@ -12,6 +12,7 @@ use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\AuctionController;
 use App\Models\Product;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\AdminDashboardController;
@@ -64,6 +65,8 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact.index
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.index');
+Route::get('/auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');
 
 Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
 
@@ -153,6 +156,10 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     
     // Invoice
     Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
+
+    // Lelang
+    Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid'])->name('auctions.bid');
+    Route::post('/auctions/{auction}/pay', [AuctionController::class, 'pay'])->name('auctions.pay');
 });
 
 // Only role = seller can access
@@ -171,6 +178,15 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{id}', [ProductController::class, 'updateStock'])->name('products.updateStock');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+    // Lelang seller
+    Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
+    Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+    Route::get('/auctions/{auction}/edit', [AuctionController::class, 'edit'])->name('auctions.edit');
+    Route::put('/auctions/{auction}', [AuctionController::class, 'update'])->name('auctions.update');
+    Route::delete('/auctions/{auction}', [AuctionController::class, 'destroy'])->name('auctions.destroy');
+    Route::get('/auctions/{auction}/relist', [AuctionController::class, 'relistForm'])->name('auctions.relist.form');
+    Route::post('/auctions/{auction}/relist', [AuctionController::class, 'relist'])->name('auctions.relist');
     
     // Order Status & Delete
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
@@ -197,6 +213,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('products/{id}/reject', [AdminProductController::class, 'reject'])->name('products.reject');
 
     Route::resource('orders', AdminOrderController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    // Kelola Lelang
+    Route::get('auctions', [AuctionController::class, 'adminIndex'])->name('auctions.index');
+    Route::post('auctions/{auction}/approve', [AuctionController::class, 'approve'])->name('auctions.approve');
+    Route::post('auctions/{auction}/reject', [AuctionController::class, 'reject'])->name('auctions.reject');
 
     Route::resource('categories', AdminCategoryController::class)->except(['show']);
 

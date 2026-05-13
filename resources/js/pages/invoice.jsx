@@ -12,6 +12,7 @@ export default function InvoicePage() {
 
   const invoiceDate = new Date(order.created_at);
   const invoiceNumber = order.public_id;
+  const item = order.product || order.auction;
   
   const statusBadge = {
     Waiting: 'bg-yellow-100 text-yellow-800',
@@ -156,10 +157,12 @@ export default function InvoicePage() {
                   <tr className="border-b border-gray-200">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900">
-                        {order.product.name}
+                        {item?.name || 'Item tidak ditemukan'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {order.product.description?.substring(0, 60)}...
+                        {item?.description
+                          ? `${item.description.substring(0, 60)}...`
+                          : '-'}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-center font-semibold">

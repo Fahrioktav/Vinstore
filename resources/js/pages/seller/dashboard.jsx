@@ -27,6 +27,7 @@ export default function SellerDashboard() {
     monthlyIncome,
     monthlyIncomeData,
     productIncome,
+    auctions,
   } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
 
@@ -201,7 +202,7 @@ export default function SellerDashboard() {
         </div>
 
         {/* Products Section */}
-        <div className="rounded-2xl bg-white p-6 shadow-md">
+        <div className="mb-8 rounded-2xl bg-white p-6 shadow-md">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-[#53685B]">
               🛍️ Daftar Barang
@@ -254,6 +255,90 @@ export default function SellerDashboard() {
                   <tr>
                     <td colSpan="9" className="py-8 text-center text-gray-500">
                       📦 Belum ada produk
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Auctions Section */}
+        <div className="rounded-2xl bg-white p-6 shadow-md">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-[#53685B]">
+              Daftar Barang Lelang
+            </h2>
+            <Link
+              href="/seller/auctions/create"
+              className="rounded-lg bg-[#B77C4C] px-6 py-2 font-semibold text-white transition hover:bg-[#8d5e39]"
+            >
+              + Add Lelang
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left">Nama</th>
+                  <th className="px-4 py-3 text-left">Harga Awal</th>
+                  <th className="px-4 py-3 text-left">Harga Tertinggi</th>
+                  <th className="px-4 py-3 text-left">Bid</th>
+                  <th className="px-4 py-3 text-left">Approval</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Pemenang</th>
+                  <th className="px-4 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auctions?.length > 0 ? (
+                  auctions.map((auction) => (
+                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold">{auction.name}</td>
+                      <td className="px-4 py-3">{formatIDR(auction.starting_price)}</td>
+                      <td className="px-4 py-3 font-semibold text-[#53685B]">
+                        {formatIDR(auction.current_price)}
+                      </td>
+                      <td className="px-4 py-3">{auction.bids_count}</td>
+                      <td className="px-4 py-3 capitalize">{auction.approval_status}</td>
+                      <td className="px-4 py-3 capitalize">{auction.status}</td>
+                      <td className="px-4 py-3">
+                        {auction.winner?.username || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center gap-2">
+                          <Link
+                            href={`/auctions/${auction.public_id}`}
+                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white"
+                          >
+                            Detail
+                          </Link>
+                          {auction.bids_count === 0 &&
+                            ['pending', 'scheduled'].includes(auction.status) &&
+                            ['pending', 'approved', 'rejected'].includes(auction.approval_status) && (
+                            <Link
+                              href={`/seller/auctions/${auction.public_id}/edit`}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
+                            >
+                              Edit
+                            </Link>
+                          )}
+                          {auction.bids_count === 0 && auction.status === 'ended' && (
+                            <Link
+                              href={`/seller/auctions/${auction.public_id}/relist`}
+                              className="rounded-lg bg-[#B77C4C] px-4 py-2 text-xs font-semibold text-white"
+                            >
+                              Ajukan Ulang
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                      Belum ada barang lelang
                     </td>
                   </tr>
                 )}
@@ -455,7 +540,9 @@ function OrderRow({ order }) {
         </p>
         <p className="text-xs text-gray-500">{order.user.email}</p>
       </td>
-      <td className="px-4 py-3">{order.product.name}</td>
+      <td className="px-4 py-3">
+        {order.product?.name || order.auction?.name || '-'}
+      </td>
       <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
       <td className="px-4 py-3 font-bold text-[#53685B]">
         {formatIDR(order.price)}

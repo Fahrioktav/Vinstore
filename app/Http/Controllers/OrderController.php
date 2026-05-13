@@ -134,14 +134,14 @@ class OrderController extends Controller
             return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        $orders = Order::with(['product', 'store'])
+        $orders = Order::with(['product', 'auction', 'store'])
             ->where('user_id', $user->id)
             ->latest()
             ->get();
 
         $this->syncPendingMidtransPayments($orders);
 
-        $orders = Order::with(['product', 'store'])
+        $orders = Order::with(['product', 'auction', 'store'])
             ->where('user_id', $user->id)
             ->latest()
             ->get();
@@ -264,7 +264,7 @@ class OrderController extends Controller
     {
         $user = Auth::user();
 
-        $order = Order::with(['product', 'store', 'user'])
+        $order = Order::with(['product', 'auction', 'store', 'user'])
             ->where('public_id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();

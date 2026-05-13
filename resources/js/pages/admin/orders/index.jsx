@@ -74,7 +74,7 @@ export default function AdminOrders() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        {order.product?.name || '-'}
+                        {order.product?.name || order.auction?.name || '-'}
                       </td>
                       <td className="px-4 py-3">
                         {order.store?.store_name || '-'}

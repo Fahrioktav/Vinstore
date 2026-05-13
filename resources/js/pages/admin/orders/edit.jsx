@@ -37,8 +37,10 @@ export default function EditOrder() {
                 <p className="text-xs text-gray-500">{order.user.email}</p>
               </div>
               <div>
-                <p className="text-gray-600">Produk</p>
-                <p className="font-semibold">{order.product.name}</p>
+                <p className="text-gray-600">Item</p>
+                <p className="font-semibold">
+                  {order.product?.name || order.auction?.name || '-'}
+                </p>
               </div>
               <div>
                 <p className="text-gray-600">Toko</p>

@@ -14,6 +14,7 @@ class Order extends Model
         'public_id',
         'user_id',
         'product_id',
+        'auction_id',
         'quantity',
         'price',
         'status',
@@ -61,6 +62,11 @@ class Order extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function auction()
+    {
+        return $this->belongsTo(Auction::class);
+    }
+
     // Relasi ke user (customer)
     public function user()
     {
@@ -86,7 +92,9 @@ class Order extends Model
                 return;
             }
 
-            Product::whereKey($order->product_id)->increment('stock', $order->quantity);
+            if ($order->product_id !== null) {
+                Product::whereKey($order->product_id)->increment('stock', $order->quantity);
+            }
 
             $order->forceFill([
                 'stock_restored_at' => now(),

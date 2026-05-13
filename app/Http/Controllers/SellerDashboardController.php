@@ -23,13 +23,14 @@ class SellerDashboardController extends Controller
 
         // Ambil semua produk milik toko seller
         $products = $store->products()->latest()->get();
+        $auctions = $store->auctions()->with(['winner', 'highestBid.user'])->latest()->get();
 
         // Hitung total produk
         $productCount = $store->products()->count();
 
         // Ambil semua order yang berkaitan dengan produk toko ini
-        $orders = Order::whereIn('product_id', $products->pluck('id'))
-            ->with(['product', 'user']) // eager load relasi
+        $orders = Order::where('store_id', $store->id)
+            ->with(['product', 'auction', 'user']) // eager load relasi
             ->latest()
             ->get();
 
@@ -37,12 +38,12 @@ class SellerDashboardController extends Controller
         $orderCount = $orders->count();
 
         // Hitung total income (hanya order yang sudah selesai/delivered)
-        $totalIncome = Order::whereIn('product_id', $products->pluck('id'))
+        $totalIncome = Order::where('store_id', $store->id)
             ->whereIn('status', ['Delivered', 'Completed'])
             ->sum('price');
 
         // Income bulan ini
-        $monthlyIncome = Order::whereIn('product_id', $products->pluck('id'))
+        $monthlyIncome = Order::where('store_id', $store->id)
             ->whereIn('status', ['Delivered', 'Completed'])
             ->whereYear('created_at', date('Y'))
             ->whereMonth('created_at', date('m'))
@@ -54,7 +55,7 @@ class SellerDashboardController extends Controller
             $month = date('Y-m', strtotime("-$i months"));
             $monthName = date('M Y', strtotime("-$i months"));
             
-            $income = Order::whereIn('product_id', $products->pluck('id'))
+            $income = Order::where('store_id', $store->id)
                 ->whereIn('status', ['Delivered', 'Completed'])
                 ->whereYear('created_at', date('Y', strtotime("-$i months")))
                 ->whereMonth('created_at', date('m', strtotime("-$i months")))
@@ -68,6 +69,7 @@ class SellerDashboardController extends Controller
 
         // Income per produk (top 5)
         $productIncome = Order::whereIn('product_id', $products->pluck('id'))
+            ->whereNotNull('product_id')
             ->whereIn('status', ['Delivered', 'Completed'])
             ->selectRaw('product_id, SUM(price) as total_income')
             ->groupBy('product_id')
@@ -88,6 +90,7 @@ class SellerDashboardController extends Controller
             'productCount', 
             'orderCount', 
             'store',
+            'auctions',
             'totalIncome',
             'monthlyIncome',
             'monthlyIncomeData',

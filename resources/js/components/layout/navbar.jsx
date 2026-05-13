@@ -14,14 +14,19 @@ const links = {
     { label: 'Home', href: '/' },
     { label: 'Toko', href: '/toko' },
     { label: 'Produk', href: '/products' },
+    { label: 'Lelang', href: '/auctions' },
     { label: 'Riwayat Order', href: '/order' },
     { label: 'Contact', href: '/contact' },
   ],
   seller: [
     { label: 'Home', href: '/' },
+    { label: 'Lelang', href: '/auctions' },
     { label: 'Contact', href: '/contact' },
   ],
-  admin: [{ label: 'Dashboard', href: '/admin/dashboard' }],
+  admin: [
+    { label: 'Dashboard', href: '/admin/dashboard' },
+    { label: 'Lelang', href: '/admin/auctions' },
+  ],
 };
 
 const baseMenus = [{ label: '👤 Profil', href: '/profile' }];

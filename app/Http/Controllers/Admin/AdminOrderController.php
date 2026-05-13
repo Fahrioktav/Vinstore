@@ -11,13 +11,13 @@ class AdminOrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('user', 'product', 'store')->latest()->get();
+        $orders = Order::with('user', 'product', 'auction', 'store')->latest()->get();
         return Inertia::render('admin/orders/index', compact('orders'));
     }
 
     public function edit($id)
     {
-        $order = Order::with('user', 'product', 'store')->where('public_id', $id)->firstOrFail();
+        $order = Order::with('user', 'product', 'auction', 'store')->where('public_id', $id)->firstOrFail();
         return Inertia::render('admin/orders/edit', compact('order'));
     }
 

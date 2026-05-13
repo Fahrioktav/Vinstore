@@ -60,7 +60,7 @@ export default function OrderPage() {
                     key={order.public_id}
                   >
                     <td className="px-6 py-4 font-semibold">
-                      {order.product.name ?? 'Produk tidak ditemukan'}
+                      {order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}
                     </td>
                     <td className="px-6 py-4">{order.quantity}</td>
                     <td className="px-6 py-4">{formatIDR(order.price)}</td>
@@ -106,6 +106,18 @@ export default function OrderPage() {
                             >
                               Bayar
                             </a>
+                          )}
+                        {!order.snap_redirect_url &&
+                          order.auction &&
+                          ['pending', 'unpaid'].includes(order.payment_status) && (
+                            <Form
+                              action={`/auctions/${order.auction.public_id}/pay`}
+                              method="POST"
+                            >
+                              <button className="font-semibold text-yellow-300 transition hover:text-yellow-200">
+                                Bayar
+                              </button>
+                            </Form>
                           )}
                         {['Waiting', 'On The Way'].includes(order.status) ? (
                           <Form
