@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { getCategoryImage } from '@/lib/utils';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function CategoriesIndex({ categories }) {
   const handleDelete = (publicId, name) => {
@@ -90,21 +91,25 @@ export default function CategoriesIndex({ categories }) {
                           'id-ID'
                         )}
                       </td>
-                      <td className="space-x-2 px-6 py-4 text-center text-sm font-medium whitespace-nowrap">
-                        <Link
-                          href={`/admin/categories/${category.public_id}/edit`}
-                          className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
-                        >
-                          ✏️ Edit
-                        </Link>
-                        <button
-                          onClick={() =>
-                            handleDelete(category.public_id, category.name)
-                          }
-                          className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
-                        >
-                          🗑️ Hapus
-                        </button>
+                      <td className="px-6 py-4 text-center text-sm font-medium whitespace-nowrap">
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Edit',
+                                icon: '✏️',
+                                href: `/admin/categories/${category.public_id}/edit`,
+                              },
+                              {
+                                label: 'Hapus',
+                                icon: '🗑️',
+                                variant: 'destructive',
+                                onClick: () =>
+                                  handleDelete(category.public_id, category.name),
+                              },
+                            ]}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))

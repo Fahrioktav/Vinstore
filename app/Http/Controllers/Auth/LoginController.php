@@ -33,6 +33,8 @@ class LoginController extends Controller
                 return redirect()->route('admin.dashboard');
             } elseif ($user->role === 'seller') {
                 return redirect()->route('seller.dashboard');
+            } elseif ($user->role === 'validator') {
+                return redirect()->route('validator.dashboard');
             } else {
                 return redirect()->intended('/');
             }

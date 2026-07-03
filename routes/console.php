@@ -68,3 +68,10 @@ Artisan::command('auctions:finish', function () {
 })->purpose('Activate due auctions and finish expired auctions');
 
 Schedule::command('auctions:finish')->everyMinute();
+
+Artisan::command('tebak-harga:finish', function () {
+    app(\App\Services\PriceGuessService::class)->sync();
+    $this->info('Tebak harga lifecycle synchronized.');
+})->purpose('Activate, finalize winners, and revert expired price-guess products');
+
+Schedule::command('tebak-harga:finish')->everyMinute();

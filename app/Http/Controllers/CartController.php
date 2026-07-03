@@ -33,6 +33,11 @@ class CartController extends Controller
             return back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
         }
 
+        // Produk Tebak Harga hanya bisa masuk keranjang ketika sudah jadi penjualan biasa (public).
+        if ($product->isTebakHarga() && !$product->isPurchasableBy($user)) {
+            return back()->with('error', 'Produk Tebak Harga ini belum dapat dibeli. Ikuti dulu proses tebak harganya.');
+        }
+
         // Cek stok produk
         if ($product->stock <= 0) {
             return back()->with('error', 'Maaf, produk ini sudah habis!');

@@ -27,6 +27,7 @@ class AdminOrderController extends Controller
         $order = Order::where('public_id', $id)->firstOrFail();
         $order->status = $request->status;
         $order->save();
+        $order->releaseSellerFunds();
 
         return redirect()->route('admin.orders.index')->with('success', 'Status pesanan berhasil diperbarui.');
     }

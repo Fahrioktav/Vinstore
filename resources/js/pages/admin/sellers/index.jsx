@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function AdminSellers() {
   const { sellers, success } = usePage().props;
@@ -37,6 +38,8 @@ export default function AdminSellers() {
                   <th className="px-4 py-3 text-left">ID</th>
                   <th className="px-4 py-3 text-left">Username</th>
                   <th className="px-4 py-3 text-left">Email</th>
+                  <th className="px-4 py-3 text-left">Nama Toko</th>
+                  <th className="px-4 py-3 text-left">Lokasi Toko</th>
                   <th className="px-4 py-3 text-left">Role</th>
                   <th className="px-4 py-3 text-center">Aksi</th>
                 </tr>
@@ -51,24 +54,41 @@ export default function AdminSellers() {
                         {seller.email}
                       </td>
                       <td className="px-4 py-3">
+                        {seller.store?.store_name ? (
+                          <span className="font-medium text-gray-800">
+                            {seller.store.store_name}
+                          </span>
+                        ) : (
+                          <span className="text-xs italic text-gray-400">
+                            Belum punya toko
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {seller.store?.location || '-'}
+                      </td>
+                      <td className="px-4 py-3">
                         <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                           {seller.role}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center gap-2">
-                          <Link
-                            href={`/admin/sellers/${seller.public_id}/edit`}
-                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
-                          >
-                            ✏️ Edit
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(seller.public_id)}
-                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
-                          >
-                            🗑️ Hapus
-                          </button>
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Edit',
+                                icon: '✏️',
+                                href: `/admin/sellers/${seller.public_id}/edit`,
+                              },
+                              {
+                                label: 'Hapus',
+                                icon: '🗑️',
+                                variant: 'destructive',
+                                onClick: () => handleDelete(seller.public_id),
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -76,7 +96,7 @@ export default function AdminSellers() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="5"
+                      colSpan="7"
                       className="px-4 py-8 text-center text-gray-500"
                     >
                       <p className="text-lg">🏪 Belum ada seller</p>

@@ -26,12 +26,14 @@ class Order extends Model
         'snap_redirect_url',
         'paid_at',
         'stock_restored_at',
+        'seller_released_at',
         'store_id',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
         'stock_restored_at' => 'datetime',
+        'seller_released_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -67,6 +69,11 @@ class Order extends Model
         return $this->belongsTo(Auction::class);
     }
 
+    public function refundRequest()
+    {
+        return $this->hasOne(RefundRequest::class);
+    }
+
     // Relasi ke user (customer)
     public function user()
     {
@@ -98,6 +105,32 @@ class Order extends Model
 
             $order->forceFill([
                 'stock_restored_at' => now(),
+            ])->save();
+        });
+    }
+
+    public function releaseSellerFunds(): void
+    {
+        if ($this->seller_released_at !== null) {
+            return;
+        }
+
+        DB::transaction(function () {
+            $order = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (
+                !$order
+                || $order->seller_released_at !== null
+                || $order->payment_status !== 'paid'
+                || !in_array($order->status, ['Delivered', 'Completed'], true)
+            ) {
+                return;
+            }
+
+            Store::whereKey($order->store_id)->increment('available_balance', $order->price);
+
+            $order->forceFill([
+                'seller_released_at' => now(),
             ])->save();
         });
     }

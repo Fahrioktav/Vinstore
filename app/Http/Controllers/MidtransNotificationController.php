@@ -44,6 +44,7 @@ class MidtransNotificationController extends Controller
 
         foreach ($orders as $order) {
             $order->update($updates);
+            $order->releaseSellerFunds();
 
             if (in_array($paymentStatus, ['cancelled', 'denied', 'expired'], true)) {
                 $order->restoreReservedStock();

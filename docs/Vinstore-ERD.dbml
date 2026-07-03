@@ -1,0 +1,287 @@
+Project Vinstore {
+  database_type: "MySQL"
+  Note: "ERD Vinstore berdasarkan seluruh migration sampai 20 Mei 2026."
+}
+
+Enum auction_approval_status {
+  pending
+  approved
+  rejected
+}
+
+Enum auction_status {
+  pending
+  scheduled
+  active
+  ended
+  cancelled
+}
+
+Enum request_status {
+  pending
+  approved
+  rejected
+}
+
+Enum contact_status {
+  pending
+  replied
+  closed
+}
+
+Table users {
+  id bigint [pk, increment]
+  public_id varchar(10) [unique]
+  username varchar [not null, unique]
+  first_name varchar [not null]
+  last_name varchar [not null]
+  email varchar [not null, unique]
+  google_id varchar [unique]
+  phone varchar [not null, unique]
+  address varchar [not null]
+  photo varchar
+  password varchar
+  remember_token varchar
+  role varchar [not null, default: "user"]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table stores {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  user_id bigint [not null]
+  store_name varchar [not null]
+  category varchar [not null]
+  description text [not null]
+  location varchar [not null]
+  photo varchar
+  available_balance decimal(14,2) [not null, default: 0]
+  withdrawn_balance decimal(14,2) [not null, default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table categories {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  name varchar(100) [not null, unique]
+  image varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table products {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  store_id bigint [not null]
+  name varchar [not null]
+  stock int [not null, default: 0]
+  price decimal(12,2) [not null]
+  category varchar [not null, note: "Menyimpan categories.name; saat ini bukan foreign key."]
+  description text [not null]
+  image varchar
+  certificate varchar
+  approval_status varchar [not null, default: "pending"]
+  approved_at timestamp
+  approved_by bigint
+  rejection_reason text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table carts {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  user_id bigint [not null]
+  product_id bigint [not null]
+  quantity int [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table orders {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  user_id bigint [not null]
+  product_id bigint
+  auction_id bigint
+  store_id bigint [not null]
+  quantity int [not null, default: 1]
+  price decimal(12,2) [not null]
+  status varchar(50) [not null, default: "Waiting"]
+  payment_reference varchar
+  payment_status varchar [not null, default: "unpaid"]
+  payment_method varchar
+  midtrans_transaction_id varchar
+  snap_token varchar
+  snap_redirect_url varchar
+  paid_at timestamp
+  stock_restored_at timestamp
+  seller_released_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Note: "Order berasal dari product atau auction. Salah satu product_id/auction_id dapat null."
+}
+
+Table auctions {
+  id bigint [pk, increment]
+  public_id varchar [not null, unique]
+  store_id bigint [not null]
+  winner_id bigint
+  name varchar [not null]
+  description text [not null]
+  image varchar
+  starting_price decimal(12,2) [not null]
+  min_increment decimal(12,2) [not null]
+  current_price decimal(12,2)
+  bids_count int [not null, default: 0]
+  approval_status auction_approval_status [not null, default: "pending"]
+  status auction_status [not null, default: "pending"]
+  starts_at timestamp [not null]
+  ends_at timestamp [not null]
+  approved_at timestamp
+  approved_by bigint
+  rejection_reason text
+  ended_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table auction_bids {
+  id bigint [pk, increment]
+  auction_id bigint [not null]
+  user_id bigint [not null]
+  amount decimal(12,2) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (auction_id, amount)
+  }
+}
+
+Table refund_requests {
+  id bigint [pk, increment]
+  public_id varchar [not null, unique]
+  order_id bigint [not null]
+  user_id bigint [not null]
+  reason text [not null]
+  proof_image varchar
+  status request_status [not null, default: "pending"]
+  admin_note text
+  reviewed_by bigint
+  reviewed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table withdrawal_requests {
+  id bigint [pk, increment]
+  public_id varchar [not null, unique]
+  store_id bigint [not null]
+  amount decimal(14,2) [not null]
+  bank_name varchar [not null]
+  account_number varchar [not null]
+  account_holder varchar [not null]
+  status request_status [not null, default: "pending"]
+  admin_note text
+  reviewed_by bigint
+  reviewed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table contacts {
+  id bigint [pk, increment]
+  public_id varchar(11) [unique]
+  user_id bigint
+  name varchar [not null]
+  email varchar [not null]
+  subject varchar [not null]
+  message text [not null]
+  status contact_status [not null, default: "pending"]
+  admin_reply text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table conversations {
+  id bigint [pk, increment]
+  public_id varchar [not null, unique]
+  store_id bigint [not null]
+  buyer_id bigint [not null]
+  last_message_id bigint [note: "Relasi logis ke messages.id; migration belum membuat foreign key."]
+  last_message_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (store_id, buyer_id) [unique]
+  }
+}
+
+Table messages {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  sender_id bigint [not null]
+  body text [not null]
+  read_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table password_reset_tokens {
+  email varchar [pk]
+  token varchar [not null]
+  created_at timestamp
+}
+
+Table sessions {
+  id varchar [pk]
+  user_id bigint
+  ip_address varchar(45)
+  user_agent text
+  payload text [not null]
+  last_activity int [not null]
+}
+
+Table cache {
+  key varchar [pk]
+  value text [not null]
+  expiration int [not null]
+}
+
+Table cache_locks {
+  key varchar [pk]
+  owner varchar [not null]
+  expiration int [not null]
+}
+
+Ref: stores.user_id > users.id [delete: cascade]
+Ref: products.store_id > stores.id [delete: cascade]
+Ref: products.approved_by > users.id [delete: set null]
+Ref: carts.user_id > users.id [delete: cascade]
+Ref: carts.product_id > products.id [delete: cascade]
+Ref: orders.user_id > users.id [delete: cascade]
+Ref: orders.product_id > products.id [delete: cascade]
+Ref: orders.auction_id > auctions.id [delete: set null]
+Ref: orders.store_id > stores.id [delete: cascade]
+Ref: auctions.store_id > stores.id [delete: cascade]
+Ref: auctions.winner_id > users.id [delete: set null]
+Ref: auctions.approved_by > users.id [delete: set null]
+Ref: auction_bids.auction_id > auctions.id [delete: cascade]
+Ref: auction_bids.user_id > users.id [delete: cascade]
+Ref: refund_requests.order_id > orders.id [delete: cascade]
+Ref: refund_requests.user_id > users.id [delete: cascade]
+Ref: refund_requests.reviewed_by > users.id [delete: set null]
+Ref: withdrawal_requests.store_id > stores.id [delete: cascade]
+Ref: withdrawal_requests.reviewed_by > users.id [delete: set null]
+Ref: contacts.user_id > users.id [delete: cascade]
+Ref: conversations.store_id > stores.id [delete: cascade]
+Ref: conversations.buyer_id > users.id [delete: cascade]
+Ref: conversations.last_message_id > messages.id [delete: set null]
+Ref: messages.conversation_id > conversations.id [delete: cascade]
+Ref: messages.sender_id > users.id [delete: cascade]
+Ref: sessions.user_id > users.id

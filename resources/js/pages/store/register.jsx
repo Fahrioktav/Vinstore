@@ -1,6 +1,7 @@
 import { useForm, usePage } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { useState } from 'react';
+import LocationPicker from '@/components/location-picker';
 
 export default function StoreRegisterPage() {
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -10,6 +11,8 @@ export default function StoreRegisterPage() {
     category: '',
     description: '',
     location: '',
+    latitude: null,
+    longitude: null,
     photo: null,
   });
 
@@ -113,6 +116,26 @@ export default function StoreRegisterPage() {
             />
             {errors.location && (
               <p className="mt-1 text-xs text-red-500">{errors.location}</p>
+            )}
+          </div>
+
+          {/* Titik Lokasi di Peta */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">
+              Titik Lokasi di Peta (Opsional)
+            </label>
+            <LocationPicker
+              latitude={data.latitude}
+              longitude={data.longitude}
+              onChange={(lat, lng) => {
+                setData('latitude', lat);
+                setData('longitude', lng);
+              }}
+            />
+            {(errors.latitude || errors.longitude) && (
+              <p className="mt-1 text-xs text-red-500">
+                {errors.latitude || errors.longitude}
+              </p>
             )}
           </div>
 

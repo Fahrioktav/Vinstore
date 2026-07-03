@@ -10,6 +10,7 @@ import {
   SpinnerIcon,
 } from '@/components/icons';
 import { getStoreImage } from '@/lib/utils';
+import LocationPicker from '@/components/location-picker';
 
 export default function StoreEditPage() {
   const { store, errors } = usePage().props;
@@ -20,6 +21,8 @@ export default function StoreEditPage() {
     category: store.category || '',
     description: store.description || '',
     location: store.location || '',
+    latitude: store.latitude ?? null,
+    longitude: store.longitude ?? null,
     photo: null,
   });
 
@@ -188,6 +191,28 @@ export default function StoreEditPage() {
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
                   <ErrorIcon />
                   {errors.description}
+                </p>
+              )}
+            </div>
+
+            {/* Titik Lokasi di Peta */}
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
+                <span className="text-xl">🗺️</span>
+                Titik Lokasi di Peta
+              </label>
+              <LocationPicker
+                latitude={data.latitude}
+                longitude={data.longitude}
+                onChange={(lat, lng) => {
+                  setData('latitude', lat);
+                  setData('longitude', lng);
+                }}
+              />
+              {(errors?.latitude || errors?.longitude) && (
+                <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
+                  <ErrorIcon />
+                  {errors.latitude || errors.longitude}
                 </p>
               )}
             </div>

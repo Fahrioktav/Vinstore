@@ -17,11 +17,22 @@ class Store extends Model
         'category',
         'description',
         'location',
+        'latitude',
+        'longitude',
         'photo',
+        'available_balance',
+        'withdrawn_balance',
     ];
 
     protected $hidden = [
         'id',
+    ];
+
+    protected $casts = [
+        'available_balance' => 'decimal:2',
+        'withdrawn_balance' => 'decimal:2',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     protected static function booted(): void
@@ -60,5 +71,20 @@ class Store extends Model
     public function auctions()
     {
         return $this->hasMany(Auction::class);
+    }
+
+    public function withdrawalRequests()
+    {
+        return $this->hasMany(WithdrawalRequest::class);
+    }
+
+    public function barterRequestsSent()
+    {
+        return $this->hasMany(BarterRequest::class, 'requester_store_id');
+    }
+
+    public function barterRequestsReceived()
+    {
+        return $this->hasMany(BarterRequest::class, 'responder_store_id');
     }
 }

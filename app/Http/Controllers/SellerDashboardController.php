@@ -24,6 +24,10 @@ class SellerDashboardController extends Controller
         // Ambil semua produk milik toko seller
         $products = $store->products()->latest()->get();
         $auctions = $store->auctions()->with(['winner', 'highestBid.user'])->latest()->get();
+        $withdrawals = $store->withdrawalRequests()->latest()->take(10)->get();
+        $pendingWithdrawalAmount = $store->withdrawalRequests()
+            ->where('status', 'pending')
+            ->sum('amount');
 
         // Hitung total produk
         $productCount = $store->products()->count();
@@ -91,6 +95,8 @@ class SellerDashboardController extends Controller
             'orderCount', 
             'store',
             'auctions',
+            'withdrawals',
+            'pendingWithdrawalAmount',
             'totalIncome',
             'monthlyIncome',
             'monthlyIncomeData',

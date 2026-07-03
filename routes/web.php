@@ -11,8 +11,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\BarterController;
+use App\Http\Controllers\ValidatorController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\PriceGuessController;
+use App\Http\Controllers\RefundRequestController;
+use App\Http\Controllers\WithdrawalRequestController;
+use App\Http\Controllers\SupportController;
 use App\Models\Product;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\AdminDashboardController;
@@ -44,11 +50,16 @@ Route::get('/', function () {
             return redirect()->route('admin.dashboard');
         } elseif ($user->role === 'seller') {
             return redirect()->route('seller.dashboard');
+        } elseif ($user->role === 'validator') {
+            return redirect()->route('validator.dashboard');
         }
         // User biasa tetap ke home
     }
     
+    // Sembunyikan harga asli produk tebak harga yang masih dalam periode/prioritas.
+    app(\App\Services\PriceGuessService::class)->sync();
     $products = Product::approved()->latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
+    $products->each(fn (Product $product) => $product->maskRealPriceFor(Auth::user()));
     $categories = Category::latest()->take(12)->get(); // Ambil 6 produk terbaru dari database
     return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
@@ -130,10 +141,18 @@ Route::middleware(['auth', 'role:user'])->group(function () {
     Route::post('/store/register', [StoreController::class, 'register'])->name('store.register.submit');
 });
 
+// Chat bantuan (user/seller/validator -> admin) realtime via WebSocket
+Route::middleware(['auth', 'role:user,seller,validator'])->group(function () {
+    Route::get('/bantuan', [SupportController::class, 'userChat'])->name('support.chat');
+    Route::post('/bantuan/messages', [SupportController::class, 'userSend'])->name('support.send');
+});
+
 // Both role user and seller can access
 Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // Riwayat pesan contact untuk user/seller
     Route::get('/my-contacts', [ContactController::class, 'userContacts'])->name('user.contacts');
+
+    // Chat bantuan dipindah ke grup khusus di bawah (user/seller/validator).
 
     // Lihat, tambahkan, atau hapus barang dari keranjang
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -153,6 +172,7 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // User order
     Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
     Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
+    Route::post('/order/{order}/refund', [RefundRequestController::class, 'store'])->name('refunds.store');
     
     // Invoice
     Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
@@ -160,6 +180,9 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // Lelang
     Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid'])->name('auctions.bid');
     Route::post('/auctions/{auction}/pay', [AuctionController::class, 'pay'])->name('auctions.pay');
+
+    // Tebak Harga - kirim satu tebakan (final, tidak dapat diubah)
+    Route::post('/products/{product}/guess', [PriceGuessController::class, 'store'])->name('products.guess');
 });
 
 // Only role = seller can access
@@ -179,6 +202,13 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::patch('/products/{id}', [ProductController::class, 'updateStock'])->name('products.updateStock');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
+    // Barter antar seller (seller-to-seller)
+    Route::get('/barter', [BarterController::class, 'index'])->name('barter.index');
+    Route::post('/barter/{product}', [BarterController::class, 'store'])->name('barter.store');
+    Route::post('/barter/{barter}/accept', [BarterController::class, 'accept'])->name('barter.accept');
+    Route::post('/barter/{barter}/reject', [BarterController::class, 'reject'])->name('barter.reject');
+    Route::post('/barter/{barter}/cancel', [BarterController::class, 'cancel'])->name('barter.cancel');
+
     // Lelang seller
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
@@ -187,10 +217,26 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::delete('/auctions/{auction}', [AuctionController::class, 'destroy'])->name('auctions.destroy');
     Route::get('/auctions/{auction}/relist', [AuctionController::class, 'relistForm'])->name('auctions.relist.form');
     Route::post('/auctions/{auction}/relist', [AuctionController::class, 'relist'])->name('auctions.relist');
+
+    // Pencairan saldo seller
+    Route::post('/withdrawals', [WithdrawalRequestController::class, 'store'])->name('withdrawals.store');
     
     // Order Status & Delete
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+});
+
+// Only role = validator can access
+Route::middleware(['auth', 'role:validator'])->prefix('validator')->name('validator.')->group(function () {
+    // Dashboard Validator Barang Antik
+    Route::get('/dashboard', [ValidatorController::class, 'index'])->name('dashboard');
+
+    // Detail produk yang diajukan seller
+    Route::get('/products/{id}', [ValidatorController::class, 'show'])->name('products.show');
+
+    // Validasi produk
+    Route::post('/products/{id}/approve', [ValidatorController::class, 'approve'])->name('products.approve');
+    Route::post('/products/{id}/reject', [ValidatorController::class, 'reject'])->name('products.reject');
 });
 
 // Only role = admin can access
@@ -208,6 +254,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('stores', AdminStoreController::class)->only(['index', 'edit', 'update', 'destroy']);
 
     // Kelola Produk
+    Route::get('products/pending', [AdminProductController::class, 'pending'])->name('products.pending');
     Route::resource('products', AdminProductController::class)->only(['index', 'edit', 'update', 'destroy']);
     Route::post('products/{id}/approve', [AdminProductController::class, 'approve'])->name('products.approve');
     Route::post('products/{id}/reject', [AdminProductController::class, 'reject'])->name('products.reject');
@@ -219,6 +266,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('auctions/{auction}/approve', [AuctionController::class, 'approve'])->name('auctions.approve');
     Route::post('auctions/{auction}/reject', [AuctionController::class, 'reject'])->name('auctions.reject');
 
+    // Kelola Refund
+    Route::get('refunds', [RefundRequestController::class, 'adminIndex'])->name('refunds.index');
+    Route::post('refunds/{refund}/approve', [RefundRequestController::class, 'approve'])->name('refunds.approve');
+    Route::post('refunds/{refund}/reject', [RefundRequestController::class, 'reject'])->name('refunds.reject');
+
+    // Kelola Pencairan Seller
+    Route::get('withdrawals', [WithdrawalRequestController::class, 'adminIndex'])->name('withdrawals.index');
+    Route::post('withdrawals/{withdrawal}/approve', [WithdrawalRequestController::class, 'approve'])->name('withdrawals.approve');
+    Route::post('withdrawals/{withdrawal}/reject', [WithdrawalRequestController::class, 'reject'])->name('withdrawals.reject');
+
     Route::resource('categories', AdminCategoryController::class)->except(['show']);
 
     // Kelola Pesan Contact
@@ -226,4 +283,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('contacts/{id}/reply', [AdminContactController::class, 'reply'])->name('contacts.reply');
     Route::post('contacts/{id}/status', [AdminContactController::class, 'updateStatus'])->name('contacts.status');
     Route::delete('contacts/{id}', [AdminContactController::class, 'destroy'])->name('contacts.destroy');
+
+    // Chat bantuan (admin) realtime via WebSocket
+    Route::get('bantuan', [SupportController::class, 'adminIndex'])->name('support.index');
+    Route::get('bantuan/{userPublicId}', [SupportController::class, 'adminShow'])->name('support.show');
+    Route::post('bantuan/{userPublicId}/messages', [SupportController::class, 'adminSend'])->name('support.send');
 });

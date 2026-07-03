@@ -64,6 +64,8 @@ class StoreController extends Controller
             'category' => 'required|string|max:255',
             'description' => 'required|string',
             'location' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -73,6 +75,8 @@ class StoreController extends Controller
             'category'    => $request->category,
             'description' => $request->description,
             'location'    => $request->location,
+            'latitude'    => $request->latitude,
+            'longitude'   => $request->longitude,
         ];
 
         // Handle photo upload
@@ -108,9 +112,16 @@ class StoreController extends Controller
 
     public function show($id)
     {
+        app(\App\Services\PriceGuessService::class)->sync();
+
         $store = Store::with(['products' => fn ($query) => $query->approved()->latest(), 'user'])
             ->where('public_id', $id)
             ->firstOrFail();
+
+        // Sembunyikan harga asli produk tebak harga yang masih dalam periode/prioritas.
+        $viewer = Auth::user();
+        $store->products->each(fn (Product $product) => $product->maskRealPriceFor($viewer));
+
         return Inertia::render('store/show', compact('store'));
     }
 
@@ -140,6 +151,8 @@ class StoreController extends Controller
             'category' => 'required|string|max:255',
             'description' => 'required|string',
             'location' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -147,6 +160,8 @@ class StoreController extends Controller
         $store->category = $request->category;
         $store->description = $request->description;
         $store->location = $request->location;
+        $store->latitude = $request->latitude;
+        $store->longitude = $request->longitude;
 
         // Handle photo upload
         if ($request->hasFile('photo')) {

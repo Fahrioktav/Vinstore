@@ -1,4 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -12,7 +13,13 @@ import { CertificateIcon } from '@/components/icons';
 import { getProductCertificate, getProductImage } from '@/lib/utils';
 
 export default function SellerEditProductPage() {
-  const { product } = usePage().props;
+  const { product, categories = [] } = usePage().props;
+  const [saleType, setSaleType] = useState(product.sale_type || 'normal');
+  const isTebakHarga = saleType === 'tebak_harga';
+  // Tebak harga yang sedang berjalan / selesai tidak boleh diubah.
+  const guessLocked =
+    product.sale_type === 'tebak_harga' &&
+    ['active', 'ended'].includes(product.guess_status);
 
   return (
     <section className="flex w-full max-w-2xl grow px-6 py-8">
@@ -40,6 +47,34 @@ export default function SellerEditProductPage() {
               />
             </div>
 
+            {guessLocked && (
+              <div className="rounded border border-yellow-400 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                Produk Tebak Harga ini sedang berjalan atau sudah selesai,
+                sehingga perubahan tidak akan disimpan.
+              </div>
+            )}
+
+            <div>
+              <AuthLabel htmlFor="sale_type">Jenis Penjualan</AuthLabel>
+              <select
+                id="sale_type"
+                name="sale_type"
+                value={saleType}
+                onChange={(e) => setSaleType(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
+              >
+                <option value="normal">Penjualan Biasa</option>
+                <option value="tebak_harga">🎯 Tebak Harga</option>
+              </select>
+              {isTebakHarga && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Harga asli disembunyikan dari pembeli (ditampilkan ???).
+                  Pembeli mengirim satu tebakan; tebakan terdekat menang dan
+                  berhak membeli lebih dulu selama 24 jam.
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <AuthLabel htmlFor="stock">Stok</AuthLabel>
@@ -53,7 +88,9 @@ export default function SellerEditProductPage() {
               </div>
 
               <div>
-                <AuthLabel htmlFor="price">Harga</AuthLabel>
+                <AuthLabel htmlFor="price">
+                  {isTebakHarga ? 'Harga Asli (disembunyikan)' : 'Harga'}
+                </AuthLabel>
                 <AuthInput
                   id="price"
                   type="number"
@@ -64,15 +101,65 @@ export default function SellerEditProductPage() {
               </div>
             </div>
 
+            {isTebakHarga && (
+              <div className="grid gap-6 rounded-lg border border-[#53685B]/30 bg-[#53685B]/5 p-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <p className="text-sm font-semibold text-[#2F3E46]">
+                    Periode Tebak Harga
+                  </p>
+                </div>
+                <div>
+                  <AuthLabel htmlFor="guess_starts_at">Tanggal Mulai</AuthLabel>
+                  <AuthInput
+                    id="guess_starts_at"
+                    type="datetime-local"
+                    name="guess_starts_at"
+                    defaultValue={
+                      product.guess_starts_at
+                        ? toDateTimeLocal(product.guess_starts_at)
+                        : ''
+                    }
+                    required={isTebakHarga}
+                  />
+                </div>
+                <div>
+                  <AuthLabel htmlFor="guess_ends_at">Tanggal Berakhir</AuthLabel>
+                  <AuthInput
+                    id="guess_ends_at"
+                    type="datetime-local"
+                    name="guess_ends_at"
+                    defaultValue={
+                      product.guess_ends_at
+                        ? toDateTimeLocal(product.guess_ends_at)
+                        : ''
+                    }
+                    required={isTebakHarga}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <AuthLabel htmlFor="category">Kategori</AuthLabel>
-              <AuthInput
+              <select
                 id="category"
-                type="text"
                 name="category"
-                defaultValue={product.category}
+                defaultValue={product.category || ''}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
                 required
-              />
+              >
+                <option value="">Pilih kategori</option>
+                {categories.map((category) => (
+                  <option key={category.name} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {categories.length === 0 && (
+                <p className="mt-1 text-xs text-red-500">
+                  Belum ada kategori. Hubungi admin untuk membuat kategori.
+                </p>
+              )}
             </div>
 
             <div>
@@ -105,6 +192,76 @@ export default function SellerEditProductPage() {
                 )}
               </div>
             </div>
+
+            <div>
+              <AuthLabel htmlFor="images">
+                Foto Tambahan (tampak depan, samping, kondisi)
+              </AuthLabel>
+              <AuthInput
+                id="images"
+                type="file"
+                name="images[]"
+                accept=".jpg,.jpeg,.png"
+                multiple
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Mengunggah foto baru akan mengganti seluruh foto tambahan
+                sebelumnya (maks. 5).
+              </p>
+              {Array.isArray(product.images) && product.images.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {product.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={getProductImage({ image: img })}
+                      className="h-16 w-16 rounded-md object-cover"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="video">🎥 Video Produk (Opsional)</AuthLabel>
+              <AuthInput
+                id="video"
+                type="file"
+                name="video"
+                accept="video/mp4,video/webm,video/quicktime"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Format: MP4, WebM, MOV (Max 20MB).
+              </p>
+              {product.video && (
+                <video
+                  src={getProductImage({ image: product.video })}
+                  controls
+                  className="mt-2 h-32 rounded-md"
+                />
+              )}
+            </div>
+
+            {!isTebakHarga && (
+              <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <input
+                  id="is_barterable"
+                  type="checkbox"
+                  name="is_barterable"
+                  value="1"
+                  defaultChecked={!!product.is_barterable}
+                  className="mt-1 h-4 w-4"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-[#2F3E46]">
+                    Produk ini bisa dibarter
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    Jika dicentang, seller lain dapat mengajukan barter untuk
+                    produk ini (selama stok masih ada).
+                  </span>
+                </span>
+              </label>
+            )}
 
             <div>
               <AuthLabel htmlFor="certificate">
@@ -152,3 +309,11 @@ SellerEditProductPage.layout = (page) => (
     {page}
   </FormLayout>
 );
+
+function toDateTimeLocal(value) {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60000);
+
+  return localDate.toISOString().slice(0, 16);
+}

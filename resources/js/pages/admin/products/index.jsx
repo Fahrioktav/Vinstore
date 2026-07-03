@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { cn, formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { BadgeIcon } from '@/components/icons';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function AdminProducts() {
   const { products, success } = usePage().props;
@@ -38,8 +39,18 @@ export default function AdminProducts() {
 
   const approvalColors = {
     approved: 'bg-green-100 text-green-700',
+    pending_validator: 'bg-yellow-100 text-yellow-700',
+    pending_admin: 'bg-blue-100 text-blue-700',
     pending: 'bg-yellow-100 text-yellow-700',
     rejected: 'bg-red-100 text-red-700',
+  };
+
+  const approvalLabels = {
+    approved: 'Disetujui',
+    pending_validator: 'Menunggu Validator',
+    pending_admin: 'Menunggu Admin',
+    pending: 'Menunggu',
+    rejected: 'Ditolak',
   };
 
   return (
@@ -114,9 +125,9 @@ export default function AdminProducts() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
                         >
-                          {product.approval_status || 'pending'}
+                          {approvalLabels[product.approval_status] || product.approval_status || 'Menunggu'}
                         </span>
                         {product.rejection_reason && (
                           <p className="mt-1 max-w-40 text-xs text-red-600">
@@ -141,35 +152,34 @@ export default function AdminProducts() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center gap-2">
-                          {product.approval_status !== 'approved' && (
-                            <button
-                              onClick={() => handleApprove(product.public_id)}
-                              className="rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700"
-                            >
-                              Setujui
-                            </button>
-                          )}
-                          {product.approval_status !== 'rejected' && (
-                            <button
-                              onClick={() => handleReject(product.public_id)}
-                              className="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-yellow-600"
-                            >
-                              Tolak
-                            </button>
-                          )}
-                          <Link
-                            href={`/admin/products/${product.public_id}/edit`}
-                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
-                          >
-                            ✏️ Edit
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(product.public_id)}
-                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
-                          >
-                            🗑️ Hapus
-                          </button>
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              product.approval_status === 'pending_admin' && {
+                                label: 'Setujui',
+                                icon: '✅',
+                                onClick: () => handleApprove(product.public_id),
+                              },
+                              ['pending_admin', 'approved'].includes(
+                                product.approval_status
+                              ) && {
+                                label: 'Tolak',
+                                icon: '🚫',
+                                onClick: () => handleReject(product.public_id),
+                              },
+                              {
+                                label: 'Edit',
+                                icon: '✏️',
+                                href: `/admin/products/${product.public_id}/edit`,
+                              },
+                              {
+                                label: 'Hapus',
+                                icon: '🗑️',
+                                variant: 'destructive',
+                                onClick: () => handleDelete(product.public_id),
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

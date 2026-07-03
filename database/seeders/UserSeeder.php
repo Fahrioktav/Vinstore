@@ -63,5 +63,18 @@ class UserSeeder extends Seeder
             'updated_at' => '2025-10-10 23:14:32',
             'role' => 'user',
         ]);
+
+        // Validator barang antik
+        User::create([
+            'username' => 'validator',
+            'first_name' => 'Validator',
+            'last_name' => 'Barang Antik',
+            'email' => 'validator@gmail.com',
+            'phone' => '081200000000',
+            'address' => 'Jakarta',
+            // password: password
+            'password' => bcrypt('password'),
+            'role' => 'validator',
+        ]);
     }
 }

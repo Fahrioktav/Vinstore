@@ -1,6 +1,7 @@
-import { Form, Link, usePage } from '@inertiajs/react';
+import { Form, Link, router, usePage } from '@inertiajs/react';
 import { cn, formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
+import { useState } from 'react';
 
 const statusStyles = {
   Waiting: 'bg-yellow-500/30 text-yellow-200',
@@ -21,8 +22,22 @@ const paymentStyles = {
   Unknown: 'bg-gray-500/30 text-gray-200',
 };
 
+const refundReasons = [
+  'Barang rusak saat diterima',
+  'Barang tidak sesuai deskripsi',
+  'Barang tidak lengkap',
+  'Barang tidak sampai',
+  'Salah barang dikirim',
+  'Kualitas barang tidak sesuai',
+  'Lainnya',
+];
+
 export default function OrderPage() {
-  const { orders } = usePage().props;
+  const { orders, flash } = usePage().props;
+  const [refundOrderId, setRefundOrderId] = useState(null);
+  const [refundReason, setRefundReason] = useState(refundReasons[0]);
+  const [customReason, setCustomReason] = useState('');
+  const [refundProofImage, setRefundProofImage] = useState(null);
 
   const onSubmit = (e) => {
     if (!confirm('Yakin ingin membatalkan pesanan ini?')) {
@@ -30,10 +45,62 @@ export default function OrderPage() {
     }
   };
 
+  const openRefundForm = (orderPublicId) => {
+    setRefundOrderId(orderPublicId);
+    setRefundReason(refundReasons[0]);
+    setCustomReason('');
+    setRefundProofImage(null);
+  };
+
+  const closeRefundForm = () => {
+    setRefundOrderId(null);
+    setCustomReason('');
+    setRefundProofImage(null);
+  };
+
+  const submitRefund = (e) => {
+    e.preventDefault();
+
+    const reason =
+      refundReason === 'Lainnya'
+        ? customReason.trim()
+        : customReason.trim()
+          ? `${refundReason}. Catatan: ${customReason.trim()}`
+          : refundReason;
+
+    if (!reason || reason.length < 10) {
+      alert('Alasan refund minimal 10 karakter.');
+      return;
+    }
+
+    router.post(
+      `/order/${refundOrderId}/refund`,
+      {
+        reason,
+        proof_image: refundProofImage,
+      },
+      {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: closeRefundForm,
+      }
+    );
+  };
+
   return (
     <section className="w-full px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
       <div className="mx-auto max-w-6xl">
         <h2 className="mb-10 text-center text-4xl font-bold">Pesananmu</h2>
+        {flash?.success && (
+          <div className="mb-6 rounded-lg border border-green-300 bg-green-500/20 px-4 py-3 text-green-100">
+            {flash.success}
+          </div>
+        )}
+        {flash?.error && (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-500/20 px-4 py-3 text-red-100">
+            {flash.error}
+          </div>
+        )}
         {orders.length === 0 ? (
           <div className="py-20 text-center text-lg text-[#E9E19E]/90 italic">
             Kamu belum memesan apapun
@@ -74,6 +141,11 @@ export default function OrderPage() {
                       >
                         {order.payment_status || 'unpaid'}
                       </span>
+                      {order.refund_request && (
+                        <p className="mt-2 text-xs capitalize text-[#E9E19E]/80">
+                          Refund: {order.refund_request.status}
+                        </p>
+                      )}
                     </td>
                     <td className="px-7 py-4 whitespace-nowrap">
                       <span
@@ -135,6 +207,17 @@ export default function OrderPage() {
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
+                        {order.payment_status === 'paid' &&
+                          ['Delivered', 'Completed'].includes(order.status) &&
+                          !order.refund_request && (
+                            <button
+                              type="button"
+                              onClick={() => openRefundForm(order.public_id)}
+                              className="font-semibold text-blue-300 transition hover:text-blue-200"
+                            >
+                              Ajukan Refund
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -144,6 +227,85 @@ export default function OrderPage() {
           </div>
         )}
       </div>
+
+      {refundOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 text-gray-800 shadow-2xl">
+            <h3 className="text-xl font-bold text-[#53685B]">
+              Ajukan Refund
+            </h3>
+            <form onSubmit={submitRefund} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  Pilih alasan refund
+                </label>
+                <select
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+                >
+                  {refundReasons.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  {refundReason === 'Lainnya'
+                    ? 'Tulis alasan refund'
+                    : 'Catatan tambahan'}
+                </label>
+                <textarea
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  rows="4"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+                  placeholder={
+                    refundReason === 'Lainnya'
+                      ? 'Contoh: Barang yang diterima berbeda dari foto produk.'
+                      : 'Opsional, jelaskan detail masalahnya.'
+                  }
+                  required={refundReason === 'Lainnya'}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  Upload foto bukti
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setRefundProofImage(e.target.files[0] || null)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Opsional. Format JPG/PNG, maksimal 2MB.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeRefundForm}
+                  className="rounded-lg bg-gray-200 px-5 py-2 font-semibold text-gray-700 hover:bg-gray-300"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#53685B] px-5 py-2 font-semibold text-white hover:bg-[#3c4a3e]"
+                >
+                  Kirim Pengajuan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Contact;
+use App\Models\SupportMessage;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Product;
@@ -24,16 +24,17 @@ class AdminDashboardController extends Controller
 
         $totalUsers = User::where('role', 'user')->count();
         $totalSellers = User::where('role', 'seller')->count();
-        $totalStores = Store::count();
         $totalProducts = Product::count();
         $totalOrders = Order::count();
         $totalCategories = Category::count();
-        $totalContacts = Contact::count();
-        $products = Product::with('store')->latest()->get();
+        // Jumlah percakapan bantuan (thread) = user/seller unik yang memiliki pesan support.
+        $totalMessages = SupportMessage::distinct()->count('user_id');
+        $totalPendingProducts = Product::where('approval_status', Product::STATUS_PENDING_ADMIN)->count();
 
         return Inertia::render('admin/dashboard', compact(
-            'totalUsers', 'totalSellers', 'totalStores', 'totalProducts',
-            'totalOrders', 'totalCategories', 'totalContacts', 'products'
+            'totalUsers', 'totalSellers', 'totalProducts',
+            'totalOrders', 'totalCategories', 'totalMessages',
+            'totalPendingProducts'
         ));
     }
 }

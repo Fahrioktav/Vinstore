@@ -12,6 +12,7 @@ class CheckRole
     static $defaultRoutesByRole = [
         'user' => '/',
         'seller' => '/seller/dashboard',
+        'validator' => '/validator/dashboard',
         'admin' => '/admin/dashboard'
     ];
 

@@ -1,17 +1,15 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { formatIDR, getProductImage } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const {
     totalUsers,
     totalSellers,
-    totalStores,
     totalProducts,
     totalOrders,
     totalCategories,
-    totalContacts,
-    products,
+    totalMessages,
+    totalPendingProducts,
   } = usePage().props;
 
   const stats = [
@@ -30,14 +28,7 @@ export default function AdminDashboard() {
       color: 'from-green-500 to-green-600',
     },
     {
-      label: 'Total Toko',
-      value: totalStores,
-      icon: '/assets/3.png',
-      href: '/admin/stores',
-      color: 'from-purple-500 to-purple-600',
-    },
-    {
-      label: 'Total Barang',
+      label: 'Total Stock',
       value: totalProducts,
       icon: '/assets/4.png',
       href: '/admin/products',
@@ -59,10 +50,17 @@ export default function AdminDashboard() {
     },
     {
       label: 'Messages',
-      value: totalContacts,
+      value: totalMessages,
       icon: '/assets/icons/social-whatsapp.png',
-      href: '/admin/contacts',
+      href: '/admin/bantuan',
       color: 'from-teal-500 to-teal-600',
+    },
+    {
+      label: 'Menunggu Persetujuan',
+      value: totalPendingProducts,
+      icon: '/assets/4.png',
+      href: '/admin/products/pending',
+      color: 'from-amber-500 to-amber-600',
     },
   ];
 
@@ -101,124 +99,8 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
-
-        {/* Products Table */}
-        <div className="mb-10 rounded-2xl bg-white p-6 shadow-lg shadow-[#53685B]/10">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[#53685B]">
-              📦 Daftar Produk Terbaru
-            </h2>
-            <Link
-              href="/admin/products"
-              className="text-sm font-semibold text-[#53685B] transition hover:text-[#3c4a3e] hover:underline"
-            >
-              Lihat Semua →
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#53685B] text-white">
-                <tr>
-                  <th className="rounded-tl-lg px-4 py-3 text-left">Foto</th>
-                  <th className="px-4 py-3 text-left">Nama Barang</th>
-                  <th className="px-4 py-3 text-left">Toko</th>
-                  <th className="px-4 py-3 text-left">Stok</th>
-                  <th className="px-4 py-3 text-left">Harga</th>
-                  <th className="px-4 py-3 text-left">Kategori</th>
-                  <th className="rounded-tr-lg px-4 py-3 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.length > 0 ? (
-                  products.map((product) => (
-                    <ProductRow key={product.public_id} product={product} />
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="7"
-                      className="px-4 py-8 text-center text-gray-500"
-                    >
-                      <p className="text-lg">📦 Belum ada produk</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
-  );
-}
-
-function ProductRow({ product }) {
-  const getStockColor = (stock) => {
-    if (stock > 10) return 'bg-green-100 text-green-700';
-    if (stock > 0) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-red-100 text-red-700';
-  };
-
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus produk ini?')) {
-      router.delete(`/admin/products/${product.public_id}`, {
-        preserveScroll: true,
-      });
-    }
-  };
-
-  return (
-    <tr className="border-t border-gray-100 transition hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <img
-          src={getProductImage(product)}
-          className="h-16 w-16 rounded-lg object-cover shadow-sm"
-          alt={product.name}
-        />
-      </td>
-      <td className="px-4 py-3">
-        <p className="font-semibold text-gray-800">{product.name}</p>
-        <p className="mt-1 text-xs text-gray-500">
-          {product.description?.substring(0, 30)}
-          {product.description?.length > 30 ? '...' : ''}
-        </p>
-      </td>
-      <td className="px-4 py-3 text-gray-700">
-        {product.store?.store_name || '-'}
-      </td>
-      <td className="px-4 py-3">
-        <span
-          className={`rounded-full px-2 py-1 text-xs font-semibold ${getStockColor(product.stock)}`}
-        >
-          {product.stock}
-        </span>
-      </td>
-      <td className="px-4 py-3 font-bold text-[#53685B]">
-        {formatIDR(product.price)}
-      </td>
-      <td className="px-4 py-3">
-        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
-          {product.category}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex justify-center gap-2">
-          <Link
-            href={`/admin/products/${product.public_id}/edit`}
-            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
-          >
-            ✏️ Edit
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
-          >
-            🗑️ Hapus
-          </button>
-        </div>
-      </td>
-    </tr>
   );
 }
 

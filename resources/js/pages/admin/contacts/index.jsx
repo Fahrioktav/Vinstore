@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { useState } from 'react';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function AdminContacts({ contacts }) {
   const { flash } = usePage().props;
@@ -137,33 +138,51 @@ export default function AdminContacts({ contacts }) {
                       )}
                     </td>
                     <td className="px-6 py-4 text-center whitespace-nowrap">
-                      <button
-                        onClick={() =>
-                          setSelectedContact(
-                            selectedContact === contact.public_id ? null : contact.public_id
-                          )
-                        }
-                        className="mr-2 rounded bg-blue-500 px-3 py-1 text-xs text-white hover:bg-blue-600"
-                      >
-                        {selectedContact === contact.public_id ? 'Tutup' : 'Detail'}
-                      </button>
-                      <select
-                        value={contact.status}
-                        onChange={(e) =>
-                          handleStatusChange(contact.public_id, e.target.value)
-                        }
-                        className="mr-2 rounded border px-2 py-1 text-xs"
-                      >
-                        <option value="pending">Menunggu</option>
-                        <option value="replied">Dibalas</option>
-                        <option value="closed">Tutup</option>
-                      </select>
-                      <button
-                        onClick={() => handleDelete(contact.public_id)}
-                        className="rounded bg-red-500 px-3 py-1 text-xs text-white hover:bg-red-600"
-                      >
-                        Hapus
-                      </button>
+                      <div className="flex justify-center">
+                        <ActionMenu
+                          items={[
+                            {
+                              label:
+                                selectedContact === contact.public_id
+                                  ? 'Tutup Detail'
+                                  : 'Lihat Detail',
+                              icon: '👁️',
+                              onClick: () =>
+                                setSelectedContact(
+                                  selectedContact === contact.public_id
+                                    ? null
+                                    : contact.public_id
+                                ),
+                            },
+                            { separator: true },
+                            contact.status !== 'pending' && {
+                              label: 'Tandai Menunggu',
+                              icon: '🕒',
+                              onClick: () =>
+                                handleStatusChange(contact.public_id, 'pending'),
+                            },
+                            contact.status !== 'replied' && {
+                              label: 'Tandai Dibalas',
+                              icon: '✅',
+                              onClick: () =>
+                                handleStatusChange(contact.public_id, 'replied'),
+                            },
+                            contact.status !== 'closed' && {
+                              label: 'Tandai Ditutup',
+                              icon: '🔒',
+                              onClick: () =>
+                                handleStatusChange(contact.public_id, 'closed'),
+                            },
+                            { separator: true },
+                            {
+                              label: 'Hapus',
+                              icon: '🗑️',
+                              variant: 'destructive',
+                              onClick: () => handleDelete(contact.public_id),
+                            },
+                          ]}
+                        />
+                      </div>
                     </td>
                   </tr>
                   {selectedContact === contact.public_id && (

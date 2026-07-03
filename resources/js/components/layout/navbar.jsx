@@ -16,41 +16,40 @@ const links = {
     { label: 'Produk', href: '/products' },
     { label: 'Lelang', href: '/auctions' },
     { label: 'Riwayat Order', href: '/order' },
-    { label: 'Contact', href: '/contact' },
   ],
   seller: [
     { label: 'Home', href: '/' },
+    { label: 'Barter', href: '/seller/barter' },
     { label: 'Lelang', href: '/auctions' },
-    { label: 'Contact', href: '/contact' },
   ],
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard' },
     { label: 'Lelang', href: '/admin/auctions' },
+    { label: 'Refund', href: '/admin/refunds' },
+    { label: 'Pencairan', href: '/admin/withdrawals' },
+  ],
+  validator: [
+    { label: 'Dashboard', href: '/validator/dashboard' },
   ],
 };
 
 const baseMenus = [{ label: '👤 Profil', href: '/profile' }];
+const bantuanUser = { label: '❓Bantuan', href: '/bantuan' };
 const menus = {
-  default: [...baseMenus, { label: '🛒 Keranjang', href: '/cart' }],
-  seller: baseMenus,
+  default: [...baseMenus, bantuanUser, { label: '🛒 Keranjang', href: '/cart' }],
+  seller: [...baseMenus, bantuanUser],
   admin: baseMenus,
+  validator: [...baseMenus, bantuanUser],
 };
 
 export default function Navbar() {
   const { user } = usePage().props;
   const url = usePage().url;
 
-  const displayMenus = user?.role === 'admin' 
-    ? menus['admin'] 
-    : user?.role === 'seller' 
-    ? menus['seller'] 
-    : menus['default'];
-  
-  const displayLinks = user?.role === 'admin' 
-    ? links['admin'] 
-    : user?.role === 'seller' 
-    ? links['seller'] 
-    : links['default'];
+  const displayMenus = menus[user?.role] ?? menus['default'];
+
+  const roleLinks = links[user?.role] ?? links['default'];
+  const displayLinks = roleLinks;
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -81,7 +80,9 @@ export default function Navbar() {
               ? '/admin/dashboard'
               : user?.role === 'seller'
                 ? '/seller/dashboard'
-                : '/'
+                : user?.role === 'validator'
+                  ? '/validator/dashboard'
+                  : '/'
           }
           className="flex items-center gap-2"
         >

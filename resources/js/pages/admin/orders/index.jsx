@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function AdminOrders() {
   const { orders, success } = usePage().props;
@@ -110,19 +111,22 @@ export default function AdminOrders() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center gap-2">
-                          <Link
-                            href={`/admin/orders/${order.public_id}/edit`}
-                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c4a3e] hover:shadow-md"
-                          >
-                            ✏️ Edit
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(order.public_id)}
-                            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:cursor-pointer hover:bg-red-600 hover:shadow-md"
-                          >
-                            🗑️ Hapus
-                          </button>
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Edit',
+                                icon: '✏️',
+                                href: `/admin/orders/${order.public_id}/edit`,
+                              },
+                              {
+                                label: 'Hapus',
+                                icon: '🗑️',
+                                variant: 'destructive',
+                                onClick: () => handleDelete(order.public_id),
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

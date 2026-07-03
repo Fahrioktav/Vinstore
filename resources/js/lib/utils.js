@@ -60,6 +60,11 @@ export function getUserImage(user) {
     : `https://ui-avatars.com/api/?name=${user.username}&size=128`;
 }
 
+// Resolve a stored media path (e.g. video) to a public URL.
+export function storageMedia(path) {
+  return storageUrl(path);
+}
+
 function storageUrl(path) {
   if (!path) {
     return null;

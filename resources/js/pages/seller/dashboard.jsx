@@ -4,6 +4,7 @@ import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BadgeIcon } from '@/components/icons';
+import ActionMenu from '@/components/ui/action-menu';
 import {
   AreaChart,
   Area,
@@ -28,8 +29,27 @@ export default function SellerDashboard() {
     monthlyIncomeData,
     productIncome,
     auctions,
+    store,
+    withdrawals,
+    pendingWithdrawalAmount,
   } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
+  const withdrawalForm = useForm({
+    amount: '',
+    bank_name: '',
+    account_number: '',
+    account_holder: '',
+  });
+  const withdrawableBalance =
+    Number(store?.available_balance || 0) - Number(pendingWithdrawalAmount || 0);
+
+  const submitWithdrawal = (e) => {
+    e.preventDefault();
+    withdrawalForm.post('/seller/withdrawals', {
+      preserveScroll: true,
+      onSuccess: () => withdrawalForm.reset(),
+    });
+  };
 
   const handleSelectProduct = (productId) => {
     setSelectedProducts((prev) =>
@@ -162,6 +182,108 @@ export default function SellerDashboard() {
                 <Bar dataKey="income" fill="#B77C4C" name="Pendapatan" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Seller Balance */}
+        <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+          <div className="rounded-2xl bg-white p-6 shadow-md">
+            <h2 className="mb-4 text-xl font-bold text-[#53685B]">
+              Saldo Seller
+            </h2>
+            <div className="space-y-4">
+              <BalanceLine
+                label="Saldo tersedia"
+                value={formatIDR(store?.available_balance || 0)}
+              />
+              <BalanceLine
+                label="Menunggu pencairan"
+                value={formatIDR(pendingWithdrawalAmount || 0)}
+              />
+              <BalanceLine
+                label="Bisa dicairkan"
+                value={formatIDR(Math.max(withdrawableBalance, 0))}
+              />
+              <BalanceLine
+                label="Total sudah dicairkan"
+                value={formatIDR(store?.withdrawn_balance || 0)}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white p-6 shadow-md">
+            <h2 className="mb-4 text-xl font-bold text-[#53685B]">
+              Ajukan Pencairan
+            </h2>
+            <form onSubmit={submitWithdrawal} className="grid gap-4 md:grid-cols-2">
+              <InputField
+                label="Nominal"
+                type="number"
+                value={withdrawalForm.data.amount}
+                onChange={(value) => withdrawalForm.setData('amount', value)}
+                error={withdrawalForm.errors.amount}
+              />
+              <InputField
+                label="Nama Bank"
+                value={withdrawalForm.data.bank_name}
+                onChange={(value) => withdrawalForm.setData('bank_name', value)}
+                error={withdrawalForm.errors.bank_name}
+              />
+              <InputField
+                label="Nomor Rekening"
+                value={withdrawalForm.data.account_number}
+                onChange={(value) => withdrawalForm.setData('account_number', value)}
+                error={withdrawalForm.errors.account_number}
+              />
+              <InputField
+                label="Nama Pemilik Rekening"
+                value={withdrawalForm.data.account_holder}
+                onChange={(value) => withdrawalForm.setData('account_holder', value)}
+                error={withdrawalForm.errors.account_holder}
+              />
+              <div className="md:col-span-2">
+                <button
+                  type="submit"
+                  disabled={withdrawalForm.processing || withdrawableBalance <= 0}
+                  className="rounded-lg bg-[#53685B] px-6 py-3 font-semibold text-white transition hover:bg-[#3c4a3e] disabled:opacity-50"
+                >
+                  Ajukan Pencairan
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Nominal</th>
+                    <th className="px-3 py-2 text-left">Bank</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withdrawals?.length > 0 ? (
+                    withdrawals.map((withdrawal) => (
+                      <tr key={withdrawal.public_id} className="border-t">
+                        <td className="px-3 py-2 font-semibold">
+                          {formatIDR(withdrawal.amount)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {withdrawal.bank_name} - {withdrawal.account_number}
+                        </td>
+                        <td className="px-3 py-2 capitalize">{withdrawal.status}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3" className="px-3 py-4 text-center text-gray-500">
+                        Belum ada pengajuan pencairan.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -306,31 +428,31 @@ export default function SellerDashboard() {
                         {auction.winner?.username || '-'}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Link
-                            href={`/auctions/${auction.public_id}`}
-                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white"
-                          >
-                            Detail
-                          </Link>
-                          {auction.bids_count === 0 &&
-                            ['pending', 'scheduled'].includes(auction.status) &&
-                            ['pending', 'approved', 'rejected'].includes(auction.approval_status) && (
-                            <Link
-                              href={`/seller/auctions/${auction.public_id}/edit`}
-                              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
-                            >
-                              Edit
-                            </Link>
-                          )}
-                          {auction.bids_count === 0 && auction.status === 'ended' && (
-                            <Link
-                              href={`/seller/auctions/${auction.public_id}/relist`}
-                              className="rounded-lg bg-[#B77C4C] px-4 py-2 text-xs font-semibold text-white"
-                            >
-                              Ajukan Ulang
-                            </Link>
-                          )}
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Detail',
+                                icon: '🔍',
+                                href: `/auctions/${auction.public_id}`,
+                              },
+                              auction.bids_count === 0 &&
+                                ['pending', 'scheduled'].includes(auction.status) &&
+                                ['pending', 'approved', 'rejected'].includes(
+                                  auction.approval_status
+                                ) && {
+                                  label: 'Edit',
+                                  icon: '✏️',
+                                  href: `/seller/auctions/${auction.public_id}/edit`,
+                                },
+                              auction.bids_count === 0 &&
+                                auction.status === 'ended' && {
+                                  label: 'Ajukan Ulang',
+                                  icon: '🔁',
+                                  href: `/seller/auctions/${auction.public_id}/relist`,
+                                },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -350,6 +472,34 @@ export default function SellerDashboard() {
     </>
   );
 }
+
+function BalanceLine({ label, value }) {
+  return (
+    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className="font-bold text-[#53685B]">{value}</span>
+    </div>
+  );
+}
+
+function InputField({ label, type = 'text', value, onChange, error }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-semibold text-gray-700">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B] focus:outline-none"
+        required
+      />
+      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+    </label>
+  );
+}
+
 function ProductRow({ product, isSelected, onSelect }) {
   const {
     patch,
@@ -378,8 +528,18 @@ function ProductRow({ product, isSelected, onSelect }) {
 
   const approvalColors = {
     approved: 'bg-green-100 text-green-700',
+    pending_validator: 'bg-yellow-100 text-yellow-700',
+    pending_admin: 'bg-blue-100 text-blue-700',
     pending: 'bg-yellow-100 text-yellow-700',
     rejected: 'bg-red-100 text-red-700',
+  };
+
+  const approvalLabels = {
+    approved: 'Disetujui',
+    pending_validator: 'Menunggu Validator',
+    pending_admin: 'Menunggu Admin',
+    pending: 'Menunggu',
+    rejected: 'Ditolak',
   };
 
   return (
@@ -417,9 +577,9 @@ function ProductRow({ product, isSelected, onSelect }) {
       </td>
       <td className="px-4 py-3">
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
         >
-          {product.approval_status || 'pending'}
+          {approvalLabels[product.approval_status] || product.approval_status || 'Menunggu'}
         </span>
         {product.rejection_reason && (
           <p className="mt-1 max-w-40 text-xs text-red-600">
@@ -452,24 +612,22 @@ function ProductRow({ product, isSelected, onSelect }) {
         )}
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-center gap-2">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link
-              href={`/seller/products/${product.public_id}/edit`}
-              className="text-blue-600 transition hover:text-blue-800"
-            >
-              ✏️
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleDelete}
-            className="text-red-600 transition hover:text-red-800"
-            disabled={processing}
-          >
-            🗑️
-          </Button>
+        <div className="flex items-center justify-center">
+          <ActionMenu
+            items={[
+              {
+                label: 'Edit',
+                icon: '✏️',
+                href: `/seller/products/${product.public_id}/edit`,
+              },
+              {
+                label: 'Hapus',
+                icon: '🗑️',
+                variant: 'destructive',
+                onClick: processing ? undefined : handleDelete,
+              },
+            ]}
+          />
         </div>
       </td>
     </tr>
@@ -578,15 +736,18 @@ function OrderRow({ order }) {
         })}
       </td>
       <td className="px-4 py-3 text-center">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleDelete}
-          className="text-red-600 transition hover:text-red-800"
-          disabled={isUpdating}
-        >
-          🗑️
-        </Button>
+        <div className="flex justify-center">
+          <ActionMenu
+            items={[
+              {
+                label: 'Hapus',
+                icon: '🗑️',
+                variant: 'destructive',
+                onClick: isUpdating ? undefined : handleDelete,
+              },
+            ]}
+          />
+        </div>
       </td>
     </tr>
   );

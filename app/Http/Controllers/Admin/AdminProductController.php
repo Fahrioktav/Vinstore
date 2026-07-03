@@ -18,6 +18,20 @@ class AdminProductController extends Controller
         return Inertia::render('admin/products/index', compact('products'));
     }
 
+    /**
+     * Daftar detail produk yang menunggu persetujuan admin
+     * (sudah divalidasi validator, status pending_admin).
+     */
+    public function pending()
+    {
+        $products = Product::with('store.user')
+            ->where('approval_status', Product::STATUS_PENDING_ADMIN)
+            ->latest()
+            ->get();
+
+        return Inertia::render('admin/products/pending', compact('products'));
+    }
+
     public function edit($id)
     {
         $product = Product::with('store')->where('public_id', $id)->firstOrFail();
@@ -60,14 +74,29 @@ class AdminProductController extends Controller
     {
         $product = Product::where('public_id', $id)->firstOrFail();
 
+        // Admin hanya boleh menyetujui produk yang sudah divalidasi oleh validator.
+        if ($product->approval_status === Product::STATUS_PENDING_VALIDATOR) {
+            return redirect()->back()->with('error', 'Produk belum divalidasi oleh validator barang antik.');
+        }
+
         $product->update([
-            'approval_status' => 'approved',
+            'approval_status' => Product::STATUS_APPROVED,
             'approved_at' => now(),
             'approved_by' => Auth::id(),
             'rejection_reason' => null,
         ]);
 
-        return redirect()->back()->with('success', 'Produk berhasil disetujui.');
+        // Untuk produk Tebak Harga, mulai siklus hidup (scheduled/active) saat disetujui.
+        if ($product->isTebakHarga()) {
+            $service = app(\App\Services\PriceGuessService::class);
+            $product->update([
+                'guess_status' => $service->initialStatusOnApproval($product),
+            ]);
+            // Jika periode ternyata sudah lewat, langsung finalisasi pemenang.
+            $service->sync();
+        }
+
+        return redirect()->back()->with('success', 'Produk berhasil disetujui dan kini tampil ke pembeli.');
     }
 
     public function reject(Request $request, $id)
@@ -79,7 +108,7 @@ class AdminProductController extends Controller
         $product = Product::where('public_id', $id)->firstOrFail();
 
         $product->update([
-            'approval_status' => 'rejected',
+            'approval_status' => Product::STATUS_REJECTED,
             'approved_at' => null,
             'approved_by' => Auth::id(),
             'rejection_reason' => $validated['rejection_reason'] ?? null,

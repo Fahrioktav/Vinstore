@@ -2,6 +2,7 @@ import { Form, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { getStoreImage, useParams } from '@/lib/utils';
 import SearchInput from '@/components/search-input';
+import StoresMap from '@/components/stores-map';
 
 export default function TokoPage() {
   const { showSearch, stores } = usePage().props;
@@ -24,6 +25,14 @@ export default function TokoPage() {
         <h2 className="mb-10 pt-10 text-center text-3xl font-bold tracking-wide text-[#E9E19E] md:text-4xl">
           Semua Toko
         </h2>
+
+        {/* {-- PETA SEBARAN TOKO --} */}
+        <div className="mx-auto mb-12 max-w-7xl">
+          <h3 className="mb-4 text-center text-xl font-semibold text-[#E9E19E]">
+            🗺️ Peta Lokasi Toko
+          </h3>
+          <StoresMap stores={stores} />
+        </div>
 
         {/* {-- GRID TOKO --} */}
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">

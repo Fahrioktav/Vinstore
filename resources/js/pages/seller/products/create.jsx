@@ -1,4 +1,5 @@
 import { Form, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -10,6 +11,10 @@ import {
 } from '@/components/auth/auth-layout';
 
 export default function SellerCreateProductPage() {
+  const { categories = [] } = usePage().props;
+  const [saleType, setSaleType] = useState('normal');
+  const isTebakHarga = saleType === 'tebak_harga';
+
   return (
     <section className="flex w-full max-w-2xl grow px-6 py-8">
       <Card className="my-auto w-full shadow-md transition hover:shadow-lg">
@@ -48,6 +53,28 @@ export default function SellerCreateProductPage() {
                   <AuthInput id="name" type="text" name="name" required />
                 </div>
 
+                <div>
+                  <AuthLabel htmlFor="sale_type">Jenis Penjualan</AuthLabel>
+                  <select
+                    id="sale_type"
+                    name="sale_type"
+                    value={saleType}
+                    onChange={(e) => setSaleType(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
+                  >
+                    <option value="normal">Penjualan Biasa</option>
+                    <option value="tebak_harga">🎯 Tebak Harga</option>
+                  </select>
+                  {isTebakHarga && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Harga asli hanya diketahui sistem dan disembunyikan dari
+                      pembeli (ditampilkan ???). Pembeli mengirim satu tebakan;
+                      tebakan terdekat menang dan berhak membeli lebih dulu
+                      selama 24 jam.
+                    </p>
+                  )}
+                </div>
+
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     <AuthLabel htmlFor="stock">Stok</AuthLabel>
@@ -61,7 +88,9 @@ export default function SellerCreateProductPage() {
                     />
                   </div>
                   <div>
-                    <AuthLabel htmlFor="price">Harga</AuthLabel>
+                    <AuthLabel htmlFor="price">
+                      {isTebakHarga ? 'Harga Asli (disembunyikan)' : 'Harga'}
+                    </AuthLabel>
                     <AuthInput
                       id="price"
                       type="number"
@@ -74,14 +103,61 @@ export default function SellerCreateProductPage() {
                   </div>
                 </div>
 
+                {isTebakHarga && (
+                  <div className="grid gap-6 rounded-lg border border-[#53685B]/30 bg-[#53685B]/5 p-4 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <p className="text-sm font-semibold text-[#2F3E46]">
+                        Periode Tebak Harga
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Tentukan kapan pembeli boleh mulai dan berhenti menebak.
+                      </p>
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="guess_starts_at">
+                        Tanggal Mulai
+                      </AuthLabel>
+                      <AuthInput
+                        id="guess_starts_at"
+                        type="datetime-local"
+                        name="guess_starts_at"
+                        required={isTebakHarga}
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="guess_ends_at">
+                        Tanggal Berakhir
+                      </AuthLabel>
+                      <AuthInput
+                        id="guess_ends_at"
+                        type="datetime-local"
+                        name="guess_ends_at"
+                        required={isTebakHarga}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <AuthLabel htmlFor="category">Kategori</AuthLabel>
-                  <AuthInput
+                  <select
                     id="category"
-                    type="text"
                     name="category"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
                     required
-                  />
+                  >
+                    <option value="">Pilih kategori</option>
+                    {categories.map((category) => (
+                      <option key={category.name} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {categories.length === 0 && (
+                    <p className="mt-1 text-xs text-red-500">
+                      Belum ada kategori. Hubungi admin untuk membuat kategori.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <AuthLabel htmlFor="description">Deskripsi</AuthLabel>
@@ -101,7 +177,61 @@ export default function SellerCreateProductPage() {
                     accept="image/*"
                     required
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Gambar utama produk. Format: JPG, PNG (Max 2MB).
+                  </p>
                 </div>
+                <div>
+                  <AuthLabel htmlFor="images">
+                    Foto Tambahan (tampak depan, samping, kondisi)
+                  </AuthLabel>
+                  <AuthInput
+                    id="images"
+                    type="file"
+                    name="images[]"
+                    accept="image/*"
+                    multiple
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Bisa pilih beberapa foto sekaligus (maks. 5). Akan tampil di
+                    detail produk untuk buyer. Format: JPG, PNG (Max 2MB / foto).
+                  </p>
+                </div>
+                <div>
+                  <AuthLabel htmlFor="video">
+                    🎥 Video Produk (Opsional)
+                  </AuthLabel>
+                  <AuthInput
+                    id="video"
+                    type="file"
+                    name="video"
+                    accept="video/mp4,video/webm,video/quicktime"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Video singkat kondisi barang. Format: MP4, WebM, MOV (Max
+                    20MB).
+                  </p>
+                </div>
+                {!isTebakHarga && (
+                  <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <input
+                      id="is_barterable"
+                      type="checkbox"
+                      name="is_barterable"
+                      value="1"
+                      className="mt-1 h-4 w-4"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-[#2F3E46]">
+                        Produk ini bisa dibarter
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        Jika dicentang, seller lain dapat mengajukan barter untuk
+                        produk ini (selama stok masih ada).
+                      </span>
+                    </span>
+                  </label>
+                )}
                 <div>
                   <AuthLabel htmlFor="certificate">
                     📜 Sertifikat Keaslian (Opsional)

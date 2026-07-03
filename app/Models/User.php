@@ -81,6 +81,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Helper pengecekan role.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isValidator(): bool
+    {
+        return $this->role === 'validator';
+    }
+
+    public function isSeller(): bool
+    {
+        return $this->role === 'seller';
+    }
+
+    /**
      * Relasi opsional jika user bisa melakukan order (sebagai customer)
      */
     public function orders()
@@ -101,5 +119,15 @@ class User extends Authenticatable
     public function wonAuctions()
     {
         return $this->hasMany(Auction::class, 'winner_id');
+    }
+
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class);
+    }
+
+    public function supportMessages()
+    {
+        return $this->hasMany(SupportMessage::class, 'user_id');
     }
 }

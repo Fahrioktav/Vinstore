@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getAuctionImage } from '@/lib/utils';
+import ActionMenu from '@/components/ui/action-menu';
 
 export default function AdminAuctions() {
   const { auctions, success, error } = usePage().props;
@@ -106,29 +107,27 @@ export default function AdminAuctions() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center gap-2">
-                          <Link
-                            href={`/auctions/${auction.public_id}`}
-                            className="rounded-lg bg-[#53685B] px-4 py-2 text-xs font-semibold text-white"
-                          >
-                            Detail
-                          </Link>
-                          {auction.approval_status !== 'approved' && (
-                            <button
-                              onClick={() => approve(auction.public_id)}
-                              className="rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white"
-                            >
-                              Setujui
-                            </button>
-                          )}
-                          {auction.approval_status !== 'rejected' && (
-                            <button
-                              onClick={() => reject(auction.public_id)}
-                              className="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-semibold text-white"
-                            >
-                              Tolak
-                            </button>
-                          )}
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Detail',
+                                icon: '🔍',
+                                href: `/auctions/${auction.public_id}`,
+                              },
+                              auction.approval_status !== 'approved' && {
+                                label: 'Setujui',
+                                icon: '✅',
+                                onClick: () => approve(auction.public_id),
+                              },
+                              auction.approval_status !== 'rejected' && {
+                                label: 'Tolak',
+                                icon: '🚫',
+                                variant: 'destructive',
+                                onClick: () => reject(auction.public_id),
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
