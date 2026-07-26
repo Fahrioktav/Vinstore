@@ -11,7 +11,7 @@ start
 
 |Sistem|
 :Sinkronisasi status Tebak Harga (PriceGuessService::sync);
-if (Produk sudah di-approve admin?) then (tidak)
+if (Produk sudah disetujui?) then (tidak)
   |Pembeli|
   :Menerima pesan "Produk belum disetujui";
   stop

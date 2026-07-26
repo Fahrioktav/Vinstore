@@ -1,11 +1,11 @@
 @startuml Vinstore-ClassDiagram
 ' =====================================================================
-'  CLASS DIAGRAM - VINSTORE
+'  CLASS DIAGRAM ARSITEKTUR - VINSTORE
 '  Mencakup: Model (domain), Controller, dan Service (arsitektur MVC Laravel)
 ' =====================================================================
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
-title Class Diagram - Sistem Vinstore
+title Class Diagram Arsitektur - Sistem Vinstore
 
 ' ============================= MODELS ===============================
 package "Models (Eloquent)" {
@@ -76,7 +76,11 @@ package "Models (Eloquent)" {
     - is_barterable : bool
     - sale_type : string
     - approval_status : string
+    - validated_at : datetime
+    - validated_by : bigint
+    - approved_at : datetime
     - approved_by : bigint
+    - rejection_reason : text
     - guess_status : string
     - guess_winner_id : bigint
     - winner_priority_until : datetime
@@ -233,6 +237,13 @@ Order "1" -- "0..1" RefundRequest : dirujuk >
 BarterRequest "*" -- "1" Store : pengaju >
 BarterRequest "*" -- "1" Product : produk ditawarkan >
 Contact "*" -- "0..1" User : dikirim oleh >
+
+note right of Category
+  Kategori produk disediakan admin.
+  Pada implementasi saat ini nilai kategori
+  produk disimpan sebagai teks nama kategori,
+  bukan foreign key category_id.
+end note
 
 ' ============================ CONTROLLERS ===========================
 package "Controllers" {

@@ -5,9 +5,14 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "format": "prettier --write \"resources/js/**/*.{js,jsx,ts,tsx}\""
+        "format": "prettier --write \"resources/js/**/*.{js,jsx,ts,tsx}\"",
+        "test:e2e": "playwright test",
+        "test:e2e:list": "playwright test --list",
+        "test:e2e:report": "playwright show-report",
+        "test:e2e:seed": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:PLAYWRIGHT_DB_SETUP='1'; php tests/playwright_db_setup.php\""
     },
     "devDependencies": {
+        "@playwright/test": "^1.61.1",
         "@tailwindcss/vite": "^4.0.0",
         "@types/react": "^19.2.2",
         "@types/react-dom": "^19.2.2",

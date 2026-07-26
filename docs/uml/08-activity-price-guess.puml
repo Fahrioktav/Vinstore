@@ -1,0 +1,121 @@
+@startuml Vinstore-Activity-PriceGuess
+' =====================================================================
+'  ACTIVITY DIAGRAM - Tebak Harga
+'  Alur: produk tebak harga disetujui -> user menebak -> sistem menentukan pemenang
+' =====================================================================
+title Activity Diagram - Tebak Harga
+
+|Penjual|
+start
+:Mengajukan produk dengan\njenis penjualan Tebak Harga;
+
+|Validator|
+:Memvalidasi keaslian produk;
+if (Produk valid?) then (tidak)
+  |Sistem|
+  :Set approval_status=rejected;
+  stop
+else (ya)
+endif
+
+|Sistem|
+:Set approval_status=pending_admin;
+
+|Admin|
+:Meninjau produk yang sudah divalidasi;
+if (Admin menyetujui?) then (tidak)
+  |Sistem|
+  :Set approval_status=rejected;
+  stop
+else (ya)
+endif
+
+|Sistem|
+:Set approval_status=approved;
+:Inisialisasi guess_status;
+if (Waktu mulai masih nanti?) then (ya)
+  :Set guess_status=scheduled;
+else (tidak)
+  :Set guess_status=active;
+endif
+
+|Pembeli|
+:Membuka detail produk Tebak Harga;
+
+|Sistem|
+:Sinkronisasi status Tebak Harga;
+if (Periode tebak harga aktif?) then (tidak)
+  |Pembeli|
+  :Melihat informasi status\nscheduled/ended/public;
+  stop
+else (ya)
+endif
+
+|Pembeli|
+:Mengisi nominal tebakan;
+:Submit tebakan harga;
+
+|Sistem|
+:Validasi tebakan;
+if (Produk milik toko sendiri?) then (ya)
+  |Pembeli|
+  :Menerima pesan tidak boleh menebak\nproduk sendiri;
+  stop
+else (tidak)
+endif
+
+if (Produk benar bertipe Tebak Harga?) then (tidak)
+  |Pembeli|
+  :Menerima pesan produk bukan Tebak Harga;
+  stop
+else (ya)
+endif
+
+if (User sudah pernah menebak?) then (ya)
+  |Pembeli|
+  :Menerima pesan tebakan tidak dapat diubah;
+  stop
+else (tidak)
+endif
+
+|Sistem|
+:Simpan PriceGuess;
+
+while (Periode tebak harga belum selesai?) is (ya)
+  |Pembeli|
+  :User lain dapat mengirim tebakan;
+  |Sistem|
+  :Menyimpan riwayat tebakan;
+endwhile (tidak)
+
+|Sistem|
+:Finalisasi periode Tebak Harga;
+if (Ada tebakan?) then (tidak)
+  :Set guess_status=public;
+  :Harga asli ditampilkan\nsebagai penjualan biasa;
+  stop
+else (ya)
+endif
+
+|Sistem|
+:Hitung selisih setiap tebakan\ndengan harga asli;
+:Pilih tebakan dengan selisih terkecil;
+:Jika seri, pilih tebakan paling awal;
+:Set guess_status=ended;
+:Set guess_winner_id;
+:Set winner_priority_until;
+
+|Pemenang|
+:Mendapat prioritas membeli produk;
+:Melakukan checkout sebelum\nbatas prioritas berakhir;
+
+|Sistem|
+if (Prioritas pemenang habis\nsebelum checkout?) then (ya)
+  :Set guess_status=public;
+  :Produk dapat dibeli user lain;
+else (tidak)
+  :Proses checkout dan pembayaran;
+endif
+stop
+
+@enduml

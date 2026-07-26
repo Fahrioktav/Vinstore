@@ -67,6 +67,7 @@ rectangle "Vinstore" {
   usecase "Melihat dashboard admin" as UC_AdminDash
 
   ' ---------------- Sistem / Pembayaran ----------------
+  usecase "Memproses pembayaran" as UC_Payment
   usecase "Memproses notifikasi pembayaran" as UC_Notif
 }
 
@@ -125,12 +126,23 @@ UC_Profile       <-- Admin
 UC_Support       <-- Admin
 
 ' ----------------------- RELASI SISTEM (kanan) ---------------------
+UC_Payment <-- Midtrans
 UC_Notif <-- Midtrans
 
 ' ----------------------- RELASI ANTAR USE CASE ---------------------
-UC_Checkout ..> UC_Notif : <<include>>
-UC_PayAuction ..> UC_Notif : <<include>>
-' Alur validasi dua tahap: produk divalidasi validator sebelum disetujui admin
-UC_Validate ..> UC_AdminProduct : <<precede>>
+UC_Checkout ..> UC_Payment : <<include>>
+UC_PayAuction ..> UC_Payment : <<include>>
+UC_Payment ..> UC_Notif : <<include>>
+
+note right of UC_Validate
+  Produk yang diajukan penjual divalidasi
+  oleh validator terlebih dahulu sebelum
+  masuk ke persetujuan admin.
+end note
+
+note right of UC_AdminProduct
+  Admin menyetujui atau menolak produk
+  yang sudah lolos validasi validator.
+end note
 
 @enduml

@@ -1,0 +1,101 @@
+@startuml Vinstore-Activity-Barter
+' =====================================================================
+'  ACTIVITY DIAGRAM - Barter Antar Toko
+'  Alur: seller mengajukan barter -> seller pemilik produk menerima/menolak
+' =====================================================================
+title Activity Diagram - Barter Antar Toko
+
+|Seller Pengaju|
+start
+:Membuka halaman barter;
+
+|Sistem|
+:Menampilkan produk seller lain\nyang tersedia untuk barter;
+:Menampilkan produk milik seller\nsendiri yang dapat ditawarkan;
+
+|Seller Pengaju|
+:Memilih produk seller lain;
+:Memilih produk milik sendiri\nsebagai penawaran;
+:Mengisi tambahan uang/catatan\njika ada;
+:Submit pengajuan barter;
+
+|Sistem|
+:Validasi pengajuan;
+if (Seller memiliki toko?) then (tidak)
+  |Seller Pengaju|
+  :Diarahkan mendaftarkan toko;
+  stop
+else (ya)
+endif
+
+if (Produk yang diminta tersedia untuk barter?) then (tidak)
+  |Seller Pengaju|
+  :Menerima pesan produk tidak tersedia;
+  stop
+else (ya)
+endif
+
+if (Produk yang diminta milik toko sendiri?) then (ya)
+  |Seller Pengaju|
+  :Menerima pesan tidak dapat barter\nproduk sendiri;
+  stop
+else (tidak)
+endif
+
+if (Produk yang ditawarkan valid dan barterable?) then (tidak)
+  |Seller Pengaju|
+  :Menerima pesan produk penawaran\ntidak valid;
+  stop
+else (ya)
+endif
+
+if (Sudah ada pengajuan pending yang sama?) then (ya)
+  |Seller Pengaju|
+  :Menerima pesan pengajuan sudah ada;
+  stop
+else (tidak)
+endif
+
+|Sistem|
+:Simpan BarterRequest\nstatus=pending;
+
+|Seller Pemilik Produk|
+:Membuka daftar pengajuan masuk;
+:Meninjau produk yang diminta\ndan produk yang ditawarkan;
+if (Pengajuan disetujui?) then (tidak)
+  :Menolak pengajuan;
+  |Sistem|
+  :Set status=rejected;
+  :Catat responded_at;
+  |Seller Pengaju|
+  :Melihat status barter ditolak;
+  stop
+else (ya)
+endif
+
+|Sistem|
+:Mulai transaksi database;
+:Lock kedua produk;
+if (Kedua produk masih tersedia untuk barter?) then (tidak)
+  :Rollback transaksi;
+  |Seller Pemilik Produk|
+  :Menerima pesan gagal barter;
+  stop
+else (ya)
+endif
+
+|Sistem|
+:Tukar store_id kedua produk;
+:Set is_barterable=false\npada kedua produk;
+:Set BarterRequest status=accepted;
+:Batalkan pengajuan pending lain\nyang memakai salah satu produk;
+:Commit transaksi;
+
+|Seller Pengaju|
+:Melihat barter diterima\ndan kepemilikan produk berubah;
+
+|Seller Pemilik Produk|
+:Melihat barter diterima\ndan kepemilikan produk berubah;
+stop
+
+@enduml

@@ -29,23 +29,57 @@ class StoreController extends Controller
     public function index(Request $request)
     {
         $keyword = $request->query('q');
-        $query = Store::latest();
-
-        if (!empty($keyword)) {
-            $query->where(function ($q) use ($keyword) {
-                $q->where('store_name', 'like', "%{$keyword}%")
-                ->orWhere('description', 'like', "%{$keyword}%")
-                ->orWhere('category', 'like', "%{$keyword}%")
-                ->orWhere('location', 'like', "%{$keyword}%");
-            });
-        }
+        $latitude = $request->query('latitude');
+        $longitude = $request->query('longitude');
+        $radius = $request->query('radius', 10); // Default 10 km
         
-        $stores = $query->get();
+        // Jika ada koordinat, gunakan nearby search
+        if ($latitude !== null && $longitude !== null) {
+            $query = Store::nearby(
+                floatval($latitude), 
+                floatval($longitude), 
+                floatval($radius)
+            );
+            
+            // Filter berdasarkan keyword jika ada
+            if (!empty($keyword)) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('store_name', 'like', "%{$keyword}%")
+                    ->orWhere('description', 'like', "%{$keyword}%")
+                    ->orWhere('category', 'like', "%{$keyword}%")
+                    ->orWhere('location', 'like', "%{$keyword}%");
+                });
+            }
+            
+            $stores = $query->get()->map(function ($store) {
+                // Tambahkan informasi jarak yang sudah diformat
+                $store->distance_text = $store->distance < 1
+                    ? round($store->distance * 1000) . ' meter'
+                    : round($store->distance, 1) . ' km';
+                return $store;
+            });
+        } else {
+            // Jika tidak ada koordinat, tampilkan semua toko (mode lama)
+            $query = Store::latest();
+
+            if (!empty($keyword)) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('store_name', 'like', "%{$keyword}%")
+                    ->orWhere('description', 'like', "%{$keyword}%")
+                    ->orWhere('category', 'like', "%{$keyword}%")
+                    ->orWhere('location', 'like', "%{$keyword}%");
+                });
+            }
+            
+            $stores = $query->get();
+        }
 
         return Inertia::render('toko', [
             'stores' => $stores,
             'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
-            'showSearch' => true
+            'showSearch' => true,
+            'hasCoordinates' => $latitude !== null && $longitude !== null,
+            'searchRadius' => floatval($radius),
         ]);
     }
 

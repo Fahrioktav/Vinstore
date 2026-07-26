@@ -180,7 +180,7 @@ export default function SellerEditProductPage() {
                   id="image"
                   type="file"
                   name="image"
-                  accept=".jpg,.jpeg,.png"
+                  accept="image/*"
                 />
                 {product.image && (
                   <div className="">
@@ -201,7 +201,7 @@ export default function SellerEditProductPage() {
                 id="images"
                 type="file"
                 name="images[]"
-                accept=".jpg,.jpeg,.png"
+                accept="image/*"
                 multiple
               />
               <p className="mt-1 text-xs text-gray-500">

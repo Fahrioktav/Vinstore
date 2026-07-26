@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import { Link } from '@inertiajs/react';
 import 'leaflet/dist/leaflet.css';
 import { setupLeafletIcons, INDONESIA_CENTER } from '@/lib/leaflet-setup';
@@ -57,6 +57,11 @@ export default function StoresMap({ stores = [], height = 420 }) {
             key={store.public_id}
             position={[Number(store.latitude), Number(store.longitude)]}
           >
+            <Tooltip permanent direction="top" offset={[0, -40]}>
+              <span className="font-semibold text-xs">
+                {store.store_name}
+              </span>
+            </Tooltip>
             <Popup>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-[#2F3E46] capitalize">
