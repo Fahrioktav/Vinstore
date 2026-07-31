@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { UserIcon } from '../icons';
-import { cn } from '@/lib/utils';
+import { cn, getUserImage } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,9 +118,13 @@ export default function Navbar() {
             // DROPDOWN USER
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-4 py-2 font-semibold text-white transition hover:bg-[#B77C4C]">
-                  <UserIcon className="h-5 w-5" />
-                  {user.username}
+                <button className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-3 py-2 font-semibold text-white transition hover:bg-[#B77C4C]">
+                  <img 
+                    src={getUserImage(user)} 
+                    alt={user.username}
+                    className="h-8 w-8 rounded-full object-cover border-2 border-white/50"
+                  />
+                  <span className="hidden sm:inline">{user.username}</span>
                   {/* <x-icon name="chevron-down" className="w-4 h-4" /> */}
                 </button>
               </DropdownMenuTrigger>

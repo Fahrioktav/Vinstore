@@ -10,6 +10,12 @@ class Auction extends Model
 {
     use HasFactory;
 
+    // Approval Status Constants
+    const STATUS_PENDING_VALIDATOR = 'pending_validator';
+    const STATUS_PENDING_ADMIN = 'pending_admin';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
+
     protected $fillable = [
         'public_id',
         'store_id',
@@ -27,6 +33,8 @@ class Auction extends Model
         'ends_at',
         'approved_at',
         'approved_by',
+        'validated_at',
+        'validated_by',
         'rejection_reason',
         'ended_at',
     ];
@@ -99,6 +107,11 @@ class Auction extends Model
     public function winner()
     {
         return $this->belongsTo(User::class, 'winner_id');
+    }
+
+    public function validator()
+    {
+        return $this->belongsTo(User::class, 'validated_by');
     }
 
     public function order()

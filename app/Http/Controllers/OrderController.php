@@ -37,45 +37,37 @@ class OrderController extends Controller
         app(PriceGuessService::class)->sync();
         $product->refresh();
 
-        // Informasi khusus tebak harga untuk frontend.
-        $guess = null;
-        $isWinner = false;
-        $canBuy = true;
-
-        if ($product->isTebakHarga()) {
-            $myGuess = PriceGuess::where('product_id', $product->id)
-                ->where('user_id', $user->id)
-                ->first();
-            $guess = $myGuess ? [
-                'amount' => $myGuess->amount,
-                'created_at' => $myGuess->created_at,
-            ] : null;
-
-            $isWinner = $product->guess_winner_id === $user->id;
-            $canBuy = $product->isPurchasableBy($user);
+        // Cek apakah produk bisa dibeli
+        if ($product->isTebakHarga() && !$product->isPurchasableBy($user)) {
+            return back()->with('error', $this->tebakHargaBlockMessage($product, $user));
         }
 
         // Sembunyikan harga asli bila viewer belum berhak melihatnya.
         $product->maskRealPriceFor($user);
 
+        $product->load('store');
+
         return Inertia::render('checkout', [
             'product' => $product,
-            'tebakHarga' => $product->isTebakHarga() ? [
-                'guess_status' => $product->guess_status,
-                'guess_starts_at' => $product->guess_starts_at,
-                'guess_ends_at' => $product->guess_ends_at,
-                'winner_priority_until' => $product->winner_priority_until,
-                'guesses_count' => $product->priceGuesses()->count(),
-                'my_guess' => $guess,
-                'is_winner' => $isWinner,
-                'can_buy' => $canBuy,
-            ] : null,
         ]);
     }
 
     public function updateStatus(Request $request, $id)
     {
-        $request->validate(['status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled']);
+        // Validasi tracking_number wajib jika status Processing atau On The Way
+        $rules = [
+            'status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled',
+            'tracking_number' => 'nullable|string|max:100',
+        ];
+
+        // Jika status diubah menjadi Processing atau On The Way, tracking_number wajib diisi
+        if (in_array($request->status, ['Processing', 'On The Way'])) {
+            $rules['tracking_number'] = 'required|string|max:100';
+        }
+
+        $request->validate($rules, [
+            'tracking_number.required' => 'Nomor resi wajib diisi saat status Processing atau On The Way.',
+        ]);
 
         $order = Order::where('public_id', $id)->firstOrFail();
 
@@ -83,9 +75,16 @@ class OrderController extends Controller
             abort(403, 'Anda tidak memiliki akses untuk mengupdate order ini.');
         }
 
-        $order->update([
+        // Update status dan tracking number sekaligus
+        $updateData = [
             'status' => $request->status,
-        ]);
+        ];
+
+        if ($request->filled('tracking_number')) {
+            $updateData['tracking_number'] = $request->tracking_number;
+        }
+
+        $order->update($updateData);
 
         $order->releaseSellerFunds();
 
@@ -104,6 +103,9 @@ class OrderController extends Controller
     {
         $request->validate([
             'quantity' => 'required|integer|min:1',
+            'shipping_address' => 'required|string|max:500',
+            'shipping_method' => 'required|in:standard,express',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $user = Auth::user();
@@ -134,7 +136,9 @@ class OrderController extends Controller
                 }
 
                 $unitPrice = (int) round((float) $product->price);
-                $totalPrice = $unitPrice * $quantity;
+                $shippingCost = $request->shipping_method === 'express' ? 25000 : 10000;
+                $totalPrice = ($unitPrice * $quantity) + $shippingCost;
+                
                 $product->stock = $product->stock - $quantity;
 
                 // Pemenang tebak harga menggunakan hak prioritasnya -> produk menjadi penjualan biasa.
@@ -159,16 +163,27 @@ class OrderController extends Controller
                 $paymentReference = $order->public_id;
                 $order->update(['payment_reference' => $paymentReference]);
 
-                $transaction = app(MidtransService::class)->createSnapTransaction(
-                    $paymentReference,
-                    $totalPrice,
-                    $user,
-                    [[
+                // Item details harus include shipping agar total match
+                $items = [
+                    [
                         'id' => $product->public_id,
                         'price' => $unitPrice,
                         'quantity' => $quantity,
                         'name' => substr($product->name, 0, 50),
-                    ]]
+                    ],
+                    [
+                        'id' => 'SHIPPING',
+                        'price' => $shippingCost,
+                        'quantity' => 1,
+                        'name' => $request->shipping_method === 'express' ? 'Pengiriman Express' : 'Pengiriman Standard',
+                    ]
+                ];
+
+                $transaction = app(MidtransService::class)->createSnapTransaction(
+                    $paymentReference,
+                    $totalPrice,
+                    $user,
+                    $items
                 );
 
                 $order->update([
@@ -184,7 +199,18 @@ class OrderController extends Controller
             return back()->with('error', 'Gagal membuat pembayaran Midtrans: ' . $e->getMessage());
         }
 
-        return Inertia::location($transaction['redirect_url']);
+        // Refresh product data
+        $product->refresh();
+        $product->load('store');
+
+        // Return ke halaman checkout dengan snap_token untuk trigger Snap Popup
+        return Inertia::render('checkout', [
+            'product' => $product,
+            'flash' => [
+                'success' => 'Order berhasil dibuat. Silakan selesaikan pembayaran.',
+                'snap_token' => $transaction['token']
+            ]
+        ]);
     }
 
     public function userOrders()
@@ -327,7 +353,8 @@ class OrderController extends Controller
             return redirect()->route('cart.index')->with('error', 'Gagal membuat pembayaran Midtrans: ' . $e->getMessage());
         }
 
-        return Inertia::location($transaction['redirect_url']);
+        // Return snap token ke frontend untuk trigger popup
+        return redirect()->route('order')->with('snap_token', $transaction['token']);
     }
 
     public function showInvoice($id)
@@ -338,6 +365,11 @@ class OrderController extends Controller
             ->where('public_id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
+
+        // Validasi: Invoice hanya bisa diakses jika pembayaran sudah berhasil
+        if ($order->payment_status !== 'paid') {
+            return redirect()->route('order')->with('error', 'Invoice hanya dapat diakses setelah pembayaran berhasil.');
+        }
 
         return Inertia::render('invoice', compact('order'));
     }

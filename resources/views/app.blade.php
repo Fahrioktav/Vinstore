@@ -24,6 +24,9 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192x192.png') }}">
     
+    <!-- Midtrans Snap Script -->
+    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    
     @vite('resources/js/app.jsx')
     @inertiaHead
 </head>

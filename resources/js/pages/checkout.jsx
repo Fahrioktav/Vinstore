@@ -1,39 +1,69 @@
-import { Form, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm, usePage, router } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import {
   formatIDR,
-  getProductCertificate,
   getProductImage,
-  storageMedia,
 } from '@/lib/utils';
-import { BadgeIcon, CertificateIcon } from '@/components/icons';
-
-const guessStatusLabel = {
-  scheduled: 'Akan Dimulai',
-  active: 'Sedang Berlangsung',
-  ended: 'Selesai - Prioritas Pemenang',
-  public: 'Penjualan Biasa',
-};
+import { toast } from 'sonner';
 
 export default function CheckoutPage() {
-  const { product, tebakHarga, flash } = usePage().props;
+  const { product, user, flash } = usePage().props;
 
-  // Gabungkan gambar utama + galeri foto tambahan
-  const gallery = [
-    product.image,
-    ...(Array.isArray(product.images) ? product.images : []),
-  ].filter(Boolean);
+  const { data, setData, post, processing, errors } = useForm({
+    quantity: 1,
+    shipping_address: user?.address || '',
+    shipping_method: 'standard',
+    notes: '',
+  });
 
-  const [activeImage, setActiveImage] = useState(gallery[0] ?? null);
+  // Hitung total
+  const unitPrice = product.price || 0;
+  const subtotal = unitPrice * data.quantity;
+  const shippingCost = data.shipping_method === 'express' ? 25000 : 10000;
+  const total = subtotal + shippingCost;
 
-  const isTebakHarga = product.sale_type === 'tebak_harga';
-  // Harga asli disembunyikan -> backend tidak mengirim field price.
-  const priceHidden = product.price === null || product.price === undefined;
+  // Handle snap_token dari flash data
+  useEffect(() => {
+    console.log('useEffect triggered, flash:', flash);
+    console.log('snap_token:', flash?.snap_token);
+    console.log('window.snap:', window.snap);
+    
+    if (flash?.snap_token && window.snap) {
+      console.log('Triggering Snap Popup with token:', flash.snap_token);
+      window.snap.pay(flash.snap_token, {
+        onSuccess: function(result) {
+          console.log('Payment success:', result);
+          toast.success('Pembayaran berhasil!');
+          router.visit('/order');
+        },
+        onPending: function(result) {
+          console.log('Payment pending:', result);
+          toast.info('Pembayaran sedang diproses');
+          router.visit('/order');
+        },
+        onError: function(result) {
+          console.error('Payment error:', result);
+          toast.error('Pembayaran gagal. Silakan coba lagi.');
+        },
+        onClose: function() {
+          console.log('Payment popup closed');
+          toast.info('Anda menutup popup pembayaran');
+        }
+      });
+    }
+  }, [flash?.snap_token]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    post(`/checkout/product/${product.public_id}`, {
+      preserveScroll: true,
+    });
+  };
 
   return (
-    <div className="mx-auto mt-10 max-w-3xl rounded-md border bg-white p-6 shadow-md">
-      <h2 className="mb-6 text-2xl font-bold">Detail Produk</h2>
+    <div className="mx-auto mt-10 max-w-5xl px-4 pb-10">
+      <h2 className="mb-6 text-3xl font-bold text-white">Checkout</h2>
 
       {flash?.success && (
         <div className="mb-4 rounded border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -46,302 +76,186 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div>
-          <img
-            src={
-              activeImage
-                ? getProductImage({ image: activeImage })
-                : getProductImage(product)
-            }
-            className="h-64 w-full rounded-md object-contain"
-            alt={product.name}
-          />
-          {gallery.length > 1 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {gallery.map((img, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveImage(img)}
-                  className={`h-16 w-16 overflow-hidden rounded-md border-2 ${
-                    activeImage === img
-                      ? 'border-[#B77C4C]'
-                      : 'border-transparent'
-                  }`}
-                >
-                  <img
-                    src={getProductImage({ image: img })}
-                    className="h-full w-full object-cover"
-                    alt={`${product.name} ${i + 1}`}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-          {product.video && (
-            <div className="mt-4">
-              <p className="mb-1 text-sm font-semibold text-gray-700">
-                🎥 Video Produk
-              </p>
-              <video
-                src={storageMedia(product.video)}
-                controls
-                className="w-full rounded-md"
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Form Checkout */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Informasi Produk */}
+          <div className="rounded-lg border bg-white p-6 shadow-md">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">Produk yang Dibeli</h3>
+            <div className="flex gap-4">
+              <img
+                src={getProductImage(product)}
+                alt={product.name}
+                className="h-24 w-24 rounded-lg object-cover border"
               />
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-semibold">{product.name}</h3>
-            {isTebakHarga && (
-              <span className="rounded-md bg-[#53685B] px-2 py-1 text-xs font-semibold text-white">
-                🎯 Tebak Harga
-              </span>
-            )}
-          </div>
-          {product.is_barterable && (
-            <span className="mt-2 inline-block rounded-md bg-[#53685B] px-2 py-1 text-xs font-medium text-white">
-              ⇄ Bisa Dibarter
-            </span>
-          )}
-          <p className="mt-2 text-gray-600">{product.description}</p>
-          <p className="mt-4 text-lg font-bold">
-            Harga:{' '}
-            {priceHidden ? (
-              <span className="text-[#B77C4C]">??? (Tebak Harga)</span>
-            ) : (
-              formatIDR(product.price)
-            )}
-          </p>
-          {product.certificate && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-800">
-                <BadgeIcon className="h-5 w-5" />
-                Produk Bersertifikat
-              </p>
-              <a
-                href={getProductCertificate(product)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
-              >
-                <CertificateIcon />
-                Lihat Sertifikat Keaslian
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {isTebakHarga && tebakHarga ? (
-        <TebakHargaSection product={product} tebakHarga={tebakHarga} />
-      ) : (
-        <NormalPurchaseActions product={product} />
-      )}
-    </div>
-  );
-}
-
-/* Aksi pembelian produk biasa (atau tebak harga yang sudah jadi penjualan biasa). */
-function NormalPurchaseActions({ product }) {
-  return (
-    <div className="flex flex-wrap gap-3">
-      <Form method="POST" action={`/cart/add/${product.public_id}`}>
-        <input type="hidden" name="quantity" defaultValue="1" />
-        <button className="rounded-md bg-yellow-300 px-6 py-2 font-semibold text-black hover:cursor-pointer hover:bg-yellow-400">
-          Masukkan Keranjang
-        </button>
-      </Form>
-
-      <Form method="POST" action={`/checkout/product/${product.public_id}`}>
-        <input type="hidden" name="quantity" defaultValue="1" />
-        <button className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:cursor-pointer hover:bg-[#3c4a3e]">
-          Beli Sekarang
-        </button>
-      </Form>
-    </div>
-  );
-}
-
-/* Bagian khusus alur Tebak Harga. */
-function TebakHargaSection({ product, tebakHarga }) {
-  const {
-    guess_status: status,
-    guess_starts_at,
-    guess_ends_at,
-    winner_priority_until,
-    guesses_count,
-    my_guess,
-    is_winner,
-    can_buy,
-  } = tebakHarga;
-
-  return (
-    <div className="rounded-lg border border-[#53685B]/30 bg-[#53685B]/5 p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <span className="rounded-full bg-[#53685B] px-3 py-1 text-xs font-semibold text-white">
-          {guessStatusLabel[status] || status}
-        </span>
-        <span className="text-sm text-gray-500">
-          {guesses_count} tebakan masuk
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <Info label="Mulai" value={formatDateTime(guess_starts_at)} />
-        <Info label="Berakhir" value={formatDateTime(guess_ends_at)} />
-      </div>
-
-      {/* SCHEDULED */}
-      {status === 'scheduled' && (
-        <p className="mt-4 rounded-md bg-white p-4 text-sm text-gray-600">
-          Periode tebak harga belum dimulai. Silakan kembali lagi pada{' '}
-          <span className="font-semibold">{formatDateTime(guess_starts_at)}</span>.
-        </p>
-      )}
-
-      {/* ACTIVE */}
-      {status === 'active' && (
-        <div className="mt-4">
-          {my_guess ? (
-            <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-              <p className="font-semibold">Tebakan Anda sudah tersimpan.</p>
-              <p className="mt-1">
-                Nilai tebakan: {formatIDR(my_guess.amount)} (tidak dapat diubah)
-              </p>
-            </div>
-          ) : (
-            <Form
-              method="POST"
-              action={`/products/${product.public_id}/guess`}
-              className="space-y-3"
-              options={{ preserveScroll: true }}
-            >
-              {({ errors, processing }) => (
-                <>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Tebak harga asli produk ini (hanya bisa sekali)
-                  </label>
-                  <input
-                    type="number"
-                    name="amount"
-                    min="1"
-                    placeholder="Masukkan tebakan harga Anda"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
-                    required
-                  />
-                  {errors.amount && (
-                    <p className="text-xs text-red-600">{errors.amount}</p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    className="w-full rounded-lg bg-[#B77C4C] px-5 py-3 font-semibold text-white transition hover:bg-[#8d5e39] disabled:opacity-50"
-                  >
-                    Kirim Tebakan
-                  </button>
-                  <p className="text-xs text-gray-500">
-                    Tebakan bersifat final dan tidak dapat diubah. Anda tidak
-                    dapat melihat tebakan pengguna lain.
-                  </p>
-                </>
-              )}
-            </Form>
-          )}
-        </div>
-      )}
-
-      {/* ENDED - prioritas pemenang */}
-      {status === 'ended' && (
-        <div className="mt-4">
-          {is_winner ? (
-            <div className="rounded-md border border-green-300 bg-green-50 p-4">
-              <p className="font-semibold text-green-800">
-                🎉 Selamat! Tebakan Anda paling mendekati harga asli.
-              </p>
-              <p className="mt-1 text-sm text-green-700">
-                Anda memiliki hak prioritas untuk membeli produk ini sampai{' '}
-                <span className="font-semibold">
-                  {formatDateTime(winner_priority_until)}
-                </span>
-                .
-              </p>
-              {can_buy && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Form
-                    method="POST"
-                    action={`/checkout/product/${product.public_id}`}
-                  >
-                    <input type="hidden" name="quantity" defaultValue="1" />
-                    <button className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e]">
-                      Beli Sekarang
-                    </button>
-                  </Form>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md bg-white p-4 text-sm text-gray-600">
-              <p>
-                Periode tebak harga telah berakhir. Pemenang sedang diberi hak
-                prioritas pembelian sampai{' '}
-                <span className="font-semibold">
-                  {formatDateTime(winner_priority_until)}
-                </span>
-                .
-              </p>
-              {my_guess && (
-                <p className="mt-2">
-                  Tebakan Anda: {formatIDR(my_guess.amount)}
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900">{product.name}</h4>
+                <p className="text-sm text-gray-500 mt-1">{product.category}</p>
+                <p className="mt-2 text-lg font-bold text-[#B77C4C]">
+                  {formatIDR(unitPrice)}
                 </p>
-              )}
-              <p className="mt-2 text-xs text-gray-500">
-                Jika pemenang tidak membeli hingga batas waktu, produk akan
-                menjadi penjualan biasa dan dapat dibeli oleh siapa saja.
-              </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Stok: {product.stock} unit
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {/* PUBLIC - sudah jadi penjualan biasa */}
-      {status === 'public' && (
-        <div className="mt-4">
-          <p className="mb-3 rounded-md bg-white p-3 text-sm text-gray-600">
-            Hak prioritas pemenang telah berakhir. Produk kini dijual normal
-            dengan harga asli.
-          </p>
-          <NormalPurchaseActions product={product} />
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Jumlah Produk */}
+            <div className="rounded-lg border bg-white p-6 shadow-md">
+              <h3 className="mb-4 text-lg font-bold text-gray-900">Jumlah Produk</h3>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setData('quantity', Math.max(1, data.quantity - 1))}
+                  className="h-10 w-10 rounded-lg border border-gray-300 font-bold hover:bg-gray-100"
+                  disabled={data.quantity <= 1}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={product.stock}
+                  value={data.quantity}
+                  onChange={(e) => setData('quantity', parseInt(e.target.value) || 1)}
+                  className="w-20 rounded-lg border border-gray-300 px-4 py-2 text-center font-semibold"
+                />
+                <button
+                  type="button"
+                  onClick={() => setData('quantity', Math.min(product.stock, data.quantity + 1))}
+                  className="h-10 w-10 rounded-lg border border-gray-300 font-bold hover:bg-gray-100"
+                  disabled={data.quantity >= product.stock}
+                >
+                  +
+                </button>
+                <span className="text-sm text-gray-500">
+                  (Max: {product.stock} unit)
+                </span>
+              </div>
+              {errors.quantity && (
+                <p className="mt-2 text-sm text-red-600">{errors.quantity}</p>
+              )}
+            </div>
+
+            {/* Alamat Pengiriman */}
+            <div className="rounded-lg border bg-white p-6 shadow-md">
+              <h3 className="mb-4 text-lg font-bold text-gray-900">Alamat Pengiriman</h3>
+              <textarea
+                value={data.shipping_address}
+                onChange={(e) => setData('shipping_address', e.target.value)}
+                placeholder="Masukkan alamat lengkap pengiriman..."
+                rows="4"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+                required
+              />
+              {errors.shipping_address && (
+                <p className="mt-2 text-sm text-red-600">{errors.shipping_address}</p>
+              )}
+            </div>
+
+            {/* Metode Pengiriman */}
+            <div className="rounded-lg border bg-white p-6 shadow-md">
+              <h3 className="mb-4 text-lg font-bold text-gray-900">Metode Pengiriman</h3>
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 hover:border-[#53685B] has-[:checked]:border-[#53685B] has-[:checked]:bg-[#53685B]/5">
+                  <input
+                    type="radio"
+                    name="shipping_method"
+                    value="standard"
+                    checked={data.shipping_method === 'standard'}
+                    onChange={(e) => setData('shipping_method', e.target.value)}
+                    className="h-4 w-4 text-[#53685B]"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">Pengiriman Standard</p>
+                    <p className="text-sm text-gray-500">Estimasi 3-5 hari kerja</p>
+                  </div>
+                  <p className="font-bold text-gray-900">{formatIDR(10000)}</p>
+                </label>
+
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 hover:border-[#53685B] has-[:checked]:border-[#53685B] has-[:checked]:bg-[#53685B]/5">
+                  <input
+                    type="radio"
+                    name="shipping_method"
+                    value="express"
+                    checked={data.shipping_method === 'express'}
+                    onChange={(e) => setData('shipping_method', e.target.value)}
+                    className="h-4 w-4 text-[#53685B]"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">Pengiriman Express</p>
+                    <p className="text-sm text-gray-500">Estimasi 1-2 hari kerja</p>
+                  </div>
+                  <p className="font-bold text-gray-900">{formatIDR(25000)}</p>
+                </label>
+              </div>
+              {errors.shipping_method && (
+                <p className="mt-2 text-sm text-red-600">{errors.shipping_method}</p>
+              )}
+            </div>
+
+            {/* Catatan untuk Penjual */}
+            <div className="rounded-lg border bg-white p-6 shadow-md">
+              <h3 className="mb-4 text-lg font-bold text-gray-900">Catatan untuk Penjual (Opsional)</h3>
+              <textarea
+                value={data.notes}
+                onChange={(e) => setData('notes', e.target.value)}
+                placeholder="Contoh: Kirim pagi hari, tolong packing bubble wrap ekstra..."
+                rows="3"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+              />
+              {errors.notes && (
+                <p className="mt-2 text-sm text-red-600">{errors.notes}</p>
+              )}
+            </div>
+          </form>
         </div>
-      )}
+
+        {/* Ringkasan Pembayaran */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6 rounded-lg border bg-white p-6 shadow-md">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">Ringkasan Pembayaran</h3>
+            
+            <div className="space-y-3 border-b border-gray-200 pb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal ({data.quantity}x)</span>
+                <span className="font-semibold text-gray-900">{formatIDR(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Biaya Pengiriman</span>
+                <span className="font-semibold text-gray-900">{formatIDR(shippingCost)}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-between">
+              <span className="text-lg font-bold text-gray-900">Total</span>
+              <span className="text-2xl font-bold text-[#B77C4C]">{formatIDR(total)}</span>
+            </div>
+
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={processing || product.stock <= 0}
+              className="mt-6 w-full rounded-lg bg-[#53685B] px-6 py-4 font-bold text-white transition hover:bg-[#3c4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {processing ? 'Memproses...' : 'Bayar Sekarang'}
+            </button>
+
+            <p className="mt-4 text-center text-xs text-gray-500">
+              Dengan melanjutkan, Anda menyetujui syarat & ketentuan yang berlaku
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
-
-function Info({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-1 font-semibold text-[#2F3E46]">{value}</p>
-    </div>
-  );
-}
-
-function formatDateTime(value) {
-  if (!value) return '-';
-  return new Intl.DateTimeFormat('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }
 
 CheckoutPage.layout = (page) => (
-  <MainLayout title="Checkout" heroText="Konfirmasi Pembelianmu">
+  <MainLayout title="Checkout" heroText="Checkout">
     {page}
   </MainLayout>
 );

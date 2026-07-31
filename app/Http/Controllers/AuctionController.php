@@ -6,6 +6,7 @@ use App\Models\Auction;
 use App\Models\AuctionBid;
 use App\Models\Order;
 use App\Services\MidtransService;
+use App\Events\AuctionBidPlaced;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -96,7 +97,7 @@ class AuctionController extends Controller
             'current_price' => $validated['starting_price'],
             'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
             'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
-            'approval_status' => 'pending',
+            'approval_status' => 'pending_validator',
             'status' => 'pending',
         ]);
 
@@ -150,7 +151,7 @@ class AuctionController extends Controller
             'current_price' => $validated['starting_price'],
             'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
             'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
-            'approval_status' => 'pending',
+            'approval_status' => 'pending_validator',
             'status' => 'pending',
             'approved_at' => null,
             'approved_by' => null,
@@ -224,7 +225,7 @@ class AuctionController extends Controller
             'current_price' => $validated['starting_price'],
             'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
             'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
-            'approval_status' => 'pending',
+            'approval_status' => 'pending_validator',
             'status' => 'pending',
         ]);
 
@@ -238,9 +239,10 @@ class AuctionController extends Controller
         ]);
 
         $user = Auth::user();
+        $newBid = null;
 
         try {
-            DB::transaction(function () use ($auction, $validated, $user) {
+            DB::transaction(function () use ($auction, $validated, $user, &$newBid) {
                 $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->firstOrFail();
                 $this->refreshAuctionStatus($auction);
 
@@ -259,7 +261,16 @@ class AuctionController extends Controller
                     throw new \RuntimeException('Nominal bid minimal ' . number_format($minimumBid, 0, ',', '.') . '.');
                 }
 
-                AuctionBid::create([
+                // Cek apakah user ini adalah yang terakhir melakukan bid
+                $lastBid = AuctionBid::where('auction_id', $auction->id)
+                    ->latest()
+                    ->first();
+
+                if ($lastBid && $lastBid->user_id === $user->id) {
+                    throw new \RuntimeException('Anda sudah melakukan bid terakhir. Tunggu pembeli lain melakukan bid terlebih dahulu.');
+                }
+
+                $newBid = AuctionBid::create([
                     'auction_id' => $auction->id,
                     'user_id' => $user->id,
                     'amount' => $amount,
@@ -270,6 +281,15 @@ class AuctionController extends Controller
                     'bids_count' => $auction->bids_count + 1,
                 ]);
             });
+
+            // Broadcast event setelah transaction berhasil
+            if ($newBid) {
+                $newBid->load('user');
+                broadcast(new AuctionBidPlaced($newBid, [
+                    'current_price' => $auction->fresh()->current_price,
+                    'bids_count' => $auction->fresh()->bids_count,
+                ]))->toOthers();
+            }
         } catch (Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -292,8 +312,12 @@ class AuctionController extends Controller
             return redirect()->route('order')->with('success', 'Pembayaran lelang ini sudah lunas.');
         }
 
-        if ($order->snap_redirect_url) {
-            return Inertia::location($order->snap_redirect_url);
+        // Jika snap_token sudah ada, langsung redirect dengan snap_token
+        if ($order->snap_token) {
+            return redirect()->route('auction.show', $auction->public_id)->with([
+                'success' => 'Silakan selesaikan pembayaran lelang.',
+                'snap_token' => $order->snap_token
+            ]);
         }
 
         try {
@@ -319,7 +343,11 @@ class AuctionController extends Controller
             return back()->with('error', 'Gagal membuat pembayaran Midtrans: ' . $e->getMessage());
         }
 
-        return Inertia::location($transaction['redirect_url']);
+        // Return dengan snap_token untuk trigger Snap Popup
+        return redirect()->route('auction.show', $auction->public_id)->with([
+            'success' => 'Order lelang berhasil dibuat. Silakan selesaikan pembayaran.',
+            'snap_token' => $transaction['token']
+        ]);
     }
 
     public function adminIndex()
@@ -327,13 +355,21 @@ class AuctionController extends Controller
         $this->finalizeExpiredAuctions();
         $this->activateApprovedAuctions();
 
-        $auctions = Auction::with(['store', 'winner', 'highestBid.user'])->latest()->get();
+        // Hanya tampilkan lelang yang sudah divalidasi validator (pending_admin) dan yang sudah diproses
+        $auctions = Auction::with(['store', 'winner', 'highestBid.user', 'validator'])
+            ->whereIn('approval_status', [Auction::STATUS_PENDING_ADMIN, Auction::STATUS_APPROVED, Auction::STATUS_REJECTED])
+            ->latest()
+            ->get();
 
         return Inertia::render('admin/auctions/index', compact('auctions'));
     }
 
     public function approve(Auction $auction)
     {
+        if ($auction->approval_status !== Auction::STATUS_PENDING_ADMIN) {
+            return back()->with('error', 'Lelang ini belum divalidasi oleh validator.');
+        }
+
         $status = now()->lt($auction->starts_at) ? 'scheduled' : 'active';
 
         if (now()->gt($auction->ends_at)) {
@@ -341,7 +377,7 @@ class AuctionController extends Controller
         }
 
         $auction->update([
-            'approval_status' => 'approved',
+            'approval_status' => Auction::STATUS_APPROVED,
             'status' => $status,
             'approved_at' => now(),
             'approved_by' => Auth::id(),
@@ -353,12 +389,16 @@ class AuctionController extends Controller
 
     public function reject(Request $request, Auction $auction)
     {
+        if ($auction->approval_status !== Auction::STATUS_PENDING_ADMIN) {
+            return back()->with('error', 'Lelang ini belum divalidasi oleh validator.');
+        }
+
         $validated = $request->validate([
             'rejection_reason' => 'nullable|string|max:1000',
         ]);
 
         $auction->update([
-            'approval_status' => 'rejected',
+            'approval_status' => Auction::STATUS_REJECTED,
             'status' => 'cancelled',
             'approved_at' => null,
             'approved_by' => Auth::id(),

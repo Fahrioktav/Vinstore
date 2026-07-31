@@ -42,7 +42,8 @@ class ForgotPasswordController extends Controller
         }
 
         if (config('mail.default') === 'log') {
-            $token = Password::broker()->createToken($user);
+            // Generate token untuk reset password
+            $token = app('auth.password.broker')->createToken($user);
 
             return back()
                 ->with('status', 'Mode email masih log. Gunakan link reset di bawah ini untuk mengganti password.')

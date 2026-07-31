@@ -106,18 +106,19 @@ export default function OrderPage() {
             Kamu belum memesan apapun
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 shadow-xl backdrop-blur-md">
-            <table className="min-w-full text-left text-[#E9E19E]">
+          <div className="rounded-2xl border border-white/20 bg-white/10 shadow-xl backdrop-blur-md">
+            <table className="w-full table-fixed text-left text-[#E9E19E]">
               <thead>
-                <tr className="bg-[#E9E19E]/10 text-sm tracking-wider uppercase">
-                  <th className="px-6 py-4">Item</th>
-                  <th className="px-6 py-4">Jumlah</th>
-                  <th className="px-6 py-4">Harga</th>
-                  <th className="px-6 py-4">Pembayaran</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Tanggal</th>
-                  <th className="px-6 py-4 text-center">Invoice</th>
-                  <th className="px-6 py-4 text-center">Aksi</th>
+                <tr className="bg-[#E9E19E]/10 text-xs tracking-wider uppercase">
+                  <th className="w-[18%] px-3 py-4">Item</th>
+                  <th className="w-[6%] px-3 py-4">Qty</th>
+                  <th className="w-[10%] px-3 py-4">Harga</th>
+                  <th className="w-[11%] px-3 py-4">Pembayaran</th>
+                  <th className="w-[10%] px-3 py-4">Status</th>
+                  <th className="w-[12%] px-3 py-4">Nomor Resi</th>
+                  <th className="w-[10%] px-3 py-4">Tanggal</th>
+                  <th className="w-[8%] px-3 py-4 text-center">Invoice</th>
+                  <th className="w-[15%] px-3 py-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,15 +127,17 @@ export default function OrderPage() {
                     className="border-b border-white/10 transition hover:bg-white/10"
                     key={order.public_id}
                   >
-                    <td className="px-6 py-4 font-semibold">
-                      {order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}
+                    <td className="px-3 py-4 font-semibold">
+                      <div className="truncate" title={order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}>
+                        {order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">{order.quantity}</td>
-                    <td className="px-6 py-4">{formatIDR(order.price)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4 text-center">{order.quantity}</td>
+                    <td className="px-3 py-4 text-sm">{formatIDR(order.price)}</td>
+                    <td className="px-3 py-4">
                       <span
                         className={cn(
-                          'rounded-full px-3 py-1 text-sm capitalize',
+                          'rounded-full px-2 py-1 text-xs capitalize block text-center',
                           paymentStyles[order.payment_status] ??
                             paymentStyles.Unknown
                         )}
@@ -142,39 +145,59 @@ export default function OrderPage() {
                         {order.payment_status || 'unpaid'}
                       </span>
                       {order.refund_request && (
-                        <p className="mt-2 text-xs capitalize text-[#E9E19E]/80">
+                        <p className="mt-1 text-xs capitalize text-[#E9E19E]/80 text-center">
                           Refund: {order.refund_request.status}
                         </p>
                       )}
                     </td>
-                    <td className="px-7 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <span
                         className={cn(
-                          'inline-flex min-w-max items-center rounded-full px-4 py-1 text-sm whitespace-nowrap',
+                          'inline-flex items-center rounded-full px-2 py-1 text-xs whitespace-nowrap',
                           statusStyles[order.status] ?? statusStyles.Unknown
                         )}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{orderDate(order.created_at)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <Link
-                        href={`/invoice/${order.public_id}`}
-                        className="inline-flex items-center gap-1 rounded-lg bg-[#B77C4C] px-4 py-2 font-semibold text-white transition hover:bg-[#8d5e39]"
-                      >
-                        Invoice
-                      </Link>
+                    <td className="px-3 py-4">
+                      {order.tracking_number ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono text-xs font-semibold text-[#E9E19E] truncate" title={order.tracking_number}>
+                            {order.tracking_number}
+                          </span>
+                          <span className="text-xs text-[#E9E19E]/70">
+                            📦 Dikirim
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#E9E19E]/50 italic">
+                          Belum tersedia
+                        </span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center gap-3">
+                    <td className="px-3 py-4 text-xs">{orderDate(order.created_at)}</td>
+                    <td className="px-3 py-4 text-center">
+                      {order.payment_status === 'paid' ? (
+                        <Link
+                          href={`/invoice/${order.public_id}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-[#B77C4C] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#8d5e39]"
+                        >
+                          Invoice
+                        </Link>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <div className="flex flex-col items-center gap-2">
                         {order.snap_redirect_url &&
                           ['pending', 'unpaid'].includes(
                             order.payment_status
                           ) && (
                             <a
                               href={order.snap_redirect_url}
-                              className="font-semibold text-yellow-300 transition hover:text-yellow-200"
+                              className="text-xs font-semibold text-yellow-300 transition hover:text-yellow-200"
                             >
                               Bayar
                             </a>
@@ -186,7 +209,7 @@ export default function OrderPage() {
                               action={`/auctions/${order.auction.public_id}/pay`}
                               method="POST"
                             >
-                              <button className="font-semibold text-yellow-300 transition hover:text-yellow-200">
+                              <button className="text-xs font-semibold text-yellow-300 transition hover:text-yellow-200">
                                 Bayar
                               </button>
                             </Form>
@@ -198,7 +221,7 @@ export default function OrderPage() {
                           >
                             <button
                               type="submit"
-                              className="font-semibold text-red-400 transition hover:text-red-300"
+                              className="text-xs font-semibold text-red-400 transition hover:text-red-300"
                               onClick={onSubmit}
                             >
                               Batalkan
@@ -213,7 +236,7 @@ export default function OrderPage() {
                             <button
                               type="button"
                               onClick={() => openRefundForm(order.public_id)}
-                              className="font-semibold text-blue-300 transition hover:text-blue-200"
+                              className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
                             >
                               Ajukan Refund
                             </button>

@@ -21,6 +21,24 @@ function StatusBadge({ status }) {
   );
 }
 
+function PaymentStatusBadge({ status }) {
+  const labels = {
+    not_required: { text: 'Tanpa Bayar', className: 'bg-gray-100 text-gray-600' },
+    pending: { text: 'Menunggu Bayar', className: 'bg-orange-100 text-orange-700' },
+    paid: { text: 'Sudah Bayar', className: 'bg-green-100 text-green-700' },
+    failed: { text: 'Bayar Gagal', className: 'bg-red-100 text-red-700' },
+    expired: { text: 'Bayar Kadaluarsa', className: 'bg-gray-100 text-gray-600' },
+  };
+  const conf = labels[status] ?? labels.pending;
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${conf.className}`}
+    >
+      {conf.text}
+    </span>
+  );
+}
+
 export default function SellerBarterPage() {
   const {
     availableProducts = [],
@@ -38,10 +56,7 @@ export default function SellerBarterPage() {
     <div className="px-6 py-10 md:px-16">
       <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">Barter Produk</h1>
       <p className="mb-6 max-w-3xl text-sm text-white/80">
-        Tukar produk Anda dengan produk seller lain. Hanya produk yang sudah
-        disetujui, masih ada stok, dan ditandai{' '}
-        <span className="font-semibold">bisa dibarter</span> yang tampil di
-        sini. Barter berlaku setelah kedua seller setuju.
+        Tukar produk Anda dengan produk seller lain. {' '}
       </p>
 
       {/* Tabs */}
@@ -99,7 +114,7 @@ function AvailableTab({ products, canOffer, onOffer }) {
   if (products.length === 0) {
     return (
       <p className="rounded-lg bg-white/90 p-6 text-gray-600">
-        Belum ada produk seller lain yang tersedia untuk dibarter saat ini.
+        Belum ada produk untuk dibarter saat ini.
       </p>
     );
   }
@@ -219,6 +234,9 @@ function OutgoingTab({ requests }) {
   const cancel = (publicId) =>
     router.post(`/seller/barter/${publicId}/cancel`, {}, { preserveScroll: true });
 
+  const pay = (publicId) =>
+    router.get(`/seller/barter/${publicId}/pay`);
+
   return (
     <div className="flex flex-col gap-4">
       {requests.map((req) => (
@@ -241,6 +259,13 @@ function OutgoingTab({ requests }) {
             >
               Batalkan
             </button>
+          ) : req.status === 'accepted' && req.payment_status === 'pending' ? (
+            <button
+              onClick={() => pay(req.public_id)}
+              className="rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white hover:bg-green-700 shadow-lg animate-pulse"
+            >
+              💳 Bayar Sekarang
+            </button>
           ) : (
             <StatusBadge status={req.status} />
           )}
@@ -260,8 +285,11 @@ function RequestCard({
   myLabel,
   children,
 }) {
+  const additionalCash = Number(req.additional_cash) || 0;
+  const paymentStatus = req.payment_status;
+  
   return (
-    <div className="rounded-lg bg-white p-5 shadow-md">
+    <div className="rounded-lg bg-white p-5 shadow-md border border-gray-200">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm text-gray-500">
           {counterpartLabel}:{' '}
@@ -269,7 +297,12 @@ function RequestCard({
             {counterpartName ?? 'Toko'}
           </span>
         </span>
-        <StatusBadge status={req.status} />
+        <div className="flex gap-2">
+          <StatusBadge status={req.status} />
+          {additionalCash > 0 && paymentStatus && paymentStatus !== 'not_required' && (
+            <PaymentStatusBadge status={paymentStatus} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
@@ -278,16 +311,46 @@ function RequestCard({
         <MiniProduct label={myLabel} product={myProduct} />
       </div>
 
-      {Number(req.additional_cash) > 0 && (
-        <p className="mt-3 text-sm text-gray-700">
-          💰 Tambahan uang:{' '}
-          <span className="font-semibold">
-            {formatIDR(req.additional_cash)}
-          </span>
-        </p>
+      {additionalCash > 0 && (
+        <div className={`mt-4 rounded-lg border p-3 ${
+          paymentStatus === 'paid' 
+            ? 'border-green-300 bg-green-50'
+            : paymentStatus === 'pending' 
+            ? 'border-yellow-300 bg-yellow-50'
+            : paymentStatus === 'failed' || paymentStatus === 'expired'
+            ? 'border-red-300 bg-red-50'
+            : 'border-yellow-300 bg-yellow-50'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">
+              {paymentStatus === 'paid' ? '✅' : '💰'}
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Pembayaran Tambahan: {formatIDR(additionalCash)}
+              </p>
+              <p className="text-xs text-gray-600">
+                {paymentStatus === 'paid'
+                  ? '✅ Pembayaran telah selesai'
+                  : paymentStatus === 'pending'
+                  ? counterpartLabel === 'Dari' 
+                    ? 'Seller pengaju harus membayar tambahan ini'
+                    : '⚠️ Anda harus membayar tambahan ini untuk menyelesaikan barter'
+                  : counterpartLabel === 'Dari' 
+                  ? 'Seller pengaju harus membayar tambahan ini jika Anda setujui'
+                  : 'Anda harus membayar tambahan ini jika barter disetujui'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
       )}
+      
       {req.note && (
-        <p className="mt-1 text-sm text-gray-600">📝 {req.note}</p>
+        <div className="mt-3 rounded-lg bg-gray-50 p-3">
+          <p className="text-xs font-semibold text-gray-500 mb-1">📝 Catatan:</p>
+          <p className="text-sm text-gray-700">{req.note}</p>
+        </div>
       )}
 
       <div className="mt-4 flex justify-end">{children}</div>
@@ -318,22 +381,30 @@ function MiniProduct({ label, product }) {
 
 function OfferModal({ target, myProducts, onClose }) {
   const [offeredId, setOfferedId] = useState(myProducts[0]?.public_id ?? '');
-  const [additionalCash, setAdditionalCash] = useState('');
   const [note, setNote] = useState('');
   const [processing, setProcessing] = useState(false);
 
   const offered = myProducts.find((p) => p.public_id === offeredId);
   const priceDiff =
     offered != null ? Number(target.price) - Number(offered.price) : 0;
+  const additionalCash = Math.max(0, priceDiff);
 
   const submit = (e) => {
     e.preventDefault();
+    
+    // Konfirmasi jika ada pembayaran tambahan
+    if (additionalCash > 0) {
+      const confirmMsg = `Anda akan menambah pembayaran sebesar ${formatIDR(additionalCash)} karena produk yang Anda tawarkan lebih murah. Lanjutkan?`;
+      if (!confirm(confirmMsg)) {
+        return;
+      }
+    }
+    
     setProcessing(true);
     router.post(
       `/seller/barter/${target.public_id}`,
       {
         offered_product_id: offeredId,
-        additional_cash: additionalCash || 0,
         note,
       },
       {
@@ -345,7 +416,7 @@ function OfferModal({ target, myProducts, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-start justify-between">
           <h2 className="text-xl font-bold text-[#3E2723]">Ajukan Barter</h2>
@@ -390,34 +461,36 @@ function OfferModal({ target, myProducts, onClose }) {
           </div>
 
           {offered && priceDiff !== 0 && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-              Selisih harga:{' '}
-              <span className="font-semibold">
-                {formatIDR(Math.abs(priceDiff))}
-              </span>{' '}
-              {priceDiff > 0
-                ? '(produk mereka lebih mahal — Anda bisa menambahkan uang agar seimbang)'
-                : '(produk Anda lebih mahal)'}
+            <div className={`rounded-lg border p-4 ${
+              priceDiff > 0 
+                ? 'border-yellow-300 bg-yellow-50' 
+                : 'border-green-300 bg-green-50'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{priceDiff > 0 ? '💰' : '✅'}</span>
+                <span className="font-semibold text-gray-900">
+                  {priceDiff > 0 ? 'Pembayaran Tambahan Diperlukan' : 'Produk Anda Lebih Mahal'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 mb-2">
+                Selisih harga:{' '}
+                <span className="font-bold text-lg">
+                  {formatIDR(Math.abs(priceDiff))}
+                </span>
+              </p>
+              {priceDiff > 0 ? (
+                <p className="text-xs text-gray-600">
+                  ⚠️ Produk Anda lebih murah. Anda harus membayar tambahan sebesar{' '}
+                  <span className="font-semibold">{formatIDR(additionalCash)}</span>{' '}
+                  jika barter disetujui.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600">
+                  ✨ Produk Anda lebih mahal. Tidak ada pembayaran tambahan diperlukan.
+                </p>
+              )}
             </div>
           )}
-
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-[#2F3E46]">
-              Tambahan uang (opsional)
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={additionalCash}
-              onChange={(e) => setAdditionalCash(e.target.value)}
-              placeholder="0"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Nominal yang Anda tawarkan untuk menyeimbangkan nilai barang.
-              Bersifat kesepakatan antar seller.
-            </p>
-          </div>
 
           <div>
             <label className="mb-1 block text-sm font-semibold text-[#2F3E46]">

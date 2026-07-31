@@ -19,7 +19,7 @@ const statusColors = {
 };
 
 export default function ValidatorDashboard() {
-  const { pendingProducts, reviewedProducts, stats } = usePage().props;
+  const { pendingProducts, pendingAuctions, reviewedProducts, reviewedAuctions, stats } = usePage().props;
 
   const handleApprove = (publicId) => {
     if (confirm('Validasi produk ini dan teruskan ke admin?')) {
@@ -33,6 +33,23 @@ export default function ValidatorDashboard() {
     const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
     router.post(
       `/validator/products/${publicId}/reject`,
+      { rejection_reason: rejectionReason },
+      { preserveScroll: true }
+    );
+  };
+
+  const handleApproveAuction = (publicId) => {
+    if (confirm('Validasi lelang ini dan teruskan ke admin?')) {
+      router.post(`/validator/auctions/${publicId}/approve`, {}, {
+        preserveScroll: true,
+      });
+    }
+  };
+
+  const handleRejectAuction = (publicId) => {
+    const rejectionReason = prompt('Alasan penolakan lelang (opsional):') || '';
+    router.post(
+      `/validator/auctions/${publicId}/reject`,
       { rejection_reason: rejectionReason },
       { preserveScroll: true }
     );
@@ -166,6 +183,99 @@ export default function ValidatorDashboard() {
           </div>
         </div>
 
+        {/* Pending Auctions validation */}
+        <div className="mb-10 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
+          <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
+            🔨 Lelang Menunggu Validasi
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-gray-200 text-sm">
+              <thead className="bg-[#53685B] text-white">
+                <tr>
+                  <th className="px-4 py-3 text-left">Foto</th>
+                  <th className="px-4 py-3 text-left">Nama Lelang</th>
+                  <th className="px-4 py-3 text-left">Toko</th>
+                  <th className="px-4 py-3 text-left">Harga Awal</th>
+                  <th className="px-4 py-3 text-left">Waktu Mulai</th>
+                  <th className="px-4 py-3 text-left">Waktu Selesai</th>
+                  <th className="px-4 py-3 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingAuctions && pendingAuctions.length > 0 ? (
+                  pendingAuctions.map((auction) => (
+                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <img
+                          src={auction.image ? `/storage/${auction.image}` : '/assets/placeholder.png'}
+                          className="h-16 w-16 rounded-lg object-cover shadow-sm"
+                          alt={auction.name}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-800">{auction.name}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {auction.description?.substring(0, 40)}
+                          {auction.description?.length > 40 ? '...' : ''}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {auction.store?.store_name || '-'}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-[#53685B]">
+                        {formatIDR(auction.starting_price)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(auction.starts_at).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(auction.ends_at).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center">
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'Validasi',
+                                icon: '✅',
+                                onClick: () => handleApproveAuction(auction.public_id),
+                              },
+                              {
+                                label: 'Tolak',
+                                icon: '🚫',
+                                variant: 'destructive',
+                                onClick: () => handleRejectAuction(auction.public_id),
+                              },
+                            ]}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                      <p className="text-lg">✅ Tidak ada lelang yang menunggu validasi</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Reviewed history */}
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
@@ -224,6 +334,58 @@ export default function ValidatorDashboard() {
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
                       Belum ada riwayat validasi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Reviewed Auctions history */}
+        <div className="mb-10 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
+          <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
+            🗂️ Riwayat Validasi Lelang
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-gray-200 text-sm">
+              <thead className="bg-[#53685B] text-white">
+                <tr>
+                  <th className="px-4 py-3 text-left">Nama Lelang</th>
+                  <th className="px-4 py-3 text-left">Toko</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Catatan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviewedAuctions && reviewedAuctions.length > 0 ? (
+                  reviewedAuctions.map((auction) => (
+                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold text-gray-800">
+                        {auction.name}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {auction.store?.store_name || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'rounded-full px-3 py-1 text-xs font-semibold',
+                            statusColors[auction.approval_status] || 'bg-gray-100 text-gray-700'
+                          )}
+                        >
+                          {statusLabels[auction.approval_status] || auction.approval_status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-red-600">
+                        {auction.rejection_reason || '-'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                      Belum ada riwayat validasi lelang
                     </td>
                   </tr>
                 )}

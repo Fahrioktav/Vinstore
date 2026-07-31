@@ -637,27 +637,70 @@ function ProductRow({ product, isSelected, onSelect }) {
 function OrderRow({ order }) {
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [showEditTrackingModal, setShowEditTrackingModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
 
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
+    
+    // Jika status diubah ke Processing atau On The Way, pastikan ada nomor resi
+    if ((newStatus === 'Processing' || newStatus === 'On The Way') && !order.tracking_number) {
+      setPendingStatus(newStatus);
+      setShowTrackingModal(true);
+      return;
+    }
+    
+    // Jika sudah ada tracking number atau status lain, langsung update
+    updateStatus(newStatus, order.tracking_number);
+  };
+
+  const handleTrackingSubmit = (e) => {
+    e.preventDefault();
+    if (!trackingNumber.trim()) {
+      alert('Nomor resi harus diisi!');
+      return;
+    }
+    updateStatus(pendingStatus, trackingNumber);
+    setShowTrackingModal(false);
+  };
+
+  const handleEditTrackingSubmit = (e) => {
+    e.preventDefault();
+    if (!trackingNumber.trim()) {
+      alert('Nomor resi harus diisi!');
+      return;
+    }
+    updateStatus(currentStatus, trackingNumber);
+    setShowEditTrackingModal(false);
+  };
+
+  const openEditTracking = () => {
+    setTrackingNumber(order.tracking_number || '');
+    setShowEditTrackingModal(true);
+  };
+
+  const updateStatus = (newStatus, tracking = null) => {
     setCurrentStatus(newStatus); // Update UI immediately
     setIsUpdating(true);
 
-    // Post dengan router.post
     router.post(
       `/seller/orders/${order.public_id}/status`,
-      { status: newStatus },
+      { 
+        status: newStatus,
+        tracking_number: tracking
+      },
       {
         preserveScroll: true,
         onSuccess: () => {
           setIsUpdating(false);
-          console.log('Status updated successfully');
         },
         onError: (errors) => {
           // Revert jika error
           setCurrentStatus(order.status);
           setIsUpdating(false);
-          console.error('Failed to update status:', errors);
+          alert('Gagal mengupdate status: ' + (errors.tracking_number || 'Terjadi kesalahan'));
         },
       }
     );
@@ -691,50 +734,181 @@ function OrderRow({ order }) {
   };
 
   return (
-    <tr className="border-t hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <p className="font-semibold">
-          {order.user.first_name} {order.user.last_name}
-        </p>
-        <p className="text-xs text-gray-500">{order.user.email}</p>
-      </td>
-      <td className="px-4 py-3">
-        {order.product?.name || order.auction?.name || '-'}
-      </td>
-      <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
-      <td className="px-4 py-3 font-bold text-[#53685B]">
-        {formatIDR(order.price)}
-      </td>
-      <td className="px-4 py-3">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${paymentColors[order.payment_status] || 'bg-gray-100 text-gray-700'}`}
-        >
-          {order.payment_status || 'unpaid'}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <select
-          value={currentStatus}
-          onChange={handleStatusChange}
-          disabled={isUpdating}
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'}`}
-        >
-          <option value="Waiting">⏳ Waiting</option>
-          <option value="Processing">🔄 Processing</option>
-          <option value="On The Way">🚚 On The Way</option>
-          <option value="Delivered">✅ Delivered</option>
-          <option value="Cancelled">❌ Cancelled</option>
-        </select>
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-600">
-        {new Date(order.created_at).toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </td>
+    <>
+      {/* Modal Input Nomor Resi untuk Status Baru */}
+      {showTrackingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B] text-2xl">
+                📦
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Masukkan Nomor Resi
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Diperlukan untuk memproses pesanan
+                </p>
+              </div>
+            </div>
+            <form onSubmit={handleTrackingSubmit}>
+              <div className="mb-5">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Nomor Resi Pengiriman <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Contoh: JNE1234567890"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:outline-none focus:ring-2 focus:ring-[#53685B]"
+                  required
+                  autoFocus
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Masukkan nomor resi dari ekspedisi pengiriman
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 rounded-lg bg-[#53685B] px-4 py-3 font-semibold text-white transition hover:bg-[#3c4a3e] disabled:opacity-50"
+                >
+                  {isUpdating ? 'Menyimpan...' : 'Simpan & Update Status'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTrackingModal(false);
+                    setPendingStatus(null);
+                    setTrackingNumber(order.tracking_number || '');
+                  }}
+                  className="flex-1 rounded-lg bg-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-300"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Nomor Resi */}
+      {showEditTrackingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-2xl">
+                ✏️
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Edit Nomor Resi
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Perbarui nomor resi pengiriman
+                </p>
+              </div>
+            </div>
+            <form onSubmit={handleEditTrackingSubmit}>
+              <div className="mb-5">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Nomor Resi Pengiriman <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Contoh: JNE1234567890"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 rounded-lg bg-blue-500 px-4 py-3 font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditTrackingModal(false);
+                    setTrackingNumber(order.tracking_number || '');
+                  }}
+                  className="flex-1 rounded-lg bg-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-300"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <tr className="border-t hover:bg-gray-50">
+        <td className="px-4 py-3">
+          <p className="font-semibold">
+            {order.user.first_name} {order.user.last_name}
+          </p>
+          <p className="text-xs text-gray-500">{order.user.email}</p>
+        </td>
+        <td className="px-4 py-3">
+          {order.product?.name || order.auction?.name || '-'}
+        </td>
+        <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
+        <td className="px-4 py-3 font-bold text-[#53685B]">
+          {formatIDR(order.price)}
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${paymentColors[order.payment_status] || 'bg-gray-100 text-gray-700'}`}
+          >
+            {order.payment_status || 'unpaid'}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <select
+            value={currentStatus}
+            onChange={handleStatusChange}
+            disabled={isUpdating}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'} ${isUpdating ? 'opacity-50' : ''}`}
+          >
+            <option value="Waiting">⏳ Waiting</option>
+            <option value="Processing">🔄 Processing</option>
+            <option value="On The Way">🚚 On The Way</option>
+            <option value="Delivered">✅ Delivered</option>
+            <option value="Cancelled">❌ Cancelled</option>
+          </select>
+          {order.tracking_number && (
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-xs text-gray-600">
+                Resi: <span className="font-semibold text-gray-800">{order.tracking_number}</span>
+              </p>
+              <button
+                onClick={openEditTracking}
+                className="text-xs text-blue-600 hover:text-blue-800"
+                title="Edit nomor resi"
+              >
+                ✏️
+              </button>
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-600">
+          {new Date(order.created_at).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </td>
       <td className="px-4 py-3 text-center">
         <div className="flex justify-center">
           <ActionMenu
@@ -750,6 +924,7 @@ function OrderRow({ order }) {
         </div>
       </td>
     </tr>
+    </>
   );
 }
 

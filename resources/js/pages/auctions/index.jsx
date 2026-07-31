@@ -17,9 +17,6 @@ export default function AuctionsIndex() {
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#E9E19E]">Lelang Barang Antik</h1>
-          <p className="mt-2 text-sm text-gray-100">
-            Ikuti lelang yang sudah diverifikasi admin Vinstore.
-          </p>
         </div>
       </div>
 

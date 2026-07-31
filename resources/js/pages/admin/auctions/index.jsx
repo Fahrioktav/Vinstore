@@ -21,8 +21,16 @@ export default function AdminAuctions() {
 
   const approvalColors = {
     approved: 'bg-green-100 text-green-700',
-    pending: 'bg-yellow-100 text-yellow-700',
+    pending_validator: 'bg-yellow-100 text-yellow-700',
+    pending_admin: 'bg-blue-100 text-blue-700',
     rejected: 'bg-red-100 text-red-700',
+  };
+
+  const approvalLabels = {
+    approved: 'Disetujui',
+    pending_validator: 'Menunggu Validator',
+    pending_admin: 'Menunggu Admin',
+    rejected: 'Ditolak',
   };
 
   const statusColors = {
@@ -61,6 +69,7 @@ export default function AdminAuctions() {
                   <th className="px-4 py-3 text-left">Toko</th>
                   <th className="px-4 py-3 text-left">Harga</th>
                   <th className="px-4 py-3 text-left">Jadwal</th>
+                  <th className="px-4 py-3 text-left">Validator</th>
                   <th className="px-4 py-3 text-left">Approval</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-center">Aksi</th>
@@ -96,9 +105,21 @@ export default function AdminAuctions() {
                         <p>{formatDateTime(auction.starts_at)}</p>
                         <p>{formatDateTime(auction.ends_at)}</p>
                       </td>
+                      <td className="px-4 py-3 text-xs">
+                        {auction.validator ? (
+                          <div>
+                            <p className="font-semibold text-gray-700">{auction.validator.name}</p>
+                            <p className="text-gray-500">
+                              {auction.validated_at ? formatDateTime(auction.validated_at) : '-'}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Belum divalidasi</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${approvalColors[auction.approval_status] || 'bg-gray-100 text-gray-700'}`}>
-                          {auction.approval_status}
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[auction.approval_status] || 'bg-gray-100 text-gray-700'}`}>
+                          {approvalLabels[auction.approval_status] || auction.approval_status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -115,18 +136,18 @@ export default function AdminAuctions() {
                                 icon: '🔍',
                                 href: `/auctions/${auction.public_id}`,
                               },
-                              auction.approval_status !== 'approved' && {
+                              auction.approval_status === 'pending_admin' && {
                                 label: 'Setujui',
                                 icon: '✅',
                                 onClick: () => approve(auction.public_id),
                               },
-                              auction.approval_status !== 'rejected' && {
+                              auction.approval_status === 'pending_admin' && {
                                 label: 'Tolak',
                                 icon: '🚫',
                                 variant: 'destructive',
                                 onClick: () => reject(auction.public_id),
                               },
-                            ]}
+                            ].filter(Boolean)}
                           />
                         </div>
                       </td>
@@ -134,7 +155,7 @@ export default function AdminAuctions() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
                       Belum ada lelang.
                     </td>
                   </tr>

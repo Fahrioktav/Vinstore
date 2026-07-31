@@ -59,7 +59,8 @@ export default function HomePage() {
             <p className="text-gray-500">Belum ada kategori</p>
           ) : (
             categories.slice(0, 5).map((category) => (
-              <div
+              <Link
+                href={`/products?category=${encodeURIComponent(category.name)}`}
                 className="group flex w-32 flex-col items-center rounded-xl bg-white p-5 shadow-md transition-all duration-300 hover:shadow-xl md:w-36"
                 key={category.public_id}
               >
@@ -79,7 +80,7 @@ export default function HomePage() {
                 <span className="text-center font-semibold text-gray-800 group-hover:text-[#B77C4C]">
                   {category.name}
                 </span>
-              </div>
+              </Link>
             ))
           )}
         </div>

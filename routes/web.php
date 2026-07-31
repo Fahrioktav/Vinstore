@@ -33,6 +33,7 @@ use App\Http\Controllers\Admin\AdminContactController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MidtransNotificationController;
+use App\Http\Controllers\BarterPaymentNotificationController;
 use App\Models\Category;
 use Inertia\Inertia;
 
@@ -58,9 +59,17 @@ Route::get('/', function () {
     
     // Sembunyikan harga asli produk tebak harga yang masih dalam periode/prioritas.
     app(\App\Services\PriceGuessService::class)->sync();
-    $products = Product::approved()->latest()->take(6)->get(); // Ambil 6 produk terbaru dari database
+    
+    // Ambil produk yang approved dan stok masih tersedia (stok > 0)
+    $products = Product::approved()
+        ->where('stock', '>', 0)
+        ->latest()
+        ->take(6)
+        ->get();
     $products->each(fn (Product $product) => $product->maskRealPriceFor(Auth::user()));
-    $categories = Category::latest()->take(12)->get(); // Ambil 6 produk terbaru dari database
+    
+    $categories = Category::latest()->take(12)->get();
+    
     return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
@@ -76,10 +85,12 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact.index
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.index');
 Route::get('/auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');
 
 Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
+Route::post('/midtrans/barter/notification', BarterPaymentNotificationController::class)->name('midtrans.barter.notification');
 
 /*
 |--------------------------------------------------------------------------
@@ -208,6 +219,8 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::post('/barter/{barter}/accept', [BarterController::class, 'accept'])->name('barter.accept');
     Route::post('/barter/{barter}/reject', [BarterController::class, 'reject'])->name('barter.reject');
     Route::post('/barter/{barter}/cancel', [BarterController::class, 'cancel'])->name('barter.cancel');
+    Route::get('/barter/{barter}/pay', [BarterController::class, 'pay'])->name('barter.pay');
+    Route::get('/barter/{barter}/payment-status', [BarterController::class, 'checkPaymentStatus'])->name('barter.payment.status');
 
     // Lelang seller
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
@@ -237,6 +250,10 @@ Route::middleware(['auth', 'role:validator'])->prefix('validator')->name('valida
     // Validasi produk
     Route::post('/products/{id}/approve', [ValidatorController::class, 'approve'])->name('products.approve');
     Route::post('/products/{id}/reject', [ValidatorController::class, 'reject'])->name('products.reject');
+
+    // Validasi lelang
+    Route::post('/auctions/{id}/approve', [ValidatorController::class, 'approveAuction'])->name('auctions.approve');
+    Route::post('/auctions/{id}/reject', [ValidatorController::class, 'rejectAuction'])->name('auctions.reject');
 });
 
 // Only role = admin can access

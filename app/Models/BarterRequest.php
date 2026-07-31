@@ -15,6 +15,13 @@ class BarterRequest extends Model
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_CANCELLED = 'cancelled';
 
+    // Payment status constants
+    public const PAYMENT_NOT_REQUIRED = 'not_required';
+    public const PAYMENT_PENDING = 'pending';
+    public const PAYMENT_PAID = 'paid';
+    public const PAYMENT_FAILED = 'failed';
+    public const PAYMENT_EXPIRED = 'expired';
+
     protected $fillable = [
         'public_id',
         'requester_store_id',
@@ -25,6 +32,11 @@ class BarterRequest extends Model
         'note',
         'status',
         'responded_at',
+        'payment_status',
+        'payment_reference',
+        'snap_token',
+        'midtrans_transaction_id',
+        'paid_at',
     ];
 
     protected $hidden = [
@@ -38,6 +50,7 @@ class BarterRequest extends Model
     protected $casts = [
         'additional_cash' => 'decimal:2',
         'responded_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -86,5 +99,32 @@ class BarterRequest extends Model
     public function requestedProduct()
     {
         return $this->belongsTo(Product::class, 'requested_product_id');
+    }
+
+    /**
+     * Cek apakah barter ini memerlukan pembayaran (ada additional_cash)
+     */
+    public function requiresPayment(): bool
+    {
+        return $this->additional_cash > 0;
+    }
+
+    /**
+     * Cek apakah pembayaran sudah selesai (atau tidak diperlukan)
+     */
+    public function isPaymentCompleted(): bool
+    {
+        return $this->payment_status === self::PAYMENT_NOT_REQUIRED 
+            || $this->payment_status === self::PAYMENT_PAID;
+    }
+
+    /**
+     * Cek apakah barter sudah siap untuk ditukar kepemilikan produknya
+     * (sudah accepted dan payment sudah selesai jika diperlukan)
+     */
+    public function isReadyToExchange(): bool
+    {
+        return $this->status === self::STATUS_ACCEPTED 
+            && $this->isPaymentCompleted();
     }
 }

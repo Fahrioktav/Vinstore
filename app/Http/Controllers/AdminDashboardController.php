@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Store;
 use App\Models\Product;
 use App\Models\Order;
+use App\Models\Auction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,11 +31,12 @@ class AdminDashboardController extends Controller
         // Jumlah percakapan bantuan (thread) = user/seller unik yang memiliki pesan support.
         $totalMessages = SupportMessage::distinct()->count('user_id');
         $totalPendingProducts = Product::where('approval_status', Product::STATUS_PENDING_ADMIN)->count();
+        $totalPendingAuctions = Auction::where('approval_status', Auction::STATUS_PENDING_ADMIN)->count();
 
         return Inertia::render('admin/dashboard', compact(
             'totalUsers', 'totalSellers', 'totalProducts',
             'totalOrders', 'totalCategories', 'totalMessages',
-            'totalPendingProducts'
+            'totalPendingProducts', 'totalPendingAuctions'
         ));
     }
 }

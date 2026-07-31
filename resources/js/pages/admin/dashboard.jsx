@@ -10,6 +10,7 @@ export default function AdminDashboard() {
     totalCategories,
     totalMessages,
     totalPendingProducts,
+    totalPendingAuctions,
   } = usePage().props;
 
   const stats = [
@@ -56,11 +57,18 @@ export default function AdminDashboard() {
       color: 'from-teal-500 to-teal-600',
     },
     {
-      label: 'Menunggu Persetujuan',
+      label: 'Produk Menunggu',
       value: totalPendingProducts,
       icon: '/assets/4.png',
       href: '/admin/products/pending',
       color: 'from-amber-500 to-amber-600',
+    },
+    {
+      label: 'Lelang Menunggu',
+      value: totalPendingAuctions,
+      icon: '/assets/5.png',
+      href: '/admin/auctions',
+      color: 'from-purple-500 to-purple-600',
     },
   ];
 

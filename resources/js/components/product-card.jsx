@@ -10,7 +10,7 @@ export default function ProductCard({ product }) {
 
   return (
     <Link
-      href={`/checkout/show/${product.public_id}`}
+      href={`/products/${product.public_id}`}
       className="group block h-full"
     >
       <Card className="h-full gap-0 py-4 shadow-md transition hover:shadow-lg">

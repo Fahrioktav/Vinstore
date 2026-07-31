@@ -83,6 +83,42 @@ class ProductController extends Controller
         ]);
     }
 
+    public function show($public_id)
+    {
+        // Sinkronkan status tebak harga
+        app(PriceGuessService::class)->sync();
+
+        $product = Product::where('public_id', $public_id)
+            ->where('approval_status', Product::STATUS_APPROVED)
+            ->with('store')
+            ->firstOrFail();
+
+        $viewer = Auth::user();
+
+        // Data tebak harga (jika produk adalah tebak harga)
+        $tebakHarga = null;
+        if ($product->isTebakHarga()) {
+            $tebakHarga = [
+                'guess_status' => $product->guess_status,
+                'guess_starts_at' => $product->guess_starts_at,
+                'guess_ends_at' => $product->guess_ends_at,
+                'winner_priority_until' => $product->winner_priority_until,
+                'guesses_count' => $product->priceGuesses()->count(),
+                'my_guess' => $viewer ? $product->priceGuesses()->where('user_id', $viewer->id)->first() : null,
+                'is_winner' => $viewer && $product->guessWinner?->id === $viewer->id,
+                'can_buy' => $product->isPurchasableBy($viewer),
+            ];
+        }
+
+        // Sembunyikan harga asli jika perlu
+        $product->maskRealPriceFor($viewer);
+
+        return Inertia::render('product-detail', [
+            'product' => $product,
+            'tebakHarga' => $tebakHarga,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
