@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Throwable;
@@ -285,10 +286,20 @@ class AuctionController extends Controller
             // Broadcast event setelah transaction berhasil
             if ($newBid) {
                 $newBid->load('user');
-                broadcast(new AuctionBidPlaced($newBid, [
-                    'current_price' => $auction->fresh()->current_price,
-                    'bids_count' => $auction->fresh()->bids_count,
-                ]))->toOthers();
+                try {
+                    broadcast(new AuctionBidPlaced($newBid, [
+                        'current_price' => $auction->fresh()->current_price,
+                        'bids_count' => $auction->fresh()->bids_count,
+                    ]))->toOthers();
+                } catch (Throwable $broadcastException) {
+                    report($broadcastException);
+
+                    Log::warning('Gagal mengirim broadcast penawaran lelang.', [
+                        'auction_id' => $auction->id,
+                        'bid_id' => $newBid->id,
+                        'message' => $broadcastException->getMessage(),
+                    ]);
+                }
             }
         } catch (Throwable $e) {
             return back()->with('error', $e->getMessage());

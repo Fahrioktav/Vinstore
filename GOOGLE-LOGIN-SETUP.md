@@ -28,7 +28,11 @@
    http://localhost:8000/auth/google/callback
    http://127.0.0.1:8000/auth/google/callback
    ```
-   (Untuk production, ganti dengan domain Anda)
+   Untuk production, tambahkan URL deploy yang persis sama, misalnya:
+   ```
+   https://domain-anda.com/auth/google/callback
+   ```
+   Jangan memakai path yang berbeda, trailing slash berbeda, atau host yang masih localhost.
 
 7. Copy **Client ID** dan **Client Secret**
 
@@ -42,6 +46,14 @@ GOOGLE_CLIENT_ID=your-google-client-id-here
 GOOGLE_CLIENT_SECRET=your-google-client-secret-here
 GOOGLE_REDIRECT_URI=${APP_URL}/auth/google/callback
 ```
+
+Setelah deploy dan mengubah `.env`, jalankan:
+```bash
+php artisan config:clear
+php artisan cache:clear
+```
+
+Pastikan `APP_URL` sudah mengarah ke domain production, bukan `http://localhost:8000`.
 
 ---
 

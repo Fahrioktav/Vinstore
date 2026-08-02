@@ -9,12 +9,19 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
+    private function googleRedirectUrl(): string
+    {
+        return url('/auth/google/callback');
+    }
+
     /**
      * Redirect ke Google OAuth
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->redirectUrl($this->googleRedirectUrl())
+            ->redirect();
     }
 
     /**
@@ -23,7 +30,9 @@ class SocialAuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl($this->googleRedirectUrl())
+                ->user();
             $googleId = $googleUser->getId();
             $email = $googleUser->getEmail();
             $name = $googleUser->getName() ?: $googleUser->getNickname() ?: $email;
