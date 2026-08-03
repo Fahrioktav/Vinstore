@@ -42,8 +42,13 @@ export default function AdminUsers() {
               <tbody>
                 {users.length > 0 ? (
                   users.map((user) => (
-                    <tr key={user.public_id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{user.public_id}</td>
+                    <tr
+                      key={user.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {user.public_id}
+                      </td>
                       <td className="px-4 py-3">{user.username}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {user.email}

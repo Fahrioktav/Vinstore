@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BarterRequest;
+use App\Models\PayoutRequest;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store) {
+        if (! $store) {
             return redirect()->route('store.register')
                 ->with('error', 'Anda harus mendaftarkan toko terlebih dahulu.');
         }
@@ -40,12 +41,16 @@ class BarterController extends Controller
             ->where('store_id', $store->id)
             ->get();
 
-        // Pengajuan masuk (seller lain ingin barter dengan produk saya)
+        // Pengajuan masuk (seller lain ingin barter dengan produk saya).
+        // payoutRequests & refundRequests ikut dimuat supaya perhitungan
+        // kelayakan pencairan tidak memicu query per kartu.
         $incomingRequests = $store->barterRequestsReceived()
             ->with([
                 'requesterStore:id,public_id,store_name',
                 'offeredProduct',
                 'requestedProduct',
+                'payoutRequests',
+                'refundRequests',
             ])
             ->latest()
             ->get();
@@ -56,15 +61,42 @@ class BarterController extends Controller
                 'responderStore:id,public_id,store_name',
                 'offeredProduct',
                 'requestedProduct',
+                'payoutRequests',
+                'refundRequests',
             ])
             ->latest()
             ->get();
+
+        // Responder yang berhak mencairkan selisih; requester yang berhak
+        // memintanya kembali. Karena itu atribut turunannya berbeda per daftar.
+        // Pelaporan barter macet terbuka untuk kedua peran, jadi atributnya
+        // ikut di kedua daftar.
+        $reportAttributes = ['can_report_stalled', 'report_block_reason', 'shipping_deadline_at'];
+
+        $incomingRequests->each->append(array_merge(
+            ['can_request_payout', 'payout_block_reason', 'latest_payout', 'latest_refund'],
+            $reportAttributes
+        ));
+
+        $outgoingRequests->each->append(array_merge(
+            ['can_request_refund', 'latest_refund', 'latest_payout'],
+            $reportAttributes
+        ));
+
+        $lastPayout = PayoutRequest::where('store_id', $store->id)->latest('id')->first();
+
+        $bankPrefill = [
+            'bank_name' => $lastPayout->bank_name ?? '',
+            'account_number' => $lastPayout->account_number ?? '',
+            'account_holder' => $lastPayout->account_holder ?? Auth::user()->first_name.' '.Auth::user()->last_name,
+        ];
 
         return Inertia::render('seller/barter/index', compact(
             'availableProducts',
             'myProducts',
             'incomingRequests',
-            'outgoingRequests'
+            'outgoingRequests',
+            'bankPrefill'
         ));
     }
 
@@ -75,7 +107,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store) {
+        if (! $store) {
             return back()->with('error', 'Anda harus mendaftarkan toko terlebih dahulu.');
         }
 
@@ -87,7 +119,7 @@ class BarterController extends Controller
         $requestedProduct = $product; // produk milik seller lain
 
         // Produk yang diminta harus bisa dibarter dan bukan milik sendiri
-        if (!$this->isBarterable($requestedProduct)) {
+        if (! $this->isBarterable($requestedProduct)) {
             return back()->with('error', 'Produk ini tidak tersedia untuk barter.');
         }
 
@@ -98,11 +130,11 @@ class BarterController extends Controller
         // Produk yang ditawarkan harus milik seller sendiri dan bisa dibarter
         $offeredProduct = Product::where('public_id', $request->offered_product_id)->first();
 
-        if (!$offeredProduct || $offeredProduct->store_id !== $store->id) {
+        if (! $offeredProduct || $offeredProduct->store_id !== $store->id) {
             return back()->with('error', 'Produk yang ditawarkan tidak valid.');
         }
 
-        if (!$this->isBarterable($offeredProduct)) {
+        if (! $this->isBarterable($offeredProduct)) {
             return back()->with('error', 'Produk yang Anda tawarkan tidak tersedia untuk barter.');
         }
 
@@ -134,7 +166,7 @@ class BarterController extends Controller
         ]);
 
         if ($additionalCash > 0) {
-            return back()->with('success', 'Pengajuan barter berhasil dikirim. Anda perlu membayar tambahan ' . number_format($additionalCash, 0, ',', '.') . ' jika barter disetujui.');
+            return back()->with('success', 'Pengajuan barter berhasil dikirim. Anda perlu membayar tambahan '.number_format($additionalCash, 0, ',', '.').' jika barter disetujui.');
         }
 
         return back()->with('success', 'Pengajuan barter berhasil dikirim. Menunggu persetujuan seller pemilik produk.');
@@ -149,7 +181,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $barter->responder_store_id !== $store->id) {
+        if (! $store || $barter->responder_store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses untuk menyetujui barter ini.');
         }
 
@@ -163,12 +195,12 @@ class BarterController extends Controller
                 $offered = Product::where('id', $barter->offered_product_id)->lockForUpdate()->first();
                 $requested = Product::where('id', $barter->requested_product_id)->lockForUpdate()->first();
 
-                if (!$offered || !$requested) {
+                if (! $offered || ! $requested) {
                     throw new \RuntimeException('Produk tidak ditemukan.');
                 }
 
                 // Pastikan kedua produk masih layak dibarter
-                if (!$this->isBarterable($offered) || !$this->isBarterable($requested)) {
+                if (! $this->isBarterable($offered) || ! $this->isBarterable($requested)) {
                     throw new \RuntimeException('Salah satu produk sudah tidak tersedia untuk barter.');
                 }
 
@@ -180,19 +212,25 @@ class BarterController extends Controller
                 if ($barter->requiresPayment()) {
                     // Ada pembayaran, set status payment ke pending
                     $barter->payment_status = BarterRequest::PAYMENT_PENDING;
-                    $barter->payment_reference = 'BARTER-' . $barter->public_id . '-' . time();
+                    $barter->payment_reference = 'BARTER-'.$barter->public_id.'-'.time();
                     $barter->save();
-
-                    // Produk belum ditukar, menunggu pembayaran
-                    // Batalkan pengajuan pending lain yang melibatkan kedua produk ini
-                    $this->cancelOtherPendingRequests($barter);
                 } else {
-                    // Tidak ada pembayaran, langsung tukar produk
                     $barter->payment_status = BarterRequest::PAYMENT_NOT_REQUIRED;
                     $barter->save();
+                }
 
-                    // Tukar kepemilikan produk
-                    $this->exchangeProducts($offered, $requested, $barter);
+                // Kunci kedua produk sejak barter disetujui — baik yang menunggu
+                // pembayaran maupun yang langsung masuk tahap pengiriman.
+                // Tanpa ini produk masih bisa dibeli pembeli biasa sementara
+                // barternya berjalan (temuan T-08).
+                $this->lockProductsForBarter($offered, $requested, $barter);
+
+                // Batalkan pengajuan pending lain yang melibatkan kedua produk ini
+                $this->cancelOtherPendingRequests($barter);
+
+                // Tanpa pembayaran, barter langsung masuk tahap saling kirim.
+                if (! $barter->requiresPayment()) {
+                    $this->startShipping($barter);
                 }
             });
         } catch (\Throwable $e) {
@@ -200,10 +238,10 @@ class BarterController extends Controller
         }
 
         if ($barter->requiresPayment()) {
-            return back()->with('success', 'Barter disetujui. Requester harus melakukan pembayaran sebesar Rp ' . number_format($barter->additional_cash, 0, ',', '.') . ' untuk menyelesaikan barter.');
+            return back()->with('success', 'Barter disetujui. Pengaju harus membayar selisih Rp '.number_format($barter->additional_cash, 0, ',', '.').' sebelum barang dikirim. Kedua produk sementara dikunci dari penjualan.');
         }
 
-        return back()->with('success', 'Barter disetujui. Kepemilikan produk telah ditukar.');
+        return back()->with('success', 'Barter disetujui. Silakan saling mengirim barang dan isi nomor resinya.');
     }
 
     /**
@@ -213,7 +251,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $barter->responder_store_id !== $store->id) {
+        if (! $store || $barter->responder_store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses untuk menolak barter ini.');
         }
 
@@ -236,7 +274,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $barter->requester_store_id !== $store->id) {
+        if (! $store || $barter->requester_store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses untuk membatalkan barter ini.');
         }
 
@@ -260,7 +298,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $barter->requester_store_id !== $store->id) {
+        if (! $store || $barter->requester_store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses untuk membayar barter ini.');
         }
 
@@ -289,7 +327,7 @@ class BarterController extends Controller
         // Generate snap token baru
         try {
             $midtransService = app(\App\Services\MidtransService::class);
-            
+
             // Custom payload untuk barter payment
             $payload = [
                 'transaction_details' => [
@@ -307,7 +345,7 @@ class BarterController extends Controller
                         'id' => $barter->public_id,
                         'price' => (int) $barter->additional_cash,
                         'quantity' => 1,
-                        'name' => 'Pembayaran Selisih Barter - ' . $barter->public_id,
+                        'name' => 'Pembayaran Selisih Barter - '.$barter->public_id,
                     ],
                 ],
                 'callbacks' => [
@@ -323,7 +361,7 @@ class BarterController extends Controller
             $response = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode($serverKey . ':'),
+                'Authorization' => 'Basic '.base64_encode($serverKey.':'),
             ])->post(config('services.midtrans.snap_url'), $payload)
                 ->throw()
                 ->json();
@@ -342,7 +380,7 @@ class BarterController extends Controller
                 'snapToken' => $response['token'],
             ]);
         } catch (\Throwable $e) {
-            return back()->with('error', 'Gagal membuat pembayaran Midtrans: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat pembayaran Midtrans: '.$e->getMessage());
         }
     }
 
@@ -353,7 +391,7 @@ class BarterController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $barter->requester_store_id !== $store->id) {
+        if (! $store || $barter->requester_store_id !== $store->id) {
             abort(403);
         }
 
@@ -369,18 +407,21 @@ class BarterController extends Controller
             // Jika payment berhasil tapi belum diproses (webhook lambat/gagal)
             if ($paymentStatus === 'paid' && $barter->payment_status !== BarterRequest::PAYMENT_PAID) {
                 DB::transaction(function () use ($barter, $status) {
-                    $barter->payment_status = BarterRequest::PAYMENT_PAID;
-                    $barter->midtrans_transaction_id = $status['transaction_id'] ?? null;
-                    $barter->paid_at = now();
-                    $barter->save();
+                    $locked = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
 
-                    // Tukar kepemilikan produk
-                    $offered = Product::where('id', $barter->offered_product_id)->lockForUpdate()->first();
-                    $requested = Product::where('id', $barter->requested_product_id)->lockForUpdate()->first();
-
-                    if ($offered && $requested) {
-                        $this->exchangeProducts($offered, $requested, $barter);
+                    if ($locked->payment_status === BarterRequest::PAYMENT_PAID) {
+                        return;
                     }
+
+                    $locked->forceFill([
+                        'payment_status' => BarterRequest::PAYMENT_PAID,
+                        'midtrans_transaction_id' => $status['transaction_id'] ?? null,
+                        'paid_at' => now(),
+                    ])->save();
+
+                    // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
+                    // Barter masuk tahap saling kirim barang lebih dulu.
+                    $this->startShipping($locked);
                 });
             }
 
@@ -394,17 +435,172 @@ class BarterController extends Controller
     }
 
     /**
-     * Helper: produk layak barter (approved, ditandai barterable, stok > 0).
+     * Salah satu seller mengisi nomor resi pengiriman barangnya.
+     *
+     * Requester mengirim produk yang ia tawarkan; responder mengirim produk
+     * miliknya yang diminta. Keduanya wajib mengirim.
+     */
+    public function ship(Request $request, BarterRequest $barter)
+    {
+        $validated = $request->validate([
+            'tracking_number' => 'required|string|max:100',
+        ], [
+            'tracking_number.required' => 'Nomor resi wajib diisi.',
+        ]);
+
+        $role = $barter->roleOfStore(Auth::user()->store);
+
+        if (! $role) {
+            abort(403, 'Anda bukan pihak dalam barter ini.');
+        }
+
+        if (! $barter->isShipping()) {
+            return back()->with('error', 'Barter ini belum masuk tahap pengiriman.');
+        }
+
+        $prefix = $role; // 'requester' atau 'responder'
+
+        if ($barter->{$prefix.'_shipped_at'} !== null) {
+            return back()->with('error', 'Anda sudah mengisi nomor resi untuk barter ini.');
+        }
+
+        $barter->update([
+            $prefix.'_tracking_number' => $validated['tracking_number'],
+            $prefix.'_shipped_at' => now(),
+        ]);
+
+        return back()->with('success', 'Nomor resi tersimpan. Menunggu pihak lain mengonfirmasi penerimaan.');
+    }
+
+    /**
+     * Salah satu seller mengonfirmasi barang dari pihak lain sudah diterima.
+     * Kepemilikan produk baru berpindah ketika KEDUANYA sudah mengonfirmasi.
+     */
+    public function confirmReceipt(BarterRequest $barter)
+    {
+        $role = $barter->roleOfStore(Auth::user()->store);
+
+        if (! $role) {
+            abort(403, 'Anda bukan pihak dalam barter ini.');
+        }
+
+        if (! $barter->isShipping()) {
+            return back()->with('error', 'Barter ini belum masuk tahap pengiriman.');
+        }
+
+        // Pihak lawan adalah yang mengirimkan barang kepada saya.
+        $counterpart = $role === 'requester' ? 'responder' : 'requester';
+
+        if ($barter->{$counterpart.'_shipped_at'} === null) {
+            return back()->with('error', 'Pihak lain belum mengirimkan barangnya.');
+        }
+
+        // Kolom *_received_at mencatat "saya sudah menerima barang".
+        if ($barter->{$role.'_received_at'} !== null) {
+            return back()->with('error', 'Anda sudah mengonfirmasi penerimaan barang.');
+        }
+
+        try {
+            DB::transaction(function () use ($barter, $role) {
+                $locked = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
+
+                if ($locked->{$role.'_received_at'} !== null) {
+                    return;
+                }
+
+                $locked->forceFill([
+                    $role.'_received_at' => now(),
+                ])->save();
+
+                if (! $locked->bothPartiesReceived()) {
+                    return;
+                }
+
+                // Kedua belah pihak sudah menerima: pindahkan kepemilikan.
+                $offered = Product::whereKey($locked->offered_product_id)->lockForUpdate()->first();
+                $requested = Product::whereKey($locked->requested_product_id)->lockForUpdate()->first();
+
+                if ($offered && $requested) {
+                    $this->exchangeProducts($offered, $requested, $locked);
+                }
+
+                $locked->forceFill([
+                    'status' => BarterRequest::STATUS_COMPLETED,
+                    'completed_at' => now(),
+                ])->save();
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Gagal memproses konfirmasi penerimaan.');
+        }
+
+        $barter->refresh();
+
+        if ($barter->isCompleted()) {
+            return back()->with('success', 'Barter selesai. Kepemilikan kedua produk sudah berpindah sepenuhnya.');
+        }
+
+        return back()->with('success', 'Penerimaan dikonfirmasi. Menunggu pihak lain mengonfirmasi juga.');
+    }
+
+    /**
+     * Helper: produk layak barter (approved, ditandai barterable, stok > 0,
+     * dan tidak sedang terikat barter lain).
      */
     private function isBarterable(Product $product): bool
     {
         return $product->approval_status === Product::STATUS_APPROVED
             && $product->is_barterable
-            && $product->stock > 0;
+            && $product->stock > 0
+            && ! $product->isLockedForBarter();
     }
 
     /**
-     * Helper: tukar kepemilikan produk setelah barter disetujui dan dibayar
+     * Kunci kedua produk agar tidak bisa dibeli pembeli biasa atau ditawarkan
+     * pada barter lain selama barter ini belum tuntas.
+     */
+    private function lockProductsForBarter(Product $offered, Product $requested, BarterRequest $barter): void
+    {
+        foreach ([$offered, $requested] as $product) {
+            $product->locked_for_barter_id = $barter->id;
+            $product->save();
+        }
+    }
+
+    /**
+     * Buka kunci kedua produk (barter batal atau sudah tuntas).
+     */
+    private function unlockProductsForBarter(BarterRequest $barter): void
+    {
+        Product::where('locked_for_barter_id', $barter->id)
+            ->update(['locked_for_barter_id' => null]);
+    }
+
+    /**
+     * Masuk tahap saling kirim barang. Dipanggil setelah barter disetujui
+     * (tanpa selisih uang) atau setelah pembayaran selisih lunas.
+     */
+    private function startShipping(BarterRequest $barter): void
+    {
+        if ($barter->status === BarterRequest::STATUS_SHIPPING || $barter->isCompleted()) {
+            return;
+        }
+
+        // Titik awal tenggat pengiriman: dari sini kedua seller punya
+        // BarterRequest::SHIPPING_DEADLINE_DAYS hari untuk mengisi resi.
+        $barter->forceFill([
+            'status' => BarterRequest::STATUS_SHIPPING,
+            'shipping_started_at' => now(),
+        ])->save();
+    }
+
+    /**
+     * Pindahkan kepemilikan produk. Dipanggil HANYA setelah kedua belah pihak
+     * mengonfirmasi barang diterima — bukan saat pembayaran lunas.
+     *
+     * Sebelumnya kepemilikan berpindah begitu pembayaran settle, padahal
+     * barangnya sendiri belum tentu pernah dikirim (temuan T-08).
      */
     private function exchangeProducts(Product $offered, Product $requested, BarterRequest $barter): void
     {
@@ -416,8 +612,11 @@ class BarterController extends Controller
         $requested->store_id = $requesterStoreId;
 
         // Setelah tertukar, matikan flag barter (pemilik baru bisa mengaktifkan lagi)
+        // dan buka kuncinya karena barter sudah tuntas.
         $offered->is_barterable = false;
         $requested->is_barterable = false;
+        $offered->locked_for_barter_id = null;
+        $requested->locked_for_barter_id = null;
 
         $offered->save();
         $requested->save();

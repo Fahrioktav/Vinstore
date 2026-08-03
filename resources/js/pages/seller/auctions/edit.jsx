@@ -104,7 +104,9 @@ export default function SellerEditAuctionPage() {
                 />
               </div>
               <div>
-                <AuthLabel htmlFor="min_increment">Minimal Kenaikan Bid</AuthLabel>
+                <AuthLabel htmlFor="min_increment">
+                  Minimal Kenaikan Bid
+                </AuthLabel>
                 <AuthInput
                   id="min_increment"
                   type="number"

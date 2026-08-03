@@ -1,6 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { cn, formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
+import {
+  cn,
+  formatIDR,
+  getProductCertificate,
+  getProductImage,
+} from '@/lib/utils';
 import { BadgeIcon } from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
 
@@ -16,9 +21,13 @@ export default function AdminProducts() {
   };
 
   const handleApprove = (publicId) => {
-    router.post(`/admin/products/${publicId}/approve`, {}, {
-      preserveScroll: true,
-    });
+    router.post(
+      `/admin/products/${publicId}/approve`,
+      {},
+      {
+        preserveScroll: true,
+      }
+    );
   };
 
   const handleReject = (publicId) => {
@@ -85,7 +94,10 @@ export default function AdminProducts() {
               <tbody>
                 {products.length > 0 ? (
                   products.map((product) => (
-                    <tr key={product.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={product.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3">
                         <img
                           src={getProductImage(product)}
@@ -127,7 +139,9 @@ export default function AdminProducts() {
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
                         >
-                          {approvalLabels[product.approval_status] || product.approval_status || 'Menunggu'}
+                          {approvalLabels[product.approval_status] ||
+                            product.approval_status ||
+                            'Menunggu'}
                         </span>
                         {product.rejection_reason && (
                           <p className="mt-1 max-w-40 text-xs text-red-600">

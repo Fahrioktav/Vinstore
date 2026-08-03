@@ -14,11 +14,17 @@ class Order extends Model
         'public_id',
         'user_id',
         'product_id',
+        'product_name',
+        'product_price',
         'auction_id',
         'quantity',
         'price',
         'status',
         'tracking_number',
+        'shipping_address',
+        'shipping_method',
+        'shipping_cost',
+        'notes',
         'payment_reference',
         'payment_status',
         'payment_method',
@@ -28,18 +34,57 @@ class Order extends Model
         'paid_at',
         'stock_restored_at',
         'seller_released_at',
+        'delivered_at',
+        'completed_at',
         'store_id',
+        'store_name',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
         'stock_restored_at' => 'datetime',
         'seller_released_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'product_price' => 'decimal:2',
+        'shipping_cost' => 'integer',
     ];
 
     protected $hidden = [
         'id',
     ];
+
+    /**
+     * Kolom turunan yang selalu ikut saat pesanan diserialisasi ke Inertia,
+     * supaya frontend tidak perlu tahu apakah produknya masih ada atau tidak.
+     */
+    protected $appends = [
+        'display_item_name',
+        'display_store_name',
+    ];
+
+    /**
+     * Nama barang yang dipesan.
+     *
+     * Snapshot didahulukan karena itulah nama barang PADA SAAT transaksi.
+     * Kalau seller mengganti nama produknya kemudian, riwayat pesanan lama
+     * tetap menampilkan nama yang dulu dibeli — dan tetap terbaca walau
+     * produknya sudah dihapus.
+     */
+    public function getDisplayItemNameAttribute(): string
+    {
+        return $this->product_name
+            ?? $this->product?->name
+            ?? $this->auction?->name
+            ?? 'Produk tidak tersedia';
+    }
+
+    public function getDisplayStoreNameAttribute(): string
+    {
+        return $this->store_name
+            ?? $this->store?->store_name
+            ?? 'Toko tidak tersedia';
+    }
 
     protected static function booted(): void
     {
@@ -53,7 +98,7 @@ class Order extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'ORD' . random_int(10000000, 99999999);
+            $publicId = 'ORD'.random_int(10000000, 99999999);
         } while (DB::table('orders')->where('public_id', $publicId)->exists());
 
         return $publicId;
@@ -81,10 +126,93 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Relasi ke store 
+    // Relasi ke store
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /**
+     * Berapa lama pembeli punya waktu untuk mengajukan sanggahan/refund setelah
+     * seller menandai pesanan sampai. Lewat dari ini pesanan diselesaikan
+     * otomatis oleh command orders:auto-complete agar dana seller tidak
+     * tertahan selamanya saat pembeli lupa mengonfirmasi.
+     */
+    public const BUYER_CONFIRMATION_WINDOW_DAYS = 3;
+
+    /**
+     * Pesanan yang masih berjalan atau pernah melibatkan uang.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', '!=', 'Cancelled')
+                ->orWhereIn('payment_status', ['paid', 'refunded', 'challenge']);
+        });
+    }
+
+    /**
+     * Status pembayaran yang sudah final: sekali tercapai, notifikasi Midtrans
+     * berikutnya tidak boleh menariknya mundur.
+     */
+    public const SETTLED_PAYMENT_STATUSES = ['paid', 'refunded'];
+
+    /**
+     * Bolehkah status pembayaran baru ini diterapkan?
+     *
+     * Midtrans tidak menjamin urutan pengiriman notifikasi, dan
+     * MidtransService::mapPaymentStatus() memetakan transaction_status yang
+     * tidak dikenal menjadi 'pending'. Tanpa penjaga ini, satu notifikasi
+     * telat/tak dikenal bisa mengubah pesanan lunas kembali menjadi 'pending' —
+     * yang mencabut akses invoice pembeli sekaligus membatalkan pencairan dana
+     * seller atas pesanan yang uangnya sudah diterima.
+     *
+     * Transisi keluar dari 'paid' hanya sah menuju 'refunded'.
+     */
+    public function canApplyPaymentStatus(?string $newStatus): bool
+    {
+        if ($newStatus === null || $newStatus === $this->payment_status) {
+            return false;
+        }
+
+        if (! in_array($this->payment_status, self::SETTLED_PAYMENT_STATUSES, true)) {
+            return true;
+        }
+
+        return $this->payment_status === 'paid' && $newStatus === 'refunded';
+    }
+
+    /**
+     * Apakah pembeli boleh menekan tombol "Barang Diterima" sekarang.
+     */
+    public function canBeConfirmedByBuyer(): bool
+    {
+        return $this->payment_status === 'paid'
+            && in_array($this->status, ['On The Way', 'Delivered'], true);
+    }
+
+    /**
+     * Tandai pesanan selesai atas konfirmasi pembeli.
+     *
+     * Konfirmasi ini TIDAK lagi mencairkan dana. Pencairan hanya terjadi lewat
+     * pengajuan seller yang disetujui admin — lihat PayoutRequest.
+     */
+    public function completeByBuyer(): void
+    {
+        DB::transaction(function () {
+            $order = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $order || ! $order->canBeConfirmedByBuyer()) {
+                return;
+            }
+
+            $order->forceFill([
+                'status' => 'Completed',
+                'completed_at' => now(),
+            ])->save();
+        });
+
+        $this->refresh();
     }
 
     public function restoreReservedStock(): void
@@ -96,7 +224,7 @@ class Order extends Model
         DB::transaction(function () {
             $order = self::whereKey($this->getKey())->lockForUpdate()->first();
 
-            if (!$order || $order->stock_restored_at !== null) {
+            if (! $order || $order->stock_restored_at !== null) {
                 return;
             }
 
@@ -110,29 +238,134 @@ class Order extends Model
         });
     }
 
-    public function releaseSellerFunds(): void
+    public function payoutRequests()
     {
-        if ($this->seller_released_at !== null) {
-            return;
+        return $this->hasMany(PayoutRequest::class);
+    }
+
+    /**
+     * Pengajuan pencairan yang sedang menahan pesanan ini: masih menunggu
+     * keputusan admin, atau sudah disetujui.
+     */
+    public function activePayoutRequest(): ?PayoutRequest
+    {
+        // Pakai relasi yang sudah dimuat bila ada, supaya daftar pesanan di
+        // dashboard seller tidak memicu query per baris.
+        if ($this->relationLoaded('payoutRequests')) {
+            return $this->payoutRequests
+                ->whereIn('status', [PayoutRequest::STATUS_PENDING, PayoutRequest::STATUS_APPROVED])
+                ->sortByDesc('id')
+                ->first();
         }
 
-        DB::transaction(function () {
-            $order = self::whereKey($this->getKey())->lockForUpdate()->first();
+        return PayoutRequest::where('order_id', $this->id)
+            ->blocking()
+            ->latest('id')
+            ->first();
+    }
 
-            if (
-                !$order
-                || $order->seller_released_at !== null
-                || $order->payment_status !== 'paid'
-                || !in_array($order->status, ['Delivered', 'Completed'], true)
-            ) {
-                return;
-            }
+    public function hasPendingRefund(): bool
+    {
+        if ($this->relationLoaded('refundRequest')) {
+            return $this->refundRequest !== null && $this->refundRequest->status === 'pending';
+        }
 
-            Store::whereKey($order->store_id)->increment('available_balance', $order->price);
+        return RefundRequest::where('order_id', $this->id)
+            ->where('status', 'pending')
+            ->exists();
+    }
 
-            $order->forceFill([
-                'seller_released_at' => now(),
-            ])->save();
-        });
+    public function getCanRequestPayoutAttribute(): bool
+    {
+        return $this->canRequestPayout();
+    }
+
+    public function getPayoutBlockReasonAttribute(): ?string
+    {
+        return $this->payoutBlockReason();
+    }
+
+    /**
+     * Pengajuan terakhir apa pun statusnya — dipakai untuk menampilkan badge
+     * "menunggu persetujuan" / "ditolak" di baris pesanan.
+     */
+    public function getLatestPayoutAttribute(): ?array
+    {
+        $payout = $this->relationLoaded('payoutRequests')
+            ? $this->payoutRequests->sortByDesc('id')->first()
+            : PayoutRequest::where('order_id', $this->id)->latest('id')->first();
+
+        if (! $payout) {
+            return null;
+        }
+
+        return [
+            'public_id' => $payout->public_id,
+            'status' => $payout->status,
+            'amount' => $payout->amount,
+            'admin_note' => $payout->admin_note,
+            'bank_name' => $payout->bank_name,
+            'account_number' => $payout->account_number,
+            'account_holder' => $payout->account_holder,
+        ];
+    }
+
+    /**
+     * Bolehkah seller mengajukan pencairan untuk pesanan ini?
+     *
+     * Dana pesanan tidak pernah cair sendiri — tidak saat pembeli konfirmasi,
+     * tidak pula lewat penjadwal. Seller harus mengajukan dan admin harus
+     * menyetujui sambil mengunggah bukti transfer.
+     *
+     * Status "Delivered" sudah cukup untuk mengajukan, karena keputusan akhir
+     * tetap ada di tangan admin. Yang tidak boleh adalah pesanan yang belum
+     * dibayar, yang dananya sudah pernah dicairkan, yang sedang disengketakan,
+     * atau yang pengajuannya masih menggantung.
+     */
+    public function canRequestPayout(): bool
+    {
+        return $this->payment_status === 'paid'
+            && in_array($this->status, ['Delivered', 'Completed'], true)
+            && $this->seller_released_at === null
+            && $this->store_id !== null
+            && ! $this->hasPendingRefund()
+            && $this->activePayoutRequest() === null;
+    }
+
+    /**
+     * Alasan pesanan belum bisa diajukan, untuk ditampilkan ke seller.
+     */
+    public function payoutBlockReason(): ?string
+    {
+        if ($this->seller_released_at !== null) {
+            return 'Dana pesanan ini sudah dicairkan.';
+        }
+
+        if ($this->payment_status !== 'paid') {
+            return 'Pesanan ini belum dibayar.';
+        }
+
+        if (! in_array($this->status, ['Delivered', 'Completed'], true)) {
+            return 'Pencairan baru bisa diajukan setelah pesanan berstatus Delivered atau Completed.';
+        }
+
+        if ($this->hasPendingRefund()) {
+            return 'Ada pengajuan refund yang belum diputus admin.';
+        }
+
+        if ($this->activePayoutRequest() !== null) {
+            return 'Pengajuan pencairan untuk pesanan ini sudah ada.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Tandai dana pesanan sudah ditransfer ke rekening seller. Hanya dipanggil
+     * dari persetujuan admin atas PayoutRequest.
+     */
+    public function markSellerPaid(): void
+    {
+        $this->forceFill(['seller_released_at' => now()])->save();
     }
 }

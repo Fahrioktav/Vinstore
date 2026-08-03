@@ -128,16 +128,18 @@ export default function OrderPage() {
                     key={order.public_id}
                   >
                     <td className="px-3 py-4 font-semibold">
-                      <div className="truncate" title={order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}>
-                        {order.product?.name ?? order.auction?.name ?? 'Item tidak ditemukan'}
+                      <div className="truncate" title={order.display_item_name}>
+                        {order.display_item_name}
                       </div>
                     </td>
                     <td className="px-3 py-4 text-center">{order.quantity}</td>
-                    <td className="px-3 py-4 text-sm">{formatIDR(order.price)}</td>
+                    <td className="px-3 py-4 text-sm">
+                      {formatIDR(order.price)}
+                    </td>
                     <td className="px-3 py-4">
                       <span
                         className={cn(
-                          'rounded-full px-2 py-1 text-xs capitalize block text-center',
+                          'block rounded-full px-2 py-1 text-center text-xs capitalize',
                           paymentStyles[order.payment_status] ??
                             paymentStyles.Unknown
                         )}
@@ -145,7 +147,7 @@ export default function OrderPage() {
                         {order.payment_status || 'unpaid'}
                       </span>
                       {order.refund_request && (
-                        <p className="mt-1 text-xs capitalize text-[#E9E19E]/80 text-center">
+                        <p className="mt-1 text-center text-xs text-[#E9E19E]/80 capitalize">
                           Refund: {order.refund_request.status}
                         </p>
                       )}
@@ -163,7 +165,10 @@ export default function OrderPage() {
                     <td className="px-3 py-4">
                       {order.tracking_number ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-xs font-semibold text-[#E9E19E] truncate" title={order.tracking_number}>
+                          <span
+                            className="truncate font-mono text-xs font-semibold text-[#E9E19E]"
+                            title={order.tracking_number}
+                          >
                             {order.tracking_number}
                           </span>
                           <span className="text-xs text-[#E9E19E]/70">
@@ -176,7 +181,9 @@ export default function OrderPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-4 text-xs">{orderDate(order.created_at)}</td>
+                    <td className="px-3 py-4 text-xs">
+                      {orderDate(order.created_at)}
+                    </td>
                     <td className="px-3 py-4 text-center">
                       {order.payment_status === 'paid' ? (
                         <Link
@@ -204,13 +211,43 @@ export default function OrderPage() {
                           )}
                         {!order.snap_redirect_url &&
                           order.auction &&
-                          ['pending', 'unpaid'].includes(order.payment_status) && (
+                          ['pending', 'unpaid'].includes(
+                            order.payment_status
+                          ) && (
                             <Form
                               action={`/auctions/${order.auction.public_id}/pay`}
                               method="POST"
                             >
                               <button className="text-xs font-semibold text-yellow-300 transition hover:text-yellow-200">
                                 Bayar
+                              </button>
+                            </Form>
+                          )}
+                        {/* Konfirmasi penerimaan oleh pembeli. Selama tombol ini
+                            belum ditekan, dana masih ditahan dan tidak masuk ke
+                            saldo penjual. */}
+                        {order.payment_status === 'paid' &&
+                          ['On The Way', 'Delivered'].includes(
+                            order.status
+                          ) && (
+                            <Form
+                              action={`/order/${order.public_id}/confirm`}
+                              method="POST"
+                            >
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
+                                onClick={(e) => {
+                                  if (
+                                    !confirm(
+                                      'Konfirmasi bahwa barang sudah Anda terima? Dana akan diteruskan ke penjual dan tindakan ini tidak dapat dibatalkan.'
+                                    )
+                                  ) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                              >
+                                Barang Diterima
                               </button>
                             </Form>
                           )}
@@ -254,9 +291,7 @@ export default function OrderPage() {
       {refundOrderId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 text-gray-800 shadow-2xl">
-            <h3 className="text-xl font-bold text-[#53685B]">
-              Ajukan Refund
-            </h3>
+            <h3 className="text-xl font-bold text-[#53685B]">Ajukan Refund</h3>
             <form onSubmit={submitRefund} className="mt-5 space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-semibold">
@@ -302,7 +337,9 @@ export default function OrderPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setRefundProofImage(e.target.files[0] || null)}
+                  onChange={(e) =>
+                    setRefundProofImage(e.target.files[0] || null)
+                  }
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
                 />
                 <p className="mt-1 text-xs text-gray-500">

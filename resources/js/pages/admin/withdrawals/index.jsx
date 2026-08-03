@@ -12,14 +12,29 @@ const statusColors = {
 export default function AdminWithdrawals() {
   const { withdrawals, success, error } = usePage().props;
 
+  // Pencairan hanya boleh disetujui setelah admin benar-benar mentransfer dana
+  // ke rekening yang diajukan seller. Bukti transfernya wajib diunggah sebagai
+  // jejak audit atas uang yang keluar.
   const approve = (publicId) => {
-    const adminNote = prompt('Catatan pencairan (opsional):') || '';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg';
 
-    router.post(
-      `/admin/withdrawals/${publicId}/approve`,
-      { admin_note: adminNote },
-      { preserveScroll: true }
-    );
+    input.onchange = () => {
+      const file = input.files?.[0];
+
+      if (!file) return;
+
+      const adminNote = prompt('Catatan pencairan (opsional):') || '';
+
+      router.post(
+        `/admin/withdrawals/${publicId}/approve`,
+        { admin_note: adminNote, transfer_proof: file },
+        { preserveScroll: true, forceFormData: true }
+      );
+    };
+
+    input.click();
   };
 
   const reject = (publicId) => {
@@ -67,7 +82,10 @@ export default function AdminWithdrawals() {
               <tbody>
                 {withdrawals.length > 0 ? (
                   withdrawals.map((withdrawal) => (
-                    <tr key={withdrawal.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={withdrawal.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3 font-semibold">
                         {withdrawal.public_id}
                       </td>
@@ -85,7 +103,8 @@ export default function AdminWithdrawals() {
                       <td className="px-4 py-3">
                         <p>{withdrawal.bank_name}</p>
                         <p className="text-xs text-gray-500">
-                          {withdrawal.account_number} a.n. {withdrawal.account_holder}
+                          {withdrawal.account_number} a.n.{' '}
+                          {withdrawal.account_holder}
                         </p>
                       </td>
                       <td className="px-4 py-3">
@@ -127,7 +146,10 @@ export default function AdminWithdrawals() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="7"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       Belum ada pengajuan pencairan.
                     </td>
                   </tr>

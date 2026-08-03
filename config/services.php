@@ -51,6 +51,12 @@ return [
         'api_url' => env('MIDTRANS_IS_PRODUCTION', false)
             ? 'https://api.midtrans.com'
             : 'https://api.sandbox.midtrans.com',
+        // URL library Snap.js untuk frontend. WAJIB satu lingkungan dengan
+        // snap_url di atas: token yang dibuat di server produksi tidak dapat
+        // dibuka oleh snap.js sandbox, dan sebaliknya.
+        'snap_js_url' => env('MIDTRANS_IS_PRODUCTION', false)
+            ? 'https://app.midtrans.com/snap/snap.js'
+            : 'https://app.sandbox.midtrans.com/snap/snap.js',
     ],
 
 ];

@@ -16,15 +16,14 @@ class SupportMessageSent implements ShouldBroadcastNow
     public function __construct(
         public SupportMessage $message,
         public string $ownerPublicId,
-    ) {
-    }
+    ) {}
 
     /**
      * Channel privat per-thread bantuan (diidentifikasi oleh public_id pemilik).
      */
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('support.' . $this->ownerPublicId);
+        return new PrivateChannel('support.'.$this->ownerPublicId);
     }
 
     public function broadcastAs(): string

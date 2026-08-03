@@ -45,8 +45,13 @@ export default function AdminStores() {
               <tbody>
                 {stores.length > 0 ? (
                   stores.map((store) => (
-                    <tr key={store.public_id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{store.public_id}</td>
+                    <tr
+                      key={store.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {store.public_id}
+                      </td>
                       <td className="px-4 py-3 font-semibold">
                         {store.store_name}
                       </td>

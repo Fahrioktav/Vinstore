@@ -1,40 +1,39 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\SocialAuthController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\StoreController;
-use App\Http\Controllers\SellerDashboardController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\BarterController;
-use App\Http\Controllers\ValidatorController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\AuctionController;
-use App\Http\Controllers\PriceGuessController;
-use App\Http\Controllers\RefundRequestController;
-use App\Http\Controllers\WithdrawalRequestController;
-use App\Http\Controllers\SupportController;
-use App\Models\Product;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\AdminSellerController;
-use App\Http\Controllers\Admin\AdminStoreController;
-use App\Http\Controllers\Admin\AdminProductController;
-use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminContactController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminSellerController;
+use App\Http\Controllers\Admin\AdminStoreController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\BarterController;
+use App\Http\Controllers\BarterPaymentNotificationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MidtransNotificationController;
-use App\Http\Controllers\BarterPaymentNotificationController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PayoutRequestController;
+use App\Http\Controllers\PriceGuessController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RefundRequestController;
+use App\Http\Controllers\SellerDashboardController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SupportController;
+use App\Http\Controllers\ValidatorController;
+use App\Http\Controllers\WithdrawalRequestController;
 use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 /*
@@ -56,10 +55,10 @@ Route::get('/', function () {
         }
         // User biasa tetap ke home
     }
-    
+
     // Sembunyikan harga asli produk tebak harga yang masih dalam periode/prioritas.
     app(\App\Services\PriceGuessService::class)->sync();
-    
+
     // Ambil produk yang approved dan stok masih tersedia (stok > 0)
     $products = Product::approved()
         ->where('stock', '>', 0)
@@ -67,14 +66,14 @@ Route::get('/', function () {
         ->take(6)
         ->get();
     $products->each(fn (Product $product) => $product->maskRealPriceFor(Auth::user()));
-    
+
     $categories = Category::latest()->take(12)->get();
-    
+
     return Inertia::render('home', [
         'heroText' => 'Males Ke Pasar Barang Antik? Pesan VINSTORE Aja!',
         'showSearch' => true,
         'products' => $products,
-        'categories' => $categories
+        'categories' => $categories,
     ]);
 });
 
@@ -100,14 +99,14 @@ Route::post('/midtrans/barter/notification', BarterPaymentNotificationController
 
 Route::middleware(['role:guestOnly'])->group(function () {
     // Register
-    Route::get('/register', fn() => Inertia::render('auth/register', [
-        'heroText' => 'Halo!, Selamat Datang di VINSTORE'
+    Route::get('/register', fn () => Inertia::render('auth/register', [
+        'heroText' => 'Halo!, Selamat Datang di VINSTORE',
     ]))->name('register.form');
     Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
 
     // Login
-    Route::get('/login', fn() => Inertia::render('auth/login', [
-        'heroText' => 'Selamat Datang Kembali!'
+    Route::get('/login', fn () => Inertia::render('auth/login', [
+        'heroText' => 'Selamat Datang Kembali!',
     ]))->name('login.form');
     Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 
@@ -141,6 +140,7 @@ Route::middleware(['auth'])->group(function () {
         Auth::logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
+
         return redirect('/');
     })->name('logout');
 });
@@ -183,8 +183,10 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // User order
     Route::get('/order', [OrderController::class, 'userOrders'])->name('order');
     Route::delete('/order/{id}', [OrderController::class, 'cancelOrder'])->name('order.cancel');
+    // Konfirmasi penerimaan oleh pembeli. Ini yang melepas dana ke saldo seller.
+    Route::post('/order/{id}/confirm', [OrderController::class, 'confirmReceipt'])->name('order.confirm');
     Route::post('/order/{order}/refund', [RefundRequestController::class, 'store'])->name('refunds.store');
-    
+
     // Invoice
     Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
 
@@ -200,7 +202,7 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
 Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
     // Dashboard Seller
     Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
-    
+
     // Edit Toko
     Route::get('/store/edit', [StoreController::class, 'edit'])->name('store.edit');
     Route::post('/store/update', [StoreController::class, 'update'])->name('store.update');
@@ -221,19 +223,34 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::post('/barter/{barter}/cancel', [BarterController::class, 'cancel'])->name('barter.cancel');
     Route::get('/barter/{barter}/pay', [BarterController::class, 'pay'])->name('barter.pay');
     Route::get('/barter/{barter}/payment-status', [BarterController::class, 'checkPaymentStatus'])->name('barter.payment.status');
+    // Pengiriman dua arah: masing-masing seller mengisi resi lalu mengonfirmasi
+    // penerimaan. Kepemilikan berpindah setelah keduanya saling menerima.
+    Route::post('/barter/{barter}/ship', [BarterController::class, 'ship'])->name('barter.ship');
+    Route::post('/barter/{barter}/receive', [BarterController::class, 'confirmReceipt'])->name('barter.receive');
+
+    // Selisih uang barter: responder mencairkan setelah barter selesai,
+    // requester meminta kembali bila barternya gagal.
+    Route::post('/barter/{barter}/payout', [PayoutRequestController::class, 'storeForBarter'])->name('barter.payout');
+    Route::post('/barter/{barter}/refund', [RefundRequestController::class, 'storeForBarter'])->name('barter.refund');
+    Route::post('/barter/{barter}/report', [RefundRequestController::class, 'reportStalledBarter'])->name('barter.report');
 
     // Lelang seller
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
     Route::get('/auctions/{auction}/edit', [AuctionController::class, 'edit'])->name('auctions.edit');
     Route::put('/auctions/{auction}', [AuctionController::class, 'update'])->name('auctions.update');
+    // Tarik kembali pengajuan agar bisa diperbaiki lalu diajukan ulang.
+    Route::post('/auctions/{auction}/withdraw', [AuctionController::class, 'withdrawSubmission'])->name('auctions.withdraw');
     Route::delete('/auctions/{auction}', [AuctionController::class, 'destroy'])->name('auctions.destroy');
     Route::get('/auctions/{auction}/relist', [AuctionController::class, 'relistForm'])->name('auctions.relist.form');
     Route::post('/auctions/{auction}/relist', [AuctionController::class, 'relist'])->name('auctions.relist');
 
     // Pencairan saldo seller
     Route::post('/withdrawals', [WithdrawalRequestController::class, 'store'])->name('withdrawals.store');
-    
+
+    // Pengajuan pencairan dana per pesanan (Delivered/Completed).
+    Route::post('/orders/{order}/payout', [PayoutRequestController::class, 'store'])->name('orders.payout');
+
     // Order Status & Delete
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
@@ -288,7 +305,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('refunds/{refund}/approve', [RefundRequestController::class, 'approve'])->name('refunds.approve');
     Route::post('refunds/{refund}/reject', [RefundRequestController::class, 'reject'])->name('refunds.reject');
 
-    // Kelola Pencairan Seller
+    // Kelola Pencairan Dana per Pesanan
+    Route::get('payouts', [PayoutRequestController::class, 'adminIndex'])->name('payouts.index');
+    Route::post('payouts/{payout}/approve', [PayoutRequestController::class, 'approve'])->name('payouts.approve');
+    Route::post('payouts/{payout}/reject', [PayoutRequestController::class, 'reject'])->name('payouts.reject');
+
+    // Kelola Pencairan Saldo (arsip: alur lama sebelum pencairan per pesanan)
     Route::get('withdrawals', [WithdrawalRequestController::class, 'adminIndex'])->name('withdrawals.index');
     Route::post('withdrawals/{withdrawal}/approve', [WithdrawalRequestController::class, 'approve'])->name('withdrawals.approve');
     Route::post('withdrawals/{withdrawal}/reject', [WithdrawalRequestController::class, 'reject'])->name('withdrawals.reject');

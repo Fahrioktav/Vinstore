@@ -123,7 +123,9 @@ export default function SellerEditProductPage() {
                   />
                 </div>
                 <div>
-                  <AuthLabel htmlFor="guess_ends_at">Tanggal Berakhir</AuthLabel>
+                  <AuthLabel htmlFor="guess_ends_at">
+                    Tanggal Berakhir
+                  </AuthLabel>
                   <AuthInput
                     id="guess_ends_at"
                     type="datetime-local"

@@ -47,7 +47,7 @@ class Store extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'STR' . random_int(10000000, 99999999);
+            $publicId = 'STR'.random_int(10000000, 99999999);
         } while (DB::table('stores')->where('public_id', $publicId)->exists());
 
         return $publicId;
@@ -92,8 +92,8 @@ class Store extends Model
      * Menghitung jarak antara toko ini dengan koordinat yang diberikan (dalam kilometer)
      * Menggunakan formula Haversine
      *
-     * @param float $userLat Latitude user
-     * @param float $userLng Longitude user
+     * @param  float  $userLat  Latitude user
+     * @param  float  $userLng  Longitude user
      * @return float Jarak dalam kilometer
      */
     public function calculateDistance(float $userLat, float $userLng): float
@@ -125,16 +125,16 @@ class Store extends Model
     /**
      * Scope untuk mencari toko terdekat berdasarkan radius
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param float $latitude Latitude user
-     * @param float $longitude Longitude user
-     * @param float $radius Radius dalam kilometer (default: 10)
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  float  $latitude  Latitude user
+     * @param  float  $longitude  Longitude user
+     * @param  float  $radius  Radius dalam kilometer (default: 10)
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeNearby($query, float $latitude, float $longitude, float $radius = 10)
     {
         // Menggunakan formula Haversine dalam SQL untuk efisiensi
-        $haversine = "(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))";
+        $haversine = '(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))';
 
         return $query
             ->select('*')
@@ -148,10 +148,10 @@ class Store extends Model
     /**
      * Static method untuk mendapatkan toko terdekat
      *
-     * @param float $latitude Latitude user
-     * @param float $longitude Longitude user
-     * @param float $radius Radius dalam kilometer (default: 10)
-     * @param int|null $limit Jumlah hasil maksimal (null = semua)
+     * @param  float  $latitude  Latitude user
+     * @param  float  $longitude  Longitude user
+     * @param  float  $radius  Radius dalam kilometer (default: 10)
+     * @param  int|null  $limit  Jumlah hasil maksimal (null = semua)
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public static function getNearbyStores(float $latitude, float $longitude, float $radius = 10, ?int $limit = null)

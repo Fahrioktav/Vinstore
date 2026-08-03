@@ -50,7 +50,9 @@ export default function ProductCard({ product }) {
             <div className="mb-2 flex items-center justify-between">
               <span className="font-bold text-[#B77C4C]">
                 {isPriceHidden ? (
-                  <span title="Harga disembunyikan selama tebak harga">???</span>
+                  <span title="Harga disembunyikan selama tebak harga">
+                    ???
+                  </span>
                 ) : (
                   formatIDR(product.price)
                 )}
@@ -63,7 +65,9 @@ export default function ProductCard({ product }) {
             </div>
 
             <div className="w-full rounded-md bg-[#B77C4C] px-3 py-3 text-center text-sm font-medium text-white transition group-hover:bg-[#a0683d]">
-              {isTebakHarga && isPriceHidden ? 'Ikuti Tebak Harga' : 'Lihat Detail'}
+              {isTebakHarga && isPriceHidden
+                ? 'Ikuti Tebak Harga'
+                : 'Lihat Detail'}
             </div>
           </div>
         </CardContent>

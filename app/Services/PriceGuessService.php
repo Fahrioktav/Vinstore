@@ -77,17 +77,17 @@ class PriceGuessService
             /** @var Product|null $product */
             $product = Product::whereKey($product->getKey())->lockForUpdate()->first();
 
-            if (!$product || !$product->isTebakHarga()) {
+            if (! $product || ! $product->isTebakHarga()) {
                 return;
             }
 
-            if (!in_array($product->guess_status, [Product::GUESS_SCHEDULED, Product::GUESS_ACTIVE], true)) {
+            if (! in_array($product->guess_status, [Product::GUESS_SCHEDULED, Product::GUESS_ACTIVE], true)) {
                 return;
             }
 
             $winner = $this->determineWinner($product);
 
-            if (!$winner) {
+            if (! $winner) {
                 // Tidak ada tebakan -> langsung jadi penjualan biasa (harga ditampilkan).
                 $product->update([
                     'guess_status' => Product::GUESS_PUBLIC,

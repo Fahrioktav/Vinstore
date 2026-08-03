@@ -40,7 +40,10 @@ export default function ActionMenu({ items = [], align = 'end' }) {
           <MoreVertical className="h-5 w-5" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="w-48 border bg-white p-1 shadow-lg">
+      <DropdownMenuContent
+        align={align}
+        className="w-48 border bg-white p-1 shadow-lg"
+      >
         {visible.map((item, i) => {
           if (item.separator) {
             return <DropdownMenuSeparator key={`sep-${i}`} />;

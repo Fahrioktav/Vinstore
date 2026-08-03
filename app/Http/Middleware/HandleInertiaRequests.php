@@ -39,12 +39,11 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'user' => Auth::user(),
             'flash' => [
-                'error' => fn() => $request->session()->get('error'),
-                'success' => fn() => $request->session()->get('success'),
-                'status' => fn() => $request->session()->get('status'),
-                'reset_url' => fn() => $request->session()->get('reset_url'),
-                'snap_token' => fn() => $request->session()->get('snap_token'),
-            ]
+                'error' => fn () => $request->session()->get('error'),
+                'success' => fn () => $request->session()->get('success'),
+                'status' => fn () => $request->session()->get('status'),
+                'snap_token' => fn () => $request->session()->get('snap_token'),
+            ],
         ]);
     }
 }

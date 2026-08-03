@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Auction;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\SupportMessage;
 use App\Models\User;
-use App\Models\Store;
-use App\Models\Product;
-use App\Models\Order;
-use App\Models\Auction;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller

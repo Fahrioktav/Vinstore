@@ -25,7 +25,7 @@ class Cart extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'CRT' . random_int(10000000, 99999999);
+            $publicId = 'CRT'.random_int(10000000, 99999999);
         } while (DB::table('carts')->where('public_id', $publicId)->exists());
 
         return $publicId;

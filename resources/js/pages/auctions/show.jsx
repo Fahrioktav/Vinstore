@@ -2,11 +2,12 @@ import { Form, Link, usePage, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getAuctionImage } from '@/lib/utils';
+import { openSnapPayment } from '@/lib/midtrans';
 import { toast } from 'sonner';
 
 export default function AuctionShow() {
   const { auction: initialAuction, user, flash } = usePage().props;
-  
+
   // State untuk real-time updates
   const [auction, setAuction] = useState(initialAuction);
   const [bids, setBids] = useState(initialAuction.bids || []);
@@ -15,38 +16,35 @@ export default function AuctionShow() {
   const minimumBid =
     Number(auction.current_price || auction.starting_price) +
     Number(auction.min_increment);
-  const isWinner = user && auction.winner && user.public_id === auction.winner.public_id;
+  const isWinner =
+    user && auction.winner && user.public_id === auction.winner.public_id;
   const canBid = auction.status === 'active';
 
-  // Handle snap_token untuk pembayaran lelang
+  // Handle snap_token untuk pembayaran lelang.
+  // Menunggu library Snap siap agar popup tidak gagal muncul diam-diam.
   useEffect(() => {
-    console.log('Auction useEffect triggered, flash:', flash);
-    console.log('snap_token:', flash?.snap_token);
-    console.log('window.snap:', window.snap);
-    
-    if (flash?.snap_token && window.snap) {
-      console.log('Triggering Snap Popup for auction with token:', flash.snap_token);
-      window.snap.pay(flash.snap_token, {
-        onSuccess: function(result) {
-          console.log('Payment success:', result);
-          toast.success('Pembayaran lelang berhasil!');
-          router.visit('/order');
-        },
-        onPending: function(result) {
-          console.log('Payment pending:', result);
-          toast.info('Pembayaran sedang diproses');
-          router.visit('/order');
-        },
-        onError: function(result) {
-          console.error('Payment error:', result);
-          toast.error('Pembayaran gagal. Silakan coba lagi.');
-        },
-        onClose: function() {
-          console.log('Payment popup closed');
-          toast.info('Anda menutup popup pembayaran');
-        }
-      });
+    if (!flash?.snap_token) {
+      return;
     }
+
+    openSnapPayment(flash.snap_token, {
+      onSuccess: () => {
+        toast.success('Pembayaran lelang berhasil!');
+        router.visit('/order');
+      },
+      onPending: () => {
+        toast.info('Pembayaran sedang diproses');
+        router.visit('/order');
+      },
+      onError: () => {
+        toast.error('Pembayaran gagal. Silakan coba lagi.');
+      },
+      onClose: () => {
+        toast.info('Anda menutup popup pembayaran');
+      },
+    }).catch((error) => {
+      toast.error(error.message);
+    });
   }, [flash?.snap_token]);
 
   // WebSocket real-time listener
@@ -59,14 +57,14 @@ export default function AuctionShow() {
       console.log('🔴 New bid received:', event);
 
       // Update auction data
-      setAuction(prev => ({
+      setAuction((prev) => ({
         ...prev,
         current_price: event.auction.current_price,
         bids_count: event.auction.bids_count,
       }));
 
       // Tambahkan bid baru ke list (di paling atas)
-      setBids(prev => [event.bid, ...prev]);
+      setBids((prev) => [event.bid, ...prev]);
 
       // Show notification
       setShowNewBidNotification(true);
@@ -97,14 +95,16 @@ export default function AuctionShow() {
           />
           <div className="p-6">
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-[#53685B]/10 px-3 py-1 text-sm font-semibold capitalize text-[#53685B]">
+              <span className="rounded-full bg-[#53685B]/10 px-3 py-1 text-sm font-semibold text-[#53685B] capitalize">
                 {auction.status}
               </span>
               <span className="text-sm text-gray-500">
                 {auction.store?.store_name || 'Toko'}
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-[#2F3E46]">{auction.name}</h1>
+            <h1 className="text-3xl font-bold text-[#2F3E46]">
+              {auction.name}
+            </h1>
             <p className="mt-4 whitespace-pre-line text-gray-600">
               {auction.description}
             </p>
@@ -132,12 +132,30 @@ export default function AuctionShow() {
             )}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <Info label="Harga awal" value={formatIDR(initialAuction.starting_price)} />
-              <Info label="Harga tertinggi" value={formatIDR(auction.current_price)} />
-              <Info label="Minimal naik" value={formatIDR(initialAuction.min_increment)} />
-              <Info label="Jumlah penawar" value={`${auction.bids_count} bid`} />
-              <Info label="Mulai" value={formatDateTime(initialAuction.starts_at)} />
-              <Info label="Selesai" value={formatDateTime(initialAuction.ends_at)} />
+              <Info
+                label="Harga awal"
+                value={formatIDR(initialAuction.starting_price)}
+              />
+              <Info
+                label="Harga tertinggi"
+                value={formatIDR(auction.current_price)}
+              />
+              <Info
+                label="Minimal naik"
+                value={formatIDR(initialAuction.min_increment)}
+              />
+              <Info
+                label="Jumlah penawar"
+                value={`${auction.bids_count} bid`}
+              />
+              <Info
+                label="Mulai"
+                value={formatDateTime(initialAuction.starts_at)}
+              />
+              <Info
+                label="Selesai"
+                value={formatDateTime(initialAuction.ends_at)}
+              />
             </div>
 
             {canBid ? (
@@ -185,7 +203,10 @@ export default function AuctionShow() {
                   Pemenang: {auction.winner.username}
                 </p>
                 {isWinner && (
-                  <Form method="POST" action={`/auctions/${auction.public_id}/pay`}>
+                  <Form
+                    method="POST"
+                    action={`/auctions/${auction.public_id}/pay`}
+                  >
                     <button className="mt-3 w-full rounded-lg bg-[#53685B] px-4 py-2 font-semibold text-white hover:bg-[#3c4a3e]">
                       Bayar Sekarang
                     </button>
@@ -210,8 +231,8 @@ export default function AuctionShow() {
                 <tbody>
                   {bids.length > 0 ? (
                     bids.map((bid, index) => (
-                      <tr 
-                        key={`${bid.user?.public_id}-${bid.amount}-${bid.created_at || index}`} 
+                      <tr
+                        key={`${bid.user?.public_id}-${bid.amount}-${bid.created_at || index}`}
                         className={`border-t ${index === 0 ? 'bg-blue-50' : ''}`}
                       >
                         <td className="px-4 py-3">
@@ -224,7 +245,10 @@ export default function AuctionShow() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="2" className="px-4 py-6 text-center text-gray-500">
+                      <td
+                        colSpan="2"
+                        className="px-4 py-6 text-center text-gray-500"
+                      >
                         Belum ada bid.
                       </td>
                     </tr>

@@ -18,6 +18,22 @@ import {
   Legend,
 } from 'recharts';
 
+// Harus sama dengan Auction::EDITABLE_APPROVAL_STATUSES di backend.
+// Nilai 'pending' TIDAK pernah ada di kolom approval_status — memakainya di
+// sini dulu membuat menu Edit tidak pernah muncul (temuan T-07).
+const EDITABLE_APPROVAL_STATUSES = [
+  'draft',
+  'pending_validator',
+  'pending_admin',
+  'rejected',
+];
+
+const payoutStatusColors = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+};
+
 export default function SellerDashboard() {
   const {
     products,
@@ -30,25 +46,29 @@ export default function SellerDashboard() {
     productIncome,
     auctions,
     store,
-    withdrawals,
-    pendingWithdrawalAmount,
+    payouts,
+    bankPrefill,
+    readyToRequest,
+    pendingPayoutAmount,
+    paidOutAmount,
   } = usePage().props;
   const [selectedProducts, setSelectedProducts] = React.useState([]);
-  const withdrawalForm = useForm({
-    amount: '',
-    bank_name: '',
-    account_number: '',
-    account_holder: '',
-  });
-  const withdrawableBalance =
-    Number(store?.available_balance || 0) - Number(pendingWithdrawalAmount || 0);
 
-  const submitWithdrawal = (e) => {
-    e.preventDefault();
-    withdrawalForm.post('/seller/withdrawals', {
-      preserveScroll: true,
-      onSuccess: () => withdrawalForm.reset(),
-    });
+  // Tarik kembali pengajuan lelang dari antrean validator agar bisa diperbaiki.
+  const withdrawSubmission = (publicId) => {
+    if (
+      !confirm(
+        'Tarik kembali pengajuan lelang ini? Lelang akan keluar dari antrean validator dan dapat Anda perbaiki sebelum diajukan ulang.'
+      )
+    ) {
+      return;
+    }
+
+    router.post(
+      `/seller/auctions/${publicId}/withdraw`,
+      {},
+      { preserveScroll: true }
+    );
   };
 
   const handleSelectProduct = (productId) => {
@@ -185,98 +205,79 @@ export default function SellerDashboard() {
           </div>
         </div>
 
-        {/* Seller Balance */}
+        {/* Pencairan Dana */}
         <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
           <div className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="mb-4 text-xl font-bold text-[#53685B]">
-              Saldo Seller
+            <h2 className="mb-2 text-xl font-bold text-[#53685B]">
+              Pencairan Dana
             </h2>
+            <p className="mb-4 text-xs text-gray-500">
+              Dana tidak cair otomatis. Ajukan pencairan per pesanan lewat menu
+              Aksi di tabel Customer Orders, lalu tunggu persetujuan admin.
+            </p>
             <div className="space-y-4">
               <BalanceLine
-                label="Saldo tersedia"
-                value={formatIDR(store?.available_balance || 0)}
+                label="Siap diajukan"
+                value={formatIDR(readyToRequest || 0)}
               />
               <BalanceLine
-                label="Menunggu pencairan"
-                value={formatIDR(pendingWithdrawalAmount || 0)}
+                label="Menunggu persetujuan"
+                value={formatIDR(pendingPayoutAmount || 0)}
               />
               <BalanceLine
-                label="Bisa dicairkan"
-                value={formatIDR(Math.max(withdrawableBalance, 0))}
-              />
-              <BalanceLine
-                label="Total sudah dicairkan"
-                value={formatIDR(store?.withdrawn_balance || 0)}
+                label="Sudah ditransfer"
+                value={formatIDR(paidOutAmount || 0)}
               />
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-md">
             <h2 className="mb-4 text-xl font-bold text-[#53685B]">
-              Ajukan Pencairan
+              Riwayat Pengajuan Pencairan
             </h2>
-            <form onSubmit={submitWithdrawal} className="grid gap-4 md:grid-cols-2">
-              <InputField
-                label="Nominal"
-                type="number"
-                value={withdrawalForm.data.amount}
-                onChange={(value) => withdrawalForm.setData('amount', value)}
-                error={withdrawalForm.errors.amount}
-              />
-              <InputField
-                label="Nama Bank"
-                value={withdrawalForm.data.bank_name}
-                onChange={(value) => withdrawalForm.setData('bank_name', value)}
-                error={withdrawalForm.errors.bank_name}
-              />
-              <InputField
-                label="Nomor Rekening"
-                value={withdrawalForm.data.account_number}
-                onChange={(value) => withdrawalForm.setData('account_number', value)}
-                error={withdrawalForm.errors.account_number}
-              />
-              <InputField
-                label="Nama Pemilik Rekening"
-                value={withdrawalForm.data.account_holder}
-                onChange={(value) => withdrawalForm.setData('account_holder', value)}
-                error={withdrawalForm.errors.account_holder}
-              />
-              <div className="md:col-span-2">
-                <button
-                  type="submit"
-                  disabled={withdrawalForm.processing || withdrawableBalance <= 0}
-                  className="rounded-lg bg-[#53685B] px-6 py-3 font-semibold text-white transition hover:bg-[#3c4a3e] disabled:opacity-50"
-                >
-                  Ajukan Pencairan
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-6 overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
                   <tr>
+                    <th className="px-3 py-2 text-left">Pesanan</th>
                     <th className="px-3 py-2 text-left">Nominal</th>
                     <th className="px-3 py-2 text-left">Bank</th>
                     <th className="px-3 py-2 text-left">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {withdrawals?.length > 0 ? (
-                    withdrawals.map((withdrawal) => (
-                      <tr key={withdrawal.public_id} className="border-t">
+                  {payouts?.length > 0 ? (
+                    payouts.map((payout) => (
+                      <tr key={payout.public_id} className="border-t">
+                        <td className="px-3 py-2 text-xs text-gray-600">
+                          {payout.order?.public_id || '-'}
+                        </td>
                         <td className="px-3 py-2 font-semibold">
-                          {formatIDR(withdrawal.amount)}
+                          {formatIDR(payout.amount)}
                         </td>
                         <td className="px-3 py-2">
-                          {withdrawal.bank_name} - {withdrawal.account_number}
+                          {payout.bank_name} - {payout.account_number}
                         </td>
-                        <td className="px-3 py-2 capitalize">{withdrawal.status}</td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-semibold capitalize ${payoutStatusColors[payout.status] || 'bg-gray-100 text-gray-700'}`}
+                          >
+                            {payout.status}
+                          </span>
+                          {payout.admin_note && (
+                            <p className="mt-1 text-xs text-gray-500 italic">
+                              {payout.admin_note}
+                            </p>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="3" className="px-3 py-4 text-center text-gray-500">
+                      <td
+                        colSpan="4"
+                        className="px-3 py-4 text-center text-gray-500"
+                      >
                         Belum ada pengajuan pencairan.
                       </td>
                     </tr>
@@ -297,6 +298,7 @@ export default function SellerDashboard() {
               <thead className="bg-[#53685B] text-white">
                 <tr>
                   <th className="px-4 py-3 text-left">Customer</th>
+                  <th className="px-4 py-3 text-left">Pengiriman</th>
                   <th className="px-4 py-3 text-left">Product</th>
                   <th className="px-4 py-3 text-center">Qty</th>
                   <th className="px-4 py-3 text-left">Total</th>
@@ -309,11 +311,15 @@ export default function SellerDashboard() {
               <tbody>
                 {orders.length > 0 ? (
                   orders.map((order) => (
-                    <OrderRow key={order.public_id} order={order} />
+                    <OrderRow
+                      key={order.public_id}
+                      order={order}
+                      bankPrefill={bankPrefill}
+                    />
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                    <td colSpan="9" className="py-8 text-center text-gray-500">
                       📭 Belum ada pesanan
                     </td>
                   </tr>
@@ -415,14 +421,23 @@ export default function SellerDashboard() {
               <tbody>
                 {auctions?.length > 0 ? (
                   auctions.map((auction) => (
-                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{auction.name}</td>
-                      <td className="px-4 py-3">{formatIDR(auction.starting_price)}</td>
+                    <tr
+                      key={auction.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {auction.name}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatIDR(auction.starting_price)}
+                      </td>
                       <td className="px-4 py-3 font-semibold text-[#53685B]">
                         {formatIDR(auction.current_price)}
                       </td>
                       <td className="px-4 py-3">{auction.bids_count}</td>
-                      <td className="px-4 py-3 capitalize">{auction.approval_status}</td>
+                      <td className="px-4 py-3 capitalize">
+                        {auction.approval_status}
+                      </td>
                       <td className="px-4 py-3 capitalize">{auction.status}</td>
                       <td className="px-4 py-3">
                         {auction.winner?.username || '-'}
@@ -437,13 +452,24 @@ export default function SellerDashboard() {
                                 href: `/auctions/${auction.public_id}`,
                               },
                               auction.bids_count === 0 &&
-                                ['pending', 'scheduled'].includes(auction.status) &&
-                                ['pending', 'approved', 'rejected'].includes(
+                                ['pending', 'scheduled'].includes(
+                                  auction.status
+                                ) &&
+                                EDITABLE_APPROVAL_STATUSES.includes(
                                   auction.approval_status
                                 ) && {
                                   label: 'Edit',
                                   icon: '✏️',
                                   href: `/seller/auctions/${auction.public_id}/edit`,
+                                },
+                              auction.bids_count === 0 &&
+                                ['pending_validator', 'pending_admin'].includes(
+                                  auction.approval_status
+                                ) && {
+                                  label: 'Tarik Pengajuan',
+                                  icon: '↩️',
+                                  onClick: () =>
+                                    withdrawSubmission(auction.public_id),
                                 },
                               auction.bids_count === 0 &&
                                 auction.status === 'ended' && {
@@ -495,7 +521,9 @@ function InputField({ label, type = 'text', value, onChange, error }) {
         className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B] focus:outline-none"
         required
       />
-      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+      {error && (
+        <span className="mt-1 block text-xs text-red-600">{error}</span>
+      )}
     </label>
   );
 }
@@ -579,7 +607,9 @@ function ProductRow({ product, isSelected, onSelect }) {
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[product.approval_status] || 'bg-gray-100 text-gray-700'}`}
         >
-          {approvalLabels[product.approval_status] || product.approval_status || 'Menunggu'}
+          {approvalLabels[product.approval_status] ||
+            product.approval_status ||
+            'Menunggu'}
         </span>
         {product.rejection_reason && (
           <p className="mt-1 max-w-40 text-xs text-red-600">
@@ -634,24 +664,46 @@ function ProductRow({ product, isSelected, onSelect }) {
   );
 }
 
-function OrderRow({ order }) {
+function OrderRow({ order, bankPrefill }) {
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [showEditTrackingModal, setShowEditTrackingModal] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
-  const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
+  const [trackingNumber, setTrackingNumber] = useState(
+    order.tracking_number || ''
+  );
+
+  // Data bank diisi otomatis dari pengajuan terakhir, tapi tetap bisa diubah
+  // seller di form ini — misal ganti rekening tujuan.
+  const payoutForm = useForm({
+    bank_name: bankPrefill?.bank_name || '',
+    account_number: bankPrefill?.account_number || '',
+    account_holder: bankPrefill?.account_holder || '',
+  });
+
+  const submitPayout = (e) => {
+    e.preventDefault();
+    payoutForm.post(`/seller/orders/${order.public_id}/payout`, {
+      preserveScroll: true,
+      onSuccess: () => setShowPayoutModal(false),
+    });
+  };
 
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
-    
+
     // Jika status diubah ke Processing atau On The Way, pastikan ada nomor resi
-    if ((newStatus === 'Processing' || newStatus === 'On The Way') && !order.tracking_number) {
+    if (
+      (newStatus === 'Processing' || newStatus === 'On The Way') &&
+      !order.tracking_number
+    ) {
       setPendingStatus(newStatus);
       setShowTrackingModal(true);
       return;
     }
-    
+
     // Jika sudah ada tracking number atau status lain, langsung update
     updateStatus(newStatus, order.tracking_number);
   };
@@ -687,9 +739,9 @@ function OrderRow({ order }) {
 
     router.post(
       `/seller/orders/${order.public_id}/status`,
-      { 
+      {
         status: newStatus,
-        tracking_number: tracking
+        tracking_number: tracking,
       },
       {
         preserveScroll: true,
@@ -700,7 +752,10 @@ function OrderRow({ order }) {
           // Revert jika error
           setCurrentStatus(order.status);
           setIsUpdating(false);
-          alert('Gagal mengupdate status: ' + (errors.tracking_number || 'Terjadi kesalahan'));
+          alert(
+            'Gagal mengupdate status: ' +
+              (errors.tracking_number || 'Terjadi kesalahan')
+          );
         },
       }
     );
@@ -737,8 +792,8 @@ function OrderRow({ order }) {
     <>
       {/* Modal Input Nomor Resi untuk Status Baru */}
       {showTrackingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B] text-2xl">
                 📦
@@ -762,7 +817,7 @@ function OrderRow({ order }) {
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="Contoh: JNE1234567890"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:outline-none focus:ring-2 focus:ring-[#53685B]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B] focus:outline-none"
                   required
                   autoFocus
                 />
@@ -795,10 +850,88 @@ function OrderRow({ order }) {
         </div>
       )}
 
+      {/* Modal Pengajuan Pencairan Dana */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B] text-2xl">
+                💰
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Ajukan Pencairan Dana
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Pesanan {order.public_id}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-5 rounded-lg bg-gray-50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  Nominal yang dicairkan
+                </span>
+                <span className="text-xl font-bold text-[#53685B]">
+                  {formatIDR(order.price)}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Sesuai hasil penjualan pesanan ini. Dana ditransfer admin ke
+                rekening di bawah setelah pengajuan disetujui.
+              </p>
+            </div>
+
+            <form onSubmit={submitPayout} className="space-y-4">
+              <InputField
+                label="Nama Bank"
+                value={payoutForm.data.bank_name}
+                onChange={(value) => payoutForm.setData('bank_name', value)}
+                error={payoutForm.errors.bank_name}
+              />
+              <InputField
+                label="Nomor Rekening"
+                value={payoutForm.data.account_number}
+                onChange={(value) =>
+                  payoutForm.setData('account_number', value)
+                }
+                error={payoutForm.errors.account_number}
+              />
+              <InputField
+                label="Nama Pemilik Rekening"
+                value={payoutForm.data.account_holder}
+                onChange={(value) =>
+                  payoutForm.setData('account_holder', value)
+                }
+                error={payoutForm.errors.account_holder}
+              />
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={payoutForm.processing}
+                  className="flex-1 rounded-lg bg-[#53685B] px-4 py-3 font-semibold text-white transition hover:bg-[#3c4a3e] disabled:opacity-50"
+                >
+                  {payoutForm.processing ? 'Mengirim...' : 'Ajukan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPayoutModal(false)}
+                  className="flex-1 rounded-lg bg-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-300"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal Edit Nomor Resi */}
       {showEditTrackingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-2xl">
                 ✏️
@@ -822,7 +955,7 @@ function OrderRow({ order }) {
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="Contoh: JNE1234567890"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   required
                   autoFocus
                 />
@@ -858,10 +991,34 @@ function OrderRow({ order }) {
           </p>
           <p className="text-xs text-gray-500">{order.user.email}</p>
         </td>
-        <td className="px-4 py-3">
-          {order.product?.name || order.auction?.name || '-'}
+        <td className="max-w-xs px-4 py-3 align-top">
+          {order.shipping_address ? (
+            <>
+              <p className="text-xs whitespace-pre-line text-gray-700">
+                {order.shipping_address}
+              </p>
+              {order.shipping_method && (
+                <p className="mt-1 text-xs text-gray-500 capitalize">
+                  {order.shipping_method} ·{' '}
+                  {formatIDR(order.shipping_cost || 0)}
+                </p>
+              )}
+              {order.notes && (
+                <p className="mt-1 text-xs text-amber-700 italic">
+                  Catatan: {order.notes}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400 italic">
+              Alamat belum diisi pembeli
+            </p>
+          )}
         </td>
-        <td className="px-4 py-3 text-center font-semibold">{order.quantity}</td>
+        <td className="px-4 py-3">{order.display_item_name}</td>
+        <td className="px-4 py-3 text-center font-semibold">
+          {order.quantity}
+        </td>
         <td className="px-4 py-3 font-bold text-[#53685B]">
           {formatIDR(order.price)}
         </td>
@@ -888,7 +1045,10 @@ function OrderRow({ order }) {
           {order.tracking_number && (
             <div className="mt-2 flex items-center gap-2">
               <p className="text-xs text-gray-600">
-                Resi: <span className="font-semibold text-gray-800">{order.tracking_number}</span>
+                Resi:{' '}
+                <span className="font-semibold text-gray-800">
+                  {order.tracking_number}
+                </span>
               </p>
               <button
                 onClick={openEditTracking}
@@ -909,21 +1069,48 @@ function OrderRow({ order }) {
             minute: '2-digit',
           })}
         </td>
-      <td className="px-4 py-3 text-center">
-        <div className="flex justify-center">
-          <ActionMenu
-            items={[
-              {
-                label: 'Hapus',
-                icon: '🗑️',
-                variant: 'destructive',
-                onClick: isUpdating ? undefined : handleDelete,
-              },
-            ]}
-          />
-        </div>
-      </td>
-    </tr>
+        <td className="px-4 py-3 text-center">
+          <div className="flex justify-center">
+            <ActionMenu
+              items={[
+                ...(order.can_request_payout
+                  ? [
+                      {
+                        label: 'Ajukan Pencairan',
+                        icon: '💰',
+                        onClick: () => setShowPayoutModal(true),
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Hapus',
+                  icon: '🗑️',
+                  variant: 'destructive',
+                  onClick: isUpdating ? undefined : handleDelete,
+                },
+              ]}
+            />
+          </div>
+          {/* Status pengajuan pencairan, supaya seller tahu posisinya tanpa
+              harus menggulir ke tabel riwayat di atas. */}
+          {order.latest_payout && (
+            <div className="mt-2">
+              <span
+                className={`rounded-full px-2 py-1 text-xs font-semibold capitalize ${payoutStatusColors[order.latest_payout.status] || 'bg-gray-100 text-gray-700'}`}
+              >
+                Pencairan: {order.latest_payout.status}
+              </span>
+            </div>
+          )}
+          {!order.can_request_payout &&
+            !order.latest_payout &&
+            order.payout_block_reason && (
+              <p className="mt-2 text-xs text-gray-400 italic">
+                {order.payout_block_reason}
+              </p>
+            )}
+        </td>
+      </tr>
     </>
   );
 }

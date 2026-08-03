@@ -26,17 +26,19 @@ const links = {
     { label: 'Dashboard', href: '/admin/dashboard' },
     { label: 'Lelang', href: '/admin/auctions' },
     { label: 'Refund', href: '/admin/refunds' },
-    { label: 'Pencairan', href: '/admin/withdrawals' },
+    { label: 'Pencairan', href: '/admin/payouts' },
   ],
-  validator: [
-    { label: 'Dashboard', href: '/validator/dashboard' },
-  ],
+  validator: [{ label: 'Dashboard', href: '/validator/dashboard' }],
 };
 
 const baseMenus = [{ label: '👤 Profil', href: '/profile' }];
 const bantuanUser = { label: '❓Bantuan', href: '/bantuan' };
 const menus = {
-  default: [...baseMenus, bantuanUser, { label: '🛒 Keranjang', href: '/cart' }],
+  default: [
+    ...baseMenus,
+    bantuanUser,
+    { label: '🛒 Keranjang', href: '/cart' },
+  ],
   seller: [...baseMenus, bantuanUser],
   admin: baseMenus,
   validator: [...baseMenus, bantuanUser],
@@ -61,6 +63,10 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
+    // Kosongkan cache service worker supaya sisa data pengguna ini tidak
+    // tersaji ke pengguna berikutnya di perangkat yang sama.
+    navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_CACHE' });
+
     router.post('/logout');
   };
 
@@ -119,10 +125,10 @@ export default function Navbar() {
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-3 py-2 font-semibold text-white transition hover:bg-[#B77C4C]">
-                  <img 
-                    src={getUserImage(user)} 
+                  <img
+                    src={getUserImage(user)}
                     alt={user.username}
-                    className="h-8 w-8 rounded-full object-cover border-2 border-white/50"
+                    className="h-8 w-8 rounded-full border-2 border-white/50 object-cover"
                   />
                   <span className="hidden sm:inline">{user.username}</span>
                   {/* <x-icon name="chevron-down" className="w-4 h-4" /> */}

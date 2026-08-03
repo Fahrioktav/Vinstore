@@ -33,11 +33,11 @@ class PriceGuessController extends Controller
             return back()->with('error', 'Anda tidak dapat menebak harga produk dari toko Anda sendiri.');
         }
 
-        if (!$product->isTebakHarga()) {
+        if (! $product->isTebakHarga()) {
             return back()->with('error', 'Produk ini bukan produk Tebak Harga.');
         }
 
-        if (!$product->isGuessingOpen()) {
+        if (! $product->isGuessingOpen()) {
             return back()->with('error', 'Periode tebak harga untuk produk ini sedang tidak berlangsung.');
         }
 

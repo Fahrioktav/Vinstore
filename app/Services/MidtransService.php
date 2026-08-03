@@ -43,7 +43,7 @@ class MidtransService
             ],
         ];
 
-        if (!empty($items)) {
+        if (! empty($items)) {
             $payload['item_details'] = $items;
         }
 
@@ -69,7 +69,7 @@ class MidtransService
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
             'Authorization' => $this->authorizationHeader(),
-        ])->get(config('services.midtrans.api_url') . '/v2/' . rawurlencode($paymentReference) . '/status')
+        ])->get(config('services.midtrans.api_url').'/v2/'.rawurlencode($paymentReference).'/status')
             ->throw()
             ->json();
     }
@@ -84,9 +84,9 @@ class MidtransService
 
         $signature = hash(
             'sha512',
-            ($payload['order_id'] ?? '') .
-            ($payload['status_code'] ?? '') .
-            ($payload['gross_amount'] ?? '') .
+            ($payload['order_id'] ?? '').
+            ($payload['status_code'] ?? '').
+            ($payload['gross_amount'] ?? '').
             $serverKey
         );
 
@@ -112,6 +112,6 @@ class MidtransService
 
     private function authorizationHeader(): string
     {
-        return 'Basic ' . base64_encode(config('services.midtrans.server_key') . ':');
+        return 'Basic '.base64_encode(config('services.midtrans.server_key').':');
     }
 }

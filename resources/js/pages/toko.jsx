@@ -31,11 +31,15 @@ export default function TokoPage() {
           params.set('latitude', latitude);
           params.set('longitude', longitude);
           params.set('radius', '10'); // Default 10 km
-          
-          router.get(`/toko?${params.toString()}`, {}, { 
-            preserveState: false,
-            preserveScroll: true 
-          });
+
+          router.get(
+            `/toko?${params.toString()}`,
+            {},
+            {
+              preserveState: false,
+              preserveScroll: true,
+            }
+          );
         },
         (err) => {
           console.error('Geolocation error:', err);
@@ -54,10 +58,14 @@ export default function TokoPage() {
   const showAllStores = () => {
     setShowNearby(false);
     setUserLocation(null);
-    router.get('/toko', {}, { 
-      preserveState: false,
-      preserveScroll: true 
-    });
+    router.get(
+      '/toko',
+      {},
+      {
+        preserveState: false,
+        preserveScroll: true,
+      }
+    );
   };
 
   return (
@@ -90,9 +98,7 @@ export default function TokoPage() {
                   Mencari lokasi...
                 </>
               ) : (
-                <>
-                  📍 Cari Toko Terdekat (10 km)
-                </>
+                <>📍 Cari Toko Terdekat (10 km)</>
               )}
             </button>
           ) : (
@@ -116,13 +122,16 @@ export default function TokoPage() {
         {showNearby && stores.length > 0 && (
           <div className="mx-auto mb-8 max-w-3xl rounded-lg bg-green-50 p-4 text-center text-sm text-green-800">
             ✓ Ditemukan <span className="font-semibold">{stores.length}</span>{' '}
-            toko dalam radius <span className="font-semibold">{searchRadius} km</span> dari lokasi Anda
+            toko dalam radius{' '}
+            <span className="font-semibold">{searchRadius} km</span> dari lokasi
+            Anda
           </div>
         )}
 
         {showNearby && stores.length === 0 && (
           <div className="mx-auto mb-8 max-w-3xl rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-800">
-            Tidak ada toko ditemukan dalam radius {searchRadius} km. Coba lihat semua toko.
+            Tidak ada toko ditemukan dalam radius {searchRadius} km. Coba lihat
+            semua toko.
           </div>
         )}
 
@@ -150,13 +159,13 @@ export default function TokoPage() {
 
               {/* DETAIL TOKO */}
               <div className="p-6">
-                <h3 className="mb-2 text-xl font-semibold capitalize text-[#2F3E46]">
+                <h3 className="mb-2 text-xl font-semibold text-[#2F3E46] capitalize">
                   {store.store_name}
                 </h3>
                 <p className="mb-2 flex items-center gap-2 text-sm text-gray-600">
                   📍 {store.location}
                 </p>
-                
+
                 {/* Tampilkan jarak jika mode nearby */}
                 {showNearby && store.distance_text && (
                   <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#B77C4C]">
@@ -175,15 +184,15 @@ export default function TokoPage() {
           ))}
 
           {stores.length === 0 && !showNearby && (
-            <div className="col-span-full text-center text-lg italic text-white">
+            <div className="col-span-full text-center text-lg text-white italic">
               Tidak ada toko yang ditemukan 🕯️
             </div>
           )}
         </div>
 
         {/* DEKORASI LATAR */}
-        <div className="pointer-events-none absolute left-0 top-0 -z-10 h-64 w-64 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
-        <div className="pointer-events-none absolute bottom-0 right-0 -z-10 h-96 w-96 rounded-full bg-[#B77C4C]/20 blur-3xl"></div>
+        <div className="pointer-events-none absolute top-0 left-0 -z-10 h-64 w-64 rounded-full bg-[#E9E19E]/20 blur-3xl"></div>
+        <div className="pointer-events-none absolute right-0 bottom-0 -z-10 h-96 w-96 rounded-full bg-[#B77C4C]/20 blur-3xl"></div>
       </section>
     </>
   );

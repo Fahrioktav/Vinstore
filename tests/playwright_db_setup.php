@@ -1,18 +1,18 @@
 <?php
 
 // Boot Laravel
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-use App\Models\User;
-use App\Models\Store;
-use App\Models\Product;
 use App\Models\Auction;
 use App\Models\Category;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
+use App\Models\Product;
+use App\Models\Store;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 if (env('PLAYWRIGHT_DB_SETUP') !== '1') {
     echo "Refusing to run database setup without PLAYWRIGHT_DB_SETUP=1.\n";
@@ -41,7 +41,7 @@ try {
                 'phone' => '083954598',
                 'address' => 'BSD',
                 'role' => 'user',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -55,7 +55,7 @@ try {
                 'phone' => '081299991111',
                 'address' => 'Jakarta',
                 'role' => 'user',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -69,7 +69,7 @@ try {
                 'phone' => '081299992222',
                 'address' => 'Bandung',
                 'role' => 'user',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -83,7 +83,7 @@ try {
                 'phone' => '081288881111',
                 'address' => 'Tangerang',
                 'role' => 'seller',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -93,7 +93,7 @@ try {
                 'store_name' => 'Toko Barang Antik Seller 1',
                 'category' => 'Antik',
                 'description' => 'Toko antik terlengkap',
-                'location' => 'Tangerang'
+                'location' => 'Tangerang',
             ]
         );
 
@@ -107,7 +107,7 @@ try {
                 'phone' => '081288882222',
                 'address' => 'Bekasi',
                 'role' => 'seller',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -117,7 +117,7 @@ try {
                 'store_name' => 'Toko Antik Seller A',
                 'category' => 'Antik',
                 'description' => 'Koleksi antik A',
-                'location' => 'Bekasi'
+                'location' => 'Bekasi',
             ]
         );
 
@@ -131,7 +131,7 @@ try {
                 'phone' => '081288883333',
                 'address' => 'Bogor',
                 'role' => 'seller',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -141,7 +141,7 @@ try {
                 'store_name' => 'Toko Antik Seller B',
                 'category' => 'Antik',
                 'description' => 'Koleksi antik B',
-                'location' => 'Bogor'
+                'location' => 'Bogor',
             ]
         );
 
@@ -155,7 +155,7 @@ try {
                 'phone' => '081200000000',
                 'address' => 'Jakarta',
                 'role' => 'validator',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
@@ -169,17 +169,17 @@ try {
                 'phone' => '081211112222',
                 'address' => 'Pamulang',
                 'role' => 'admin',
-                'password' => $passwordHash
+                'password' => $passwordHash,
             ]
         );
 
         // 3. Clear existing test products to prevent conflicts
         Product::whereIn('name', [
-            'Koin Emas Kerajaan Majapahit', 
-            'Guci Premium', 
-            'Keris Pusaka Omyang Jimbe', 
-            'Pedang Katana Kuno', 
-            'Koin Kuno Yasin'
+            'Koin Emas Kerajaan Majapahit',
+            'Guci Premium',
+            'Keris Pusaka Omyang Jimbe',
+            'Pedang Katana Kuno',
+            'Koin Kuno Yasin',
         ])->delete();
 
         // 4. Seed products for tests
@@ -198,7 +198,7 @@ try {
             'approved_by' => $admin->id,
             'validated_at' => now(),
             'validated_by' => $validator->id,
-            'sale_type' => Product::SALE_TYPE_NORMAL
+            'sale_type' => Product::SALE_TYPE_NORMAL,
         ]);
 
         // Barterable product owned by Seller B (requested in barter test)
@@ -216,7 +216,7 @@ try {
             'approved_by' => $admin->id,
             'validated_at' => now(),
             'validated_by' => $validator->id,
-            'sale_type' => Product::SALE_TYPE_NORMAL
+            'sale_type' => Product::SALE_TYPE_NORMAL,
         ]);
 
         // Barterable product owned by Seller A (offered in barter test)
@@ -234,7 +234,7 @@ try {
             'approved_by' => $admin->id,
             'validated_at' => now(),
             'validated_by' => $validator->id,
-            'sale_type' => Product::SALE_TYPE_NORMAL
+            'sale_type' => Product::SALE_TYPE_NORMAL,
         ]);
 
         // Tebak Harga product (active) (TC-TH-01, TC-TH-02)
@@ -254,7 +254,7 @@ try {
             'sale_type' => Product::SALE_TYPE_TEBAK_HARGA,
             'guess_status' => Product::GUESS_ACTIVE,
             'guess_starts_at' => Carbon::now()->subHours(12),
-            'guess_ends_at' => Carbon::now()->addHours(12)
+            'guess_ends_at' => Carbon::now()->addHours(12),
         ]);
 
         // 5. Clear existing test auctions to prevent conflicts
@@ -274,12 +274,12 @@ try {
             'approval_status' => 'approved',
             'status' => 'active',
             'approved_at' => now(),
-            'approved_by' => $admin->id
+            'approved_by' => $admin->id,
         ]);
 
         echo "Created and verified Playwright test users and products successfully.\n";
     });
 } catch (\Throwable $e) {
-    echo "Error during database setup: " . $e->getMessage() . "\n";
+    echo 'Error during database setup: '.$e->getMessage()."\n";
     exit(1);
 }

@@ -1,10 +1,8 @@
 import { useForm, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import MainLayout from '@/layouts/main-layout';
-import {
-  formatIDR,
-  getProductImage,
-} from '@/lib/utils';
+import { formatIDR, getProductImage } from '@/lib/utils';
+import { openSnapPayment } from '@/lib/midtrans';
 import { toast } from 'sonner';
 
 export default function CheckoutPage() {
@@ -23,35 +21,32 @@ export default function CheckoutPage() {
   const shippingCost = data.shipping_method === 'express' ? 25000 : 10000;
   const total = subtotal + shippingCost;
 
-  // Handle snap_token dari flash data
+  // Handle snap_token dari flash data.
+  // openSnapPayment menunggu library Snap siap lebih dulu, supaya popup tidak
+  // gagal muncul diam-diam saat skripnya belum selesai dimuat.
   useEffect(() => {
-    console.log('useEffect triggered, flash:', flash);
-    console.log('snap_token:', flash?.snap_token);
-    console.log('window.snap:', window.snap);
-    
-    if (flash?.snap_token && window.snap) {
-      console.log('Triggering Snap Popup with token:', flash.snap_token);
-      window.snap.pay(flash.snap_token, {
-        onSuccess: function(result) {
-          console.log('Payment success:', result);
-          toast.success('Pembayaran berhasil!');
-          router.visit('/order');
-        },
-        onPending: function(result) {
-          console.log('Payment pending:', result);
-          toast.info('Pembayaran sedang diproses');
-          router.visit('/order');
-        },
-        onError: function(result) {
-          console.error('Payment error:', result);
-          toast.error('Pembayaran gagal. Silakan coba lagi.');
-        },
-        onClose: function() {
-          console.log('Payment popup closed');
-          toast.info('Anda menutup popup pembayaran');
-        }
-      });
+    if (!flash?.snap_token) {
+      return;
     }
+
+    openSnapPayment(flash.snap_token, {
+      onSuccess: () => {
+        toast.success('Pembayaran berhasil!');
+        router.visit('/order');
+      },
+      onPending: () => {
+        toast.info('Pembayaran sedang diproses');
+        router.visit('/order');
+      },
+      onError: () => {
+        toast.error('Pembayaran gagal. Silakan coba lagi.');
+      },
+      onClose: () => {
+        toast.info('Anda menutup popup pembayaran');
+      },
+    }).catch((error) => {
+      toast.error(error.message);
+    });
   }, [flash?.snap_token]);
 
   const handleSubmit = (e) => {
@@ -78,23 +73,25 @@ export default function CheckoutPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Form Checkout */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Informasi Produk */}
           <div className="rounded-lg border bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Produk yang Dibeli</h3>
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Produk yang Dibeli
+            </h3>
             <div className="flex gap-4">
               <img
                 src={getProductImage(product)}
                 alt={product.name}
-                className="h-24 w-24 rounded-lg object-cover border"
+                className="h-24 w-24 rounded-lg border object-cover"
               />
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900">{product.name}</h4>
-                <p className="text-sm text-gray-500 mt-1">{product.category}</p>
+                <p className="mt-1 text-sm text-gray-500">{product.category}</p>
                 <p className="mt-2 text-lg font-bold text-[#B77C4C]">
                   {formatIDR(unitPrice)}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-gray-500">
                   Stok: {product.stock} unit
                 </p>
               </div>
@@ -105,11 +102,15 @@ export default function CheckoutPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Jumlah Produk */}
             <div className="rounded-lg border bg-white p-6 shadow-md">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">Jumlah Produk</h3>
+              <h3 className="mb-4 text-lg font-bold text-gray-900">
+                Jumlah Produk
+              </h3>
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => setData('quantity', Math.max(1, data.quantity - 1))}
+                  onClick={() =>
+                    setData('quantity', Math.max(1, data.quantity - 1))
+                  }
                   className="h-10 w-10 rounded-lg border border-gray-300 font-bold hover:bg-gray-100"
                   disabled={data.quantity <= 1}
                 >
@@ -120,12 +121,19 @@ export default function CheckoutPage() {
                   min="1"
                   max={product.stock}
                   value={data.quantity}
-                  onChange={(e) => setData('quantity', parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    setData('quantity', parseInt(e.target.value) || 1)
+                  }
                   className="w-20 rounded-lg border border-gray-300 px-4 py-2 text-center font-semibold"
                 />
                 <button
                   type="button"
-                  onClick={() => setData('quantity', Math.min(product.stock, data.quantity + 1))}
+                  onClick={() =>
+                    setData(
+                      'quantity',
+                      Math.min(product.stock, data.quantity + 1)
+                    )
+                  }
                   className="h-10 w-10 rounded-lg border border-gray-300 font-bold hover:bg-gray-100"
                   disabled={data.quantity >= product.stock}
                 >
@@ -142,7 +150,9 @@ export default function CheckoutPage() {
 
             {/* Alamat Pengiriman */}
             <div className="rounded-lg border bg-white p-6 shadow-md">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">Alamat Pengiriman</h3>
+              <h3 className="mb-4 text-lg font-bold text-gray-900">
+                Alamat Pengiriman
+              </h3>
               <textarea
                 value={data.shipping_address}
                 onChange={(e) => setData('shipping_address', e.target.value)}
@@ -152,13 +162,17 @@ export default function CheckoutPage() {
                 required
               />
               {errors.shipping_address && (
-                <p className="mt-2 text-sm text-red-600">{errors.shipping_address}</p>
+                <p className="mt-2 text-sm text-red-600">
+                  {errors.shipping_address}
+                </p>
               )}
             </div>
 
             {/* Metode Pengiriman */}
             <div className="rounded-lg border bg-white p-6 shadow-md">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">Metode Pengiriman</h3>
+              <h3 className="mb-4 text-lg font-bold text-gray-900">
+                Metode Pengiriman
+              </h3>
               <div className="space-y-3">
                 <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 hover:border-[#53685B] has-[:checked]:border-[#53685B] has-[:checked]:bg-[#53685B]/5">
                   <input
@@ -170,8 +184,12 @@ export default function CheckoutPage() {
                     className="h-4 w-4 text-[#53685B]"
                   />
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Pengiriman Standard</p>
-                    <p className="text-sm text-gray-500">Estimasi 3-5 hari kerja</p>
+                    <p className="font-semibold text-gray-900">
+                      Pengiriman Standard
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Estimasi 3-5 hari kerja
+                    </p>
                   </div>
                   <p className="font-bold text-gray-900">{formatIDR(10000)}</p>
                 </label>
@@ -186,20 +204,28 @@ export default function CheckoutPage() {
                     className="h-4 w-4 text-[#53685B]"
                   />
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Pengiriman Express</p>
-                    <p className="text-sm text-gray-500">Estimasi 1-2 hari kerja</p>
+                    <p className="font-semibold text-gray-900">
+                      Pengiriman Express
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Estimasi 1-2 hari kerja
+                    </p>
                   </div>
                   <p className="font-bold text-gray-900">{formatIDR(25000)}</p>
                 </label>
               </div>
               {errors.shipping_method && (
-                <p className="mt-2 text-sm text-red-600">{errors.shipping_method}</p>
+                <p className="mt-2 text-sm text-red-600">
+                  {errors.shipping_method}
+                </p>
               )}
             </div>
 
             {/* Catatan untuk Penjual */}
             <div className="rounded-lg border bg-white p-6 shadow-md">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">Catatan untuk Penjual (Opsional)</h3>
+              <h3 className="mb-4 text-lg font-bold text-gray-900">
+                Catatan untuk Penjual (Opsional)
+              </h3>
               <textarea
                 value={data.notes}
                 onChange={(e) => setData('notes', e.target.value)}
@@ -217,22 +243,32 @@ export default function CheckoutPage() {
         {/* Ringkasan Pembayaran */}
         <div className="lg:col-span-1">
           <div className="sticky top-6 rounded-lg border bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Ringkasan Pembayaran</h3>
-            
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Ringkasan Pembayaran
+            </h3>
+
             <div className="space-y-3 border-b border-gray-200 pb-4">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal ({data.quantity}x)</span>
-                <span className="font-semibold text-gray-900">{formatIDR(subtotal)}</span>
+                <span className="text-gray-600">
+                  Subtotal ({data.quantity}x)
+                </span>
+                <span className="font-semibold text-gray-900">
+                  {formatIDR(subtotal)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Biaya Pengiriman</span>
-                <span className="font-semibold text-gray-900">{formatIDR(shippingCost)}</span>
+                <span className="font-semibold text-gray-900">
+                  {formatIDR(shippingCost)}
+                </span>
               </div>
             </div>
 
             <div className="mt-4 flex justify-between">
               <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold text-[#B77C4C]">{formatIDR(total)}</span>
+              <span className="text-2xl font-bold text-[#B77C4C]">
+                {formatIDR(total)}
+              </span>
             </div>
 
             <button
@@ -245,7 +281,8 @@ export default function CheckoutPage() {
             </button>
 
             <p className="mt-4 text-center text-xs text-gray-500">
-              Dengan melanjutkan, Anda menyetujui syarat & ketentuan yang berlaku
+              Dengan melanjutkan, Anda menyetujui syarat & ketentuan yang
+              berlaku
             </p>
           </div>
         </div>

@@ -11,10 +11,27 @@ class Auction extends Model
     use HasFactory;
 
     // Approval Status Constants
+    // DRAFT = pengajuan ditarik kembali oleh seller untuk diperbaiki.
+    const STATUS_DRAFT = 'draft';
+
     const STATUS_PENDING_VALIDATOR = 'pending_validator';
+
     const STATUS_PENDING_ADMIN = 'pending_admin';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
+    /**
+     * Status pengajuan yang masih boleh diubah/ditarik oleh seller,
+     * selama lelangnya belum menerima penawaran.
+     */
+    const EDITABLE_APPROVAL_STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_PENDING_VALIDATOR,
+        self::STATUS_PENDING_ADMIN,
+        self::STATUS_REJECTED,
+    ];
 
     protected $fillable = [
         'public_id',
@@ -73,7 +90,7 @@ class Auction extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'AUC' . random_int(10000000, 99999999);
+            $publicId = 'AUC'.random_int(10000000, 99999999);
         } while (DB::table('auctions')->where('public_id', $publicId)->exists());
 
         return $publicId;

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 
 class Category extends Model
@@ -33,7 +32,7 @@ class Category extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'CAT' . random_int(10000000, 99999999);
+            $publicId = 'CAT'.random_int(10000000, 99999999);
         } while (DB::table('categories')->where('public_id', $publicId)->exists());
 
         return $publicId;

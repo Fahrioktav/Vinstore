@@ -12,7 +12,7 @@ class MidtransNotificationController extends Controller
     {
         $payload = $request->all();
 
-        if (!$midtrans->isValidSignature($payload)) {
+        if (! $midtrans->isValidSignature($payload)) {
             return response()->json(['message' => 'Invalid Midtrans signature.'], 403);
         }
 
@@ -28,25 +28,34 @@ class MidtransNotificationController extends Controller
             $payload['fraud_status'] ?? null
         );
 
-        $updates = [
-            'payment_status' => $paymentStatus,
-            'payment_method' => $payload['payment_type'] ?? $orders->first()->payment_method,
-            'midtrans_transaction_id' => $payload['transaction_id'] ?? $orders->first()->midtrans_transaction_id,
-        ];
-
-        if ($paymentStatus === 'paid') {
-            $updates['paid_at'] = now();
-        }
-
-        if (in_array($paymentStatus, ['cancelled', 'denied', 'expired'], true)) {
-            $updates['status'] = 'Cancelled';
-        }
+        $isFailure = in_array($paymentStatus, ['cancelled', 'denied', 'expired'], true);
 
         foreach ($orders as $order) {
-            $order->update($updates);
-            $order->releaseSellerFunds();
+            $updates = [
+                'payment_method' => $payload['payment_type'] ?? $order->payment_method,
+                'midtrans_transaction_id' => $payload['transaction_id'] ?? $order->midtrans_transaction_id,
+            ];
 
-            if (in_array($paymentStatus, ['cancelled', 'denied', 'expired'], true)) {
+            // Notifikasi Midtrans bisa datang tidak berurutan atau membawa
+            // transaction_status yang tidak dikenal. Pesanan yang sudah lunas
+            // tidak boleh dikembalikan ke 'pending' oleh notifikasi semacam itu.
+            $applyStatus = $order->canApplyPaymentStatus($paymentStatus);
+
+            if ($applyStatus) {
+                $updates['payment_status'] = $paymentStatus;
+
+                if ($paymentStatus === 'paid') {
+                    $updates['paid_at'] = now();
+                }
+
+                if ($isFailure) {
+                    $updates['status'] = 'Cancelled';
+                }
+            }
+
+            $order->update($updates);
+
+            if ($applyStatus && $isFailure) {
                 $order->restoreReservedStock();
             }
         }

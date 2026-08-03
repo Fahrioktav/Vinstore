@@ -38,7 +38,8 @@ export default function SellerRelistAuctionPage() {
             Ajukan Ulang Barang Lelang
           </h2>
           <p className="mb-6 text-sm text-gray-500">
-            Data barang disalin dari lelang lama. Pilih jadwal baru sebelum mengajukan.
+            Data barang disalin dari lelang lama. Pilih jadwal baru sebelum
+            mengajukan.
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -106,7 +107,9 @@ export default function SellerRelistAuctionPage() {
                 />
               </div>
               <div>
-                <AuthLabel htmlFor="min_increment">Minimal Kenaikan Bid</AuthLabel>
+                <AuthLabel htmlFor="min_increment">
+                  Minimal Kenaikan Bid
+                </AuthLabel>
                 <AuthInput
                   id="min_increment"
                   type="number"

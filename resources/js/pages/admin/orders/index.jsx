@@ -64,8 +64,13 @@ export default function AdminOrders() {
               <tbody>
                 {orders.length > 0 ? (
                   orders.map((order) => (
-                    <tr key={order.public_id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{order.public_id}</td>
+                    <tr
+                      key={order.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {order.public_id}
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-semibold">
                           {order.user.first_name} {order.user.last_name}
@@ -74,12 +79,8 @@ export default function AdminOrders() {
                           {order.user.email}
                         </p>
                       </td>
-                      <td className="px-4 py-3">
-                        {order.product?.name || order.auction?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {order.store?.store_name || '-'}
-                      </td>
+                      <td className="px-4 py-3">{order.display_item_name}</td>
+                      <td className="px-4 py-3">{order.display_store_name}</td>
                       <td className="px-4 py-3">{order.quantity}</td>
                       <td className="px-4 py-3 font-bold text-[#53685B]">
                         {formatIDR(order.price)}

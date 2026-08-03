@@ -71,28 +71,87 @@ export default function AdminRefunds() {
                 {refunds.length > 0 ? (
                   refunds.map((refund) => {
                     const order = refund.order;
+                    const barter = refund.barter_request;
+                    const isBarter = refund.source_type === 'barter';
                     const item = order?.product || order?.auction;
 
+                    // Sanggahan barter menyangkut selisih uangnya, bukan harga
+                    // pesanan — nominal dan pihak terkaitnya berbeda sumber.
+                    const itemLabel = isBarter
+                      ? `${barter?.offered_product?.name || '?'} ⇄ ${barter?.requested_product?.name || '?'}`
+                      : item?.name || '-';
+                    const referenceLabel = isBarter
+                      ? `Barter: ${barter?.public_id || '-'}`
+                      : `Order: ${order?.public_id || '-'}`;
+                    const storeLabel = isBarter
+                      ? barter?.responder_store?.store_name || '-'
+                      : order?.store?.store_name || '-';
+                    const amount = isBarter
+                      ? barter?.additional_cash || 0
+                      : order?.price || 0;
+
                     return (
-                      <tr key={refund.public_id} className="border-t hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold">{refund.public_id}</td>
+                      <tr
+                        key={refund.public_id}
+                        className="border-t hover:bg-gray-50"
+                      >
+                        <td className="px-4 py-3 font-semibold">
+                          {refund.public_id}
+                        </td>
                         <td className="px-4 py-3">
                           <p className="font-semibold">
                             {refund.user?.first_name} {refund.user?.last_name}
                           </p>
-                          <p className="text-xs text-gray-500">{refund.user?.email}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="font-semibold">{item?.name || '-'}</p>
                           <p className="text-xs text-gray-500">
-                            Order: {order?.public_id || '-'}
+                            {refund.user?.email}
                           </p>
                         </td>
-                        <td className="px-4 py-3">{order?.store?.store_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isBarter ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`}
+                          >
+                            {isBarter ? 'Barter' : 'Pesanan'}
+                          </span>
+                          <p className="mt-1 font-semibold">{itemLabel}</p>
+                          <p className="text-xs text-gray-500">
+                            {referenceLabel}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3">{storeLabel}</td>
                         <td className="px-4 py-3 font-bold text-[#53685B]">
-                          {formatIDR(order?.price || 0)}
+                          {formatIDR(amount)}
                         </td>
                         <td className="px-4 py-3">
+                          {/* Bukti objektif untuk memutuskan sengketa barter:
+                              siapa yang sudah mengisi resi dan siapa belum. */}
+                          {isBarter && (
+                            <div className="mb-2 rounded-md bg-gray-50 p-2 text-xs">
+                              <p
+                                className={
+                                  barter?.requester_shipped_at
+                                    ? 'text-green-700'
+                                    : 'font-semibold text-red-700'
+                                }
+                              >
+                                Pengaju:{' '}
+                                {barter?.requester_shipped_at
+                                  ? `kirim (${barter.requester_tracking_number || '-'})`
+                                  : 'belum kirim'}
+                              </p>
+                              <p
+                                className={
+                                  barter?.responder_shipped_at
+                                    ? 'text-green-700'
+                                    : 'font-semibold text-red-700'
+                                }
+                              >
+                                Penerima:{' '}
+                                {barter?.responder_shipped_at
+                                  ? `kirim (${barter.responder_tracking_number || '-'})`
+                                  : 'belum kirim'}
+                              </p>
+                            </div>
+                          )}
                           <p className="max-w-64 whitespace-pre-line text-gray-700">
                             {refund.reason}
                           </p>
@@ -157,7 +216,10 @@ export default function AdminRefunds() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="9"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       Belum ada pengajuan refund.
                     </td>
                   </tr>

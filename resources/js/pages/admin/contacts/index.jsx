@@ -103,7 +103,7 @@ export default function AdminContacts({ contacts }) {
               {contacts.map((contact) => (
                 <>
                   <tr key={contact.public_id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <p className="font-medium text-gray-900">
                           {contact.name}
@@ -159,13 +159,19 @@ export default function AdminContacts({ contacts }) {
                               label: 'Tandai Menunggu',
                               icon: '🕒',
                               onClick: () =>
-                                handleStatusChange(contact.public_id, 'pending'),
+                                handleStatusChange(
+                                  contact.public_id,
+                                  'pending'
+                                ),
                             },
                             contact.status !== 'replied' && {
                               label: 'Tandai Dibalas',
                               icon: '✅',
                               onClick: () =>
-                                handleStatusChange(contact.public_id, 'replied'),
+                                handleStatusChange(
+                                  contact.public_id,
+                                  'replied'
+                                ),
                             },
                             contact.status !== 'closed' && {
                               label: 'Tandai Ditutup',

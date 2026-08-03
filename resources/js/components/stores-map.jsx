@@ -58,9 +58,7 @@ export default function StoresMap({ stores = [], height = 420 }) {
             position={[Number(store.latitude), Number(store.longitude)]}
           >
             <Tooltip permanent direction="top" offset={[0, -40]}>
-              <span className="font-semibold text-xs">
-                {store.store_name}
-              </span>
+              <span className="text-xs font-semibold">{store.store_name}</span>
             </Tooltip>
             <Popup>
               <div className="space-y-1">

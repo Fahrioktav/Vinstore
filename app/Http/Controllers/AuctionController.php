@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\AuctionBidPlaced;
 use App\Models\Auction;
 use App\Models\AuctionBid;
 use App\Models\Order;
 use App\Services\MidtransService;
-use App\Events\AuctionBidPlaced;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +44,7 @@ class AuctionController extends Controller
             || ($user->role === 'seller' && $user->store && $auction->store_id === $user->store->id)
         );
 
-        if ($auction->approval_status !== 'approved' && !$canPreview) {
+        if ($auction->approval_status !== 'approved' && ! $canPreview) {
             abort(404);
         }
 
@@ -77,14 +77,14 @@ class AuctionController extends Controller
 
         $store = Auth::user()->store;
 
-        if (!$store) {
+        if (! $store) {
             return redirect()->route('store.register')->with('error', 'Anda harus memiliki toko terlebih dahulu.');
         }
 
         $imagePath = null;
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageName = time() . '_auction_' . $image->getClientOriginalName();
+            $imageName = time().'_auction_'.$image->getClientOriginalName();
             $imagePath = $image->storeAs('auctions', $imageName, 'public');
         }
 
@@ -109,7 +109,7 @@ class AuctionController extends Controller
     {
         $this->authorizeSellerAuction($auction);
 
-        if (!$this->canEditAuction($auction)) {
+        if (! $this->canEditAuction($auction)) {
             return redirect()->route('seller.dashboard')->with('error', 'Lelang hanya bisa diedit sebelum berjalan dan belum memiliki bid.');
         }
 
@@ -120,7 +120,7 @@ class AuctionController extends Controller
     {
         $this->authorizeSellerAuction($auction);
 
-        if (!$this->canEditAuction($auction)) {
+        if (! $this->canEditAuction($auction)) {
             return redirect()->route('seller.dashboard')->with('error', 'Lelang hanya bisa diedit sebelum berjalan dan belum memiliki bid.');
         }
 
@@ -140,7 +140,7 @@ class AuctionController extends Controller
             }
 
             $image = $request->file('image');
-            $imageName = time() . '_auction_' . $image->getClientOriginalName();
+            $imageName = time().'_auction_'.$image->getClientOriginalName();
             $auction->image = $image->storeAs('auctions', $imageName, 'public');
         }
 
@@ -166,7 +166,7 @@ class AuctionController extends Controller
     {
         $this->authorizeSellerAuction($auction);
 
-        if (!$this->canEditAuction($auction)) {
+        if (! $this->canEditAuction($auction)) {
             return redirect()->route('seller.dashboard')->with('error', 'Lelang hanya bisa dihapus sebelum berjalan dan belum memiliki bid.');
         }
 
@@ -179,11 +179,39 @@ class AuctionController extends Controller
         return redirect()->route('seller.dashboard')->with('success', 'Barang lelang berhasil dihapus.');
     }
 
+    /**
+     * Seller menarik kembali pengajuan lelang dari antrean validator/admin
+     * supaya bisa memperbaiki datanya lebih dulu. Setelah ini lelang berstatus
+     * draft: tidak tampil ke pembeli, tidak muncul di antrean validator, dan
+     * dapat diedit lalu diajukan ulang lewat form edit.
+     */
+    public function withdrawSubmission(Auction $auction)
+    {
+        $this->authorizeSellerAuction($auction);
+
+        if (! $this->canWithdrawAuction($auction)) {
+            return redirect()->route('seller.dashboard')->with('error', 'Pengajuan ini sudah tidak dapat ditarik kembali.');
+        }
+
+        $auction->update([
+            'approval_status' => Auction::STATUS_DRAFT,
+            'status' => 'pending',
+            'validated_at' => null,
+            'validated_by' => null,
+            'approved_at' => null,
+            'approved_by' => null,
+            'rejection_reason' => null,
+        ]);
+
+        return redirect()->route('seller.auctions.edit', $auction->public_id)
+            ->with('success', 'Pengajuan ditarik kembali. Silakan perbaiki datanya lalu ajukan ulang.');
+    }
+
     public function relistForm(Auction $auction)
     {
         $this->authorizeSellerAuction($auction);
 
-        if (!$this->canRelistAuction($auction)) {
+        if (! $this->canRelistAuction($auction)) {
             return redirect()->route('seller.dashboard')->with('error', 'Hanya lelang selesai tanpa bid yang bisa diajukan ulang.');
         }
 
@@ -194,7 +222,7 @@ class AuctionController extends Controller
     {
         $this->authorizeSellerAuction($auction);
 
-        if (!$this->canRelistAuction($auction)) {
+        if (! $this->canRelistAuction($auction)) {
             return redirect()->route('seller.dashboard')->with('error', 'Hanya lelang selesai tanpa bid yang bisa diajukan ulang.');
         }
 
@@ -212,7 +240,7 @@ class AuctionController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageName = time() . '_auction_' . $image->getClientOriginalName();
+            $imageName = time().'_auction_'.$image->getClientOriginalName();
             $imagePath = $image->storeAs('auctions', $imageName, 'public');
         }
 
@@ -247,7 +275,7 @@ class AuctionController extends Controller
                 $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->firstOrFail();
                 $this->refreshAuctionStatus($auction);
 
-                if (!$auction->isActive()) {
+                if (! $auction->isActive()) {
                     throw new \RuntimeException('Lelang tidak sedang aktif.');
                 }
 
@@ -259,7 +287,7 @@ class AuctionController extends Controller
                 $amount = (float) $validated['amount'];
 
                 if ($amount < $minimumBid) {
-                    throw new \RuntimeException('Nominal bid minimal ' . number_format($minimumBid, 0, ',', '.') . '.');
+                    throw new \RuntimeException('Nominal bid minimal '.number_format($minimumBid, 0, ',', '.').'.');
                 }
 
                 // Cek apakah user ini adalah yang terakhir melakukan bid
@@ -315,7 +343,7 @@ class AuctionController extends Controller
         $auction->refresh()->load('order');
         $order = $auction->order;
 
-        if (!$order || $auction->winner_id !== Auth::id()) {
+        if (! $order || $auction->winner_id !== Auth::id()) {
             abort(403, 'Anda bukan pemenang lelang ini.');
         }
 
@@ -325,9 +353,9 @@ class AuctionController extends Controller
 
         // Jika snap_token sudah ada, langsung redirect dengan snap_token
         if ($order->snap_token) {
-            return redirect()->route('auction.show', $auction->public_id)->with([
+            return redirect()->route('auctions.show', $auction->public_id)->with([
                 'success' => 'Silakan selesaikan pembayaran lelang.',
-                'snap_token' => $order->snap_token
+                'snap_token' => $order->snap_token,
             ]);
         }
 
@@ -340,7 +368,7 @@ class AuctionController extends Controller
                     'id' => $auction->public_id,
                     'price' => (int) round((float) $order->price),
                     'quantity' => 1,
-                    'name' => substr('Lelang - ' . $auction->name, 0, 50),
+                    'name' => substr('Lelang - '.$auction->name, 0, 50),
                 ]]
             );
 
@@ -351,13 +379,13 @@ class AuctionController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return back()->with('error', 'Gagal membuat pembayaran Midtrans: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat pembayaran Midtrans: '.$e->getMessage());
         }
 
         // Return dengan snap_token untuk trigger Snap Popup
-        return redirect()->route('auction.show', $auction->public_id)->with([
+        return redirect()->route('auctions.show', $auction->public_id)->with([
             'success' => 'Order lelang berhasil dibuat. Silakan selesaikan pembayaran.',
-            'snap_token' => $transaction['token']
+            'snap_token' => $transaction['token'],
         ]);
     }
 
@@ -445,6 +473,7 @@ class AuctionController extends Controller
         if ($auction->ends_at->lte(now())) {
             $this->finishAuction($auction);
             $auction->refresh();
+
             return;
         }
 
@@ -459,7 +488,7 @@ class AuctionController extends Controller
         DB::transaction(function () use ($auction) {
             $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->first();
 
-            if (!$auction || $auction->status === 'ended') {
+            if (! $auction || $auction->status === 'ended') {
                 return;
             }
 
@@ -479,15 +508,23 @@ class AuctionController extends Controller
 
             $auction->update($updates);
 
-            if ($highestBid && !Order::where('auction_id', $auction->id)->exists()) {
+            if ($highestBid && ! Order::where('auction_id', $auction->id)->exists()) {
                 $order = Order::create([
                     'user_id' => $highestBid->user_id,
                     'product_id' => null,
+                    // Snapshot agar riwayat pesanan lelang tetap terbaca
+                    // meski lelang atau tokonya dihapus.
+                    'product_name' => $auction->name,
+                    'product_price' => $highestBid->amount,
                     'auction_id' => $auction->id,
                     'store_id' => $auction->store_id,
+                    'store_name' => $auction->store?->store_name,
                     'quantity' => 1,
                     'price' => $highestBid->amount,
                     'status' => 'Waiting',
+                    // Lelang tidak punya form checkout, jadi alamat diambil dari
+                    // profil pemenang agar seller tetap punya tujuan pengiriman.
+                    'shipping_address' => $highestBid->user?->address,
                     'payment_status' => 'pending',
                     'payment_method' => 'midtrans',
                 ]);
@@ -501,16 +538,39 @@ class AuctionController extends Controller
     {
         $store = Auth::user()->store;
 
-        if (!$store || $auction->store_id !== $store->id) {
+        if (! $store || $auction->store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses ke lelang ini.');
         }
     }
 
+    /**
+     * Lelang boleh diubah/dihapus selama belum ada penawaran masuk dan belum
+     * benar-benar berjalan.
+     *
+     * Catatan: sebelumnya daftar approval_status di sini berisi 'pending' —
+     * nilai yang tidak pernah ada di kolom itu (nilai yang sah adalah
+     * pending_validator/pending_admin/approved/rejected). Akibatnya lelang yang
+     * baru diajukan SELALU gagal lolos pengecekan, sehingga seller tidak pernah
+     * bisa memperbaiki typo maupun membatalkan pengajuannya (temuan T-07).
+     */
     private function canEditAuction(Auction $auction): bool
     {
         return $auction->bids_count === 0
             && in_array($auction->status, ['pending', 'scheduled'], true)
-            && in_array($auction->approval_status, ['pending', 'approved', 'rejected'], true);
+            && in_array($auction->approval_status, Auction::EDITABLE_APPROVAL_STATUSES, true);
+    }
+
+    /**
+     * Apakah pengajuan masih bisa ditarik kembali oleh seller.
+     * Hanya yang masih mengantre di validator/admin dan belum ada penawaran.
+     */
+    private function canWithdrawAuction(Auction $auction): bool
+    {
+        return $auction->bids_count === 0
+            && in_array($auction->approval_status, [
+                Auction::STATUS_PENDING_VALIDATOR,
+                Auction::STATUS_PENDING_ADMIN,
+            ], true);
     }
 
     private function canRelistAuction(Auction $auction): bool

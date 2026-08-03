@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
+import { openSnapPayment } from '@/lib/midtrans';
 
 export default function BarterPaymentPage() {
   const { barter, snapToken } = usePage().props;
@@ -10,14 +11,17 @@ export default function BarterPaymentPage() {
   const [pollingStatus, setPollingStatus] = useState(false);
 
   useEffect(() => {
-    // Pastikan Midtrans Snap sudah loaded
-    if (window.snap && snapToken) {
-      // Auto-trigger Snap popup setelah halaman load
-      const timer = setTimeout(() => {
-        handlePay();
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!snapToken) {
+      return;
     }
+
+    // Auto-trigger Snap popup setelah halaman load. openSnapPayment menunggu
+    // library Snap siap, jadi tidak perlu lagi menebak lewat setTimeout.
+    const timer = setTimeout(() => {
+      handlePay();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [snapToken]);
 
   // Polling status payment jika webhook lambat
@@ -26,9 +30,11 @@ export default function BarterPaymentPage() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/seller/barter/${barter.public_id}/payment-status`);
+        const response = await fetch(
+          `/seller/barter/${barter.public_id}/payment-status`
+        );
         const data = await response.json();
-        
+
         if (data.is_paid) {
           setPollingStatus(false);
           setProcessing(false);
@@ -44,7 +50,9 @@ export default function BarterPaymentPage() {
     const timeout = setTimeout(() => {
       setPollingStatus(false);
       setProcessing(false);
-      alert('Pembayaran sedang diproses. Silakan cek halaman barter dalam beberapa menit.');
+      alert(
+        'Pembayaran sedang diproses. Silakan cek halaman barter dalam beberapa menit.'
+      );
       router.visit('/seller/barter');
     }, 30000);
 
@@ -55,35 +63,36 @@ export default function BarterPaymentPage() {
   }, [pollingStatus, barter.public_id]);
 
   const handlePay = () => {
-    if (!window.snap || !snapToken) {
+    if (!snapToken) {
       alert('Sistem pembayaran belum siap. Silakan refresh halaman.');
       return;
     }
 
     setProcessing(true);
 
-    window.snap.pay(snapToken, {
-      onSuccess: function (result) {
-        console.log('Payment success:', result);
+    openSnapPayment(snapToken, {
+      onSuccess: () => {
         setPaymentCompleted(true);
         setPollingStatus(true); // Mulai polling status
       },
-      onPending: function (result) {
-        console.log('Payment pending:', result);
+      onPending: () => {
         setProcessing(false);
-        alert('Pembayaran tertunda. Silakan selesaikan pembayaran Anda terlebih dahulu.');
+        alert(
+          'Pembayaran tertunda. Silakan selesaikan pembayaran Anda terlebih dahulu.'
+        );
       },
-      onError: function (result) {
-        console.log('Payment error:', result);
+      onError: () => {
         setProcessing(false);
         alert('Pembayaran gagal. Silakan coba lagi.');
       },
-      onClose: function () {
-        console.log('Payment popup closed');
+      onClose: () => {
         if (!paymentCompleted) {
           setProcessing(false);
         }
       },
+    }).catch((error) => {
+      setProcessing(false);
+      alert(error.message);
     });
   };
 
@@ -161,14 +170,14 @@ export default function BarterPaymentPage() {
 
             {paymentCompleted ? (
               <div className="rounded-lg bg-green-100 p-4 text-center">
-                <div className="mb-2 text-3xl animate-bounce">✅</div>
+                <div className="mb-2 animate-bounce text-3xl">✅</div>
                 <p className="font-bold text-green-800">Pembayaran Berhasil!</p>
-                <p className="text-sm text-green-700 mb-2">
+                <p className="mb-2 text-sm text-green-700">
                   Sedang memproses pertukaran produk...
                 </p>
                 {pollingStatus && (
                   <div className="flex items-center justify-center gap-2 text-xs text-green-600">
-                    <div className="h-2 w-2 bg-green-600 rounded-full animate-pulse"></div>
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-green-600"></div>
                     Mengecek status pembayaran...
                   </div>
                 )}
@@ -179,7 +188,9 @@ export default function BarterPaymentPage() {
                 disabled={processing}
                 className="w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white shadow-lg transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {processing ? '⏳ Memproses...' : `💳 Bayar ${formatIDR(barter.additional_cash)}`}
+                {processing
+                  ? '⏳ Memproses...'
+                  : `💳 Bayar ${formatIDR(barter.additional_cash)}`}
               </button>
             )}
 

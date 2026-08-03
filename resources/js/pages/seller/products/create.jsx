@@ -194,7 +194,8 @@ export default function SellerCreateProductPage() {
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     Bisa pilih beberapa foto sekaligus (maks. 5). Akan tampil di
-                    detail produk untuk buyer. Format: JPG, PNG (Max 2MB / foto).
+                    detail produk untuk buyer. Format: JPG, PNG (Max 2MB /
+                    foto).
                   </p>
                 </div>
                 <div>
@@ -226,8 +227,8 @@ export default function SellerCreateProductPage() {
                         Produk ini bisa dibarter
                       </span>
                       <span className="block text-xs text-gray-500">
-                        Jika dicentang, seller lain dapat mengajukan barter untuk
-                        produk ini (selama stok masih ada).
+                        Jika dicentang, seller lain dapat mengajukan barter
+                        untuk produk ini (selama stok masih ada).
                       </span>
                     </span>
                   </label>

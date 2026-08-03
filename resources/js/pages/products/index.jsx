@@ -6,7 +6,8 @@ import SearchInput from '@/components/search-input';
 import { useState } from 'react';
 
 export default function ProductsPage() {
-  const { paginatedProducts, showSearch, categories, filters } = usePage().props;
+  const { paginatedProducts, showSearch, categories, filters } =
+    usePage().props;
   const products = paginatedProducts.data;
   const q = useParams().get('q');
   const [filterData, setFilterData] = useState({
@@ -67,7 +68,10 @@ export default function ProductsPage() {
               <select
                 value={filterData.category}
                 onChange={(e) =>
-                  setFilterData((data) => ({ ...data, category: e.target.value }))
+                  setFilterData((data) => ({
+                    ...data,
+                    category: e.target.value,
+                  }))
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               >
@@ -115,7 +119,10 @@ export default function ProductsPage() {
                 type="checkbox"
                 checked={filterData.in_stock}
                 onChange={(e) =>
-                  setFilterData((data) => ({ ...data, in_stock: e.target.checked }))
+                  setFilterData((data) => ({
+                    ...data,
+                    in_stock: e.target.checked,
+                  }))
                 }
               />
               Stok tersedia
@@ -125,7 +132,10 @@ export default function ProductsPage() {
                 type="checkbox"
                 checked={filterData.certified}
                 onChange={(e) =>
-                  setFilterData((data) => ({ ...data, certified: e.target.checked }))
+                  setFilterData((data) => ({
+                    ...data,
+                    certified: e.target.checked,
+                  }))
                 }
               />
               Bersertifikat

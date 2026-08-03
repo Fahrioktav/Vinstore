@@ -76,7 +76,9 @@ export default function LoginPage() {
                     onClick={() => setShowPassword((value) => !value)}
                     className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-gray-500 transition hover:bg-gray-100 hover:text-[#B77C4C]"
                     aria-label={
-                      showPassword ? 'Sembunyikan password' : 'Tampilkan password'
+                      showPassword
+                        ? 'Sembunyikan password'
+                        : 'Tampilkan password'
                     }
                   >
                     {showPassword ? (

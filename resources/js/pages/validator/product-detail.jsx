@@ -29,9 +29,13 @@ export default function ValidatorProductDetail() {
 
   const handleApprove = () => {
     if (confirm('Validasi produk ini dan teruskan ke admin?')) {
-      router.post(`/validator/products/${product.public_id}/approve`, {}, {
-        preserveScroll: true,
-      });
+      router.post(
+        `/validator/products/${product.public_id}/approve`,
+        {},
+        {
+          preserveScroll: true,
+        }
+      );
     }
   };
 
@@ -61,7 +65,8 @@ export default function ValidatorProductDetail() {
           <span
             className={cn(
               'rounded-full px-4 py-1.5 text-sm font-semibold',
-              statusColors[product.approval_status] || 'bg-gray-100 text-gray-700'
+              statusColors[product.approval_status] ||
+                'bg-gray-100 text-gray-700'
             )}
           >
             {statusLabels[product.approval_status] || product.approval_status}
@@ -100,7 +105,9 @@ export default function ValidatorProductDetail() {
           {/* Detail produk */}
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
-              <h1 className="text-2xl font-bold text-[#53685B]">{product.name}</h1>
+              <h1 className="text-2xl font-bold text-[#53685B]">
+                {product.name}
+              </h1>
               {product.sale_type === 'tebak_harga' && (
                 <span className="mt-2 inline-block rounded-md bg-[#53685B] px-2 py-1 text-xs font-semibold text-white">
                   🎯 Tebak Harga
@@ -136,34 +143,45 @@ export default function ValidatorProductDetail() {
                   label="Tanggal Diajukan"
                   value={
                     product.created_at
-                      ? new Date(product.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })
+                      ? new Date(product.created_at).toLocaleDateString(
+                          'id-ID',
+                          {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          }
+                        )
                       : '-'
                   }
                 />
               </div>
 
               <div className="mt-6">
-                <p className="mb-1 text-sm font-semibold text-gray-500">Deskripsi</p>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                <p className="mb-1 text-sm font-semibold text-gray-500">
+                  Deskripsi
+                </p>
+                <p className="text-sm leading-relaxed whitespace-pre-line text-gray-700">
                   {product.description || 'Tidak ada deskripsi.'}
                 </p>
               </div>
 
               {product.rejection_reason && (
                 <div className="mt-6 rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3">
-                  <p className="text-sm font-semibold text-red-700">Alasan Penolakan</p>
-                  <p className="text-sm text-red-600">{product.rejection_reason}</p>
+                  <p className="text-sm font-semibold text-red-700">
+                    Alasan Penolakan
+                  </p>
+                  <p className="text-sm text-red-600">
+                    {product.rejection_reason}
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Info penjual / toko */}
             <div className="mt-6 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
-              <h2 className="mb-4 text-lg font-bold text-[#53685B]">Informasi Penjual</h2>
+              <h2 className="mb-4 text-lg font-bold text-[#53685B]">
+                Informasi Penjual
+              </h2>
               <div className="flex items-center gap-4">
                 {seller.username && (
                   <img
@@ -186,7 +204,9 @@ export default function ValidatorProductDetail() {
                 </div>
               </div>
               {store.description && (
-                <p className="mt-4 text-sm text-gray-600">{store.description}</p>
+                <p className="mt-4 text-sm text-gray-600">
+                  {store.description}
+                </p>
               )}
             </div>
 

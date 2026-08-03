@@ -16,7 +16,9 @@ export default function AuctionsIndex() {
     <section className="px-6 py-10 md:px-16">
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#E9E19E]">Lelang Barang Antik</h1>
+          <h1 className="text-3xl font-bold text-[#E9E19E]">
+            Lelang Barang Antik
+          </h1>
         </div>
       </div>
 

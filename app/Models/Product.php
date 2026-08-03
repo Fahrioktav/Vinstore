@@ -16,14 +16,18 @@ class Product extends Model
      *        (atau REJECTED pada salah satu tahap)
      */
     public const STATUS_PENDING_VALIDATOR = 'pending_validator';
+
     public const STATUS_PENDING_ADMIN = 'pending_admin';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
 
     /**
      * Jenis penjualan produk.
      */
     public const SALE_TYPE_NORMAL = 'normal';
+
     public const SALE_TYPE_TEBAK_HARGA = 'tebak_harga';
 
     /**
@@ -31,8 +35,11 @@ class Product extends Model
      *   scheduled -> active -> ended -> public
      */
     public const GUESS_SCHEDULED = 'scheduled';
+
     public const GUESS_ACTIVE = 'active';
+
     public const GUESS_ENDED = 'ended';
+
     public const GUESS_PUBLIC = 'public';
 
     /**
@@ -53,6 +60,7 @@ class Product extends Model
         'video',
         'certificate',
         'is_barterable',
+        'locked_for_barter_id',
         'approval_status',
         'approved_at',
         'approved_by',
@@ -89,14 +97,34 @@ class Product extends Model
 
     /**
      * Produk yang dapat ditawarkan/diajukan untuk barter:
-     * sudah disetujui, masih punya stok, dan ditandai bisa dibarter oleh seller.
+     * sudah disetujui, masih punya stok, ditandai bisa dibarter oleh seller,
+     * dan tidak sedang terikat barter lain yang belum tuntas.
      * (Produk yang sudah terjual/stok habis otomatis tidak masuk.)
      */
     public function scopeBarterable($query)
     {
         return $query->where('approval_status', self::STATUS_APPROVED)
             ->where('is_barterable', true)
-            ->where('stock', '>', 0);
+            ->where('stock', '>', 0)
+            ->whereNull('locked_for_barter_id');
+    }
+
+    /**
+     * Produk yang sedang dikunci karena terikat barter yang sudah disetujui
+     * tetapi belum tuntas (menunggu pembayaran selisih atau menunggu kedua
+     * belah pihak saling menerima barang).
+     *
+     * Selama terkunci, produk tidak boleh dibeli pembeli biasa maupun
+     * ditawarkan pada barter lain — lihat temuan T-08.
+     */
+    public function isLockedForBarter(): bool
+    {
+        return $this->locked_for_barter_id !== null;
+    }
+
+    public function lockedForBarter()
+    {
+        return $this->belongsTo(BarterRequest::class, 'locked_for_barter_id');
     }
 
     /**
@@ -135,7 +163,7 @@ class Product extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'PRD' . random_int(10000000, 99999999);
+            $publicId = 'PRD'.random_int(10000000, 99999999);
         } while (DB::table('products')->where('public_id', $publicId)->exists());
 
         return $publicId;
@@ -149,7 +177,7 @@ class Product extends Model
     // Mutator untuk memastikan stock tidak pernah negatif
     public function setStockAttribute($value)
     {
-        $this->attributes['stock'] = max(0, (int)$value);
+        $this->attributes['stock'] = max(0, (int) $value);
     }
 
     public function store()
@@ -232,13 +260,13 @@ class Product extends Model
      */
     public function shouldHidePriceFor(?User $user): bool
     {
-        if (!$this->isTebakHarga()) {
+        if (! $this->isTebakHarga()) {
             return false;
         }
 
         return match ($this->guess_status) {
             self::GUESS_SCHEDULED, self::GUESS_ACTIVE => true,
-            self::GUESS_ENDED => !($user && $this->guess_winner_id === $user->id),
+            self::GUESS_ENDED => ! ($user && $this->guess_winner_id === $user->id),
             default => false, // public / null
         };
     }
@@ -264,7 +292,7 @@ class Product extends Model
      */
     public function isPurchasableBy(?User $user): bool
     {
-        if (!$this->isTebakHarga()) {
+        if (! $this->isTebakHarga()) {
             return true;
         }
 

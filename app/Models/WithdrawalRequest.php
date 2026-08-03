@@ -19,6 +19,8 @@ class WithdrawalRequest extends Model
         'account_holder',
         'status',
         'admin_note',
+        'transfer_proof',
+        'transferred_at',
         'reviewed_by',
         'reviewed_at',
     ];
@@ -32,6 +34,7 @@ class WithdrawalRequest extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'reviewed_at' => 'datetime',
+        'transferred_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -46,7 +49,7 @@ class WithdrawalRequest extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'WDR' . random_int(10000000, 99999999);
+            $publicId = 'WDR'.random_int(10000000, 99999999);
         } while (DB::table('withdrawal_requests')->where('public_id', $publicId)->exists());
 
         return $publicId;

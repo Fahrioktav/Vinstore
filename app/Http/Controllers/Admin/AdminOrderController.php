@@ -12,12 +12,14 @@ class AdminOrderController extends Controller
     public function index()
     {
         $orders = Order::with('user', 'product', 'auction', 'store')->latest()->get();
+
         return Inertia::render('admin/orders/index', compact('orders'));
     }
 
     public function edit($id)
     {
         $order = Order::with('user', 'product', 'auction', 'store')->where('public_id', $id)->firstOrFail();
+
         return Inertia::render('admin/orders/edit', compact('order'));
     }
 
@@ -27,7 +29,9 @@ class AdminOrderController extends Controller
         $order = Order::where('public_id', $id)->firstOrFail();
         $order->status = $request->status;
         $order->save();
-        $order->releaseSellerFunds();
+
+        // Mengubah status tidak mencairkan dana. Pencairan hanya lewat
+        // pengajuan seller yang disetujui admin (PayoutRequest).
 
         return redirect()->route('admin.orders.index')->with('success', 'Status pesanan berhasil diperbarui.');
     }
@@ -35,6 +39,7 @@ class AdminOrderController extends Controller
     public function destroy($id)
     {
         Order::where('public_id', $id)->firstOrFail()->delete();
+
         return back()->with('success', 'Pesanan berhasil dihapus.');
     }
 }

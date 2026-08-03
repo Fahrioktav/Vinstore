@@ -6,8 +6,12 @@ import echo from '@/echo';
 import { cn } from '@/lib/utils';
 
 export default function AdminSupport() {
-  const { threads, selectedOwner, messages: initialMessages, user } =
-    usePage().props;
+  const {
+    threads,
+    selectedOwner,
+    messages: initialMessages,
+    user,
+  } = usePage().props;
 
   const [messages, setMessages] = useState(initialMessages ?? []);
   const [body, setBody] = useState('');
@@ -146,8 +150,7 @@ export default function AdminSupport() {
               <div className="flex-1 space-y-4 overflow-y-auto bg-gray-50 p-5">
                 {messages.length > 0 ? (
                   messages.map((message, index) => {
-                    const mine =
-                      message.sender?.public_id === user.public_id;
+                    const mine = message.sender?.public_id === user.public_id;
                     return (
                       <div
                         key={`${message.sender?.public_id}-${message.created_at}-${index}`}

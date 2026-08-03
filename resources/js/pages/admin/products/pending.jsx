@@ -102,7 +102,9 @@ function PendingProductCard({ product }) {
                 type="button"
                 onClick={() => setActiveImage(img)}
                 className={`h-14 w-14 overflow-hidden rounded-md border-2 ${
-                  activeImage === img ? 'border-[#B77C4C]' : 'border-transparent'
+                  activeImage === img
+                    ? 'border-[#B77C4C]'
+                    : 'border-transparent'
                 }`}
               >
                 <img
@@ -179,7 +181,10 @@ function PendingProductCard({ product }) {
           <Info label="Kategori" value={product.category} />
           <Info label="Stok" value={product.stock} />
           <Info label="ID Produk" value={product.public_id} />
-          <Info label="Bisa Dibarter" value={product.is_barterable ? 'Ya' : 'Tidak'} />
+          <Info
+            label="Bisa Dibarter"
+            value={product.is_barterable ? 'Ya' : 'Tidak'}
+          />
           <Info
             label="Tanggal Diajukan"
             value={
@@ -208,7 +213,7 @@ function PendingProductCard({ product }) {
 
         <div className="mt-5">
           <p className="mb-1 text-sm font-semibold text-gray-500">Deskripsi</p>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+          <p className="text-sm leading-relaxed whitespace-pre-line text-gray-700">
             {product.description || 'Tidak ada deskripsi.'}
           </p>
         </div>

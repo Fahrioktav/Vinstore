@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use App\Services\PriceGuessService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -24,11 +24,11 @@ class ProductController extends Controller
         // Sembunyikan produk yang sudah sold out (stok habis) dari halaman produk
         $query = Product::approved()->where('stock', '>', 0);
 
-        if (!empty($keyword)) {
+        if (! empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
-                ->orWhere('category', 'like', "%{$keyword}%")
-                ->orWhere('description', 'like', "%{$keyword}%");
+                    ->orWhere('category', 'like', "%{$keyword}%")
+                    ->orWhere('description', 'like', "%{$keyword}%");
             });
         }
 
@@ -146,26 +146,26 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
+            $imageName = time().'_'.$image->getClientOriginalName();
             $imagePath = $image->storeAs('products', $imageName, 'public');
         }
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $galleryImage) {
-                $galleryName = time() . '_' . $index . '_' . $galleryImage->getClientOriginalName();
+                $galleryName = time().'_'.$index.'_'.$galleryImage->getClientOriginalName();
                 $galleryPaths[] = $galleryImage->storeAs('products', $galleryName, 'public');
             }
         }
 
         if ($request->hasFile('video')) {
             $video = $request->file('video');
-            $videoName = time() . '_video_' . $video->getClientOriginalName();
+            $videoName = time().'_video_'.$video->getClientOriginalName();
             $videoPath = $video->storeAs('product-videos', $videoName, 'public');
         }
 
         if ($request->hasFile('certificate')) {
             $certificate = $request->file('certificate');
-            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificateName = time().'_certificate_'.$certificate->getClientOriginalName();
             $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
         }
 
@@ -244,7 +244,7 @@ class ProductController extends Controller
             }
             // Upload gambar baru
             $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
+            $imageName = time().'_'.$image->getClientOriginalName();
             $imagePath = $image->storeAs('products', $imageName, 'public');
             $product->image = $imagePath;
         }
@@ -259,7 +259,7 @@ class ProductController extends Controller
             }
             $galleryPaths = [];
             foreach ($request->file('images') as $index => $galleryImage) {
-                $galleryName = time() . '_' . $index . '_' . $galleryImage->getClientOriginalName();
+                $galleryName = time().'_'.$index.'_'.$galleryImage->getClientOriginalName();
                 $galleryPaths[] = $galleryImage->storeAs('products', $galleryName, 'public');
             }
             $product->images = $galleryPaths;
@@ -271,7 +271,7 @@ class ProductController extends Controller
                 Storage::disk('public')->delete($product->video);
             }
             $video = $request->file('video');
-            $videoName = time() . '_video_' . $video->getClientOriginalName();
+            $videoName = time().'_video_'.$video->getClientOriginalName();
             $product->video = $video->storeAs('product-videos', $videoName, 'public');
         }
 
@@ -283,7 +283,7 @@ class ProductController extends Controller
             }
             // Upload gambar baru
             $certificate = $request->file('certificate');
-            $certificateName = time() . '_certificate_' . $certificate->getClientOriginalName();
+            $certificateName = time().'_certificate_'.$certificate->getClientOriginalName();
             $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
             $product->certificate = $certificatePath;
         }
@@ -329,11 +329,12 @@ class ProductController extends Controller
         return redirect()->route('seller.dashboard')->with('success', $message);
     }
 
-    public function updateStock(Request $request, $id) {
+    public function updateStock(Request $request, $id)
+    {
         $validator = Validator::make($request->all(), [
             'stock' => 'required|integer',
         ]);
-        
+
         if ($validator->fails()) {
             return back()->with('error', $validator->errors());
         }
@@ -346,7 +347,7 @@ class ProductController extends Controller
         }
 
         $product->stock = $request->stock;
-        $product->save();   
+        $product->save();
 
         return back()->with('success', 'Stok produk berhasil diperbarui.');
     }
@@ -360,11 +361,16 @@ class ProductController extends Controller
             abort(403, 'Anda tidak memiliki akses ke produk ini.');
         }
 
+        // Produk boleh dihapus kapan pun. Riwayat pesanan pembeli TIDAK ikut
+        // terhapus: foreign key orders.product_id sudah nullOnDelete dan setiap
+        // pesanan menyimpan snapshot nama & harga produknya sendiri.
         $product->delete();
+
         return back()->with('success', 'Produk berhasil dihapus.');
     }
 
-    public function create() {
+    public function create()
+    {
         $sessions = [
             'error' => session('error'),
             'success' => session('success'),
@@ -377,11 +383,16 @@ class ProductController extends Controller
     public function edit($id)
     {
         $product = Product::where('public_id', $id)->firstOrFail();
+
+        // Pastikan hanya pemilik toko yang bisa membuka form edit. Tanpa cek ini
+        // seller lain dapat melihat seluruh data produk — termasuk harga asli
+        // produk Tebak Harga yang seharusnya dirahasiakan dari calon penebak.
+        if ($product->store->user_id !== Auth::id()) {
+            abort(403, 'Anda tidak memiliki akses ke produk ini.');
+        }
+
         $categories = Category::orderBy('name')->get(['name']);
 
         return Inertia::render('seller/products/edit', compact('product', 'categories'));
-
-        $product->update($data);
-        return redirect()->route('seller.dashboard')->with('success', 'Produk berhasil diperbarui.');
     }
 }

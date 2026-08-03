@@ -46,12 +46,23 @@ export default function SellerCreateAuctionPage() {
 
                 <div>
                   <AuthLabel htmlFor="description">Deskripsi</AuthLabel>
-                  <AuthTextArea id="description" name="description" rows="4" required />
+                  <AuthTextArea
+                    id="description"
+                    name="description"
+                    rows="4"
+                    required
+                  />
                 </div>
 
                 <div>
                   <AuthLabel htmlFor="image">Foto Barang</AuthLabel>
-                  <AuthInput id="image" type="file" name="image" accept="image/*" required />
+                  <AuthInput
+                    id="image"
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    required
+                  />
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -66,7 +77,9 @@ export default function SellerCreateAuctionPage() {
                     />
                   </div>
                   <div>
-                    <AuthLabel htmlFor="min_increment">Minimal Kenaikan Bid</AuthLabel>
+                    <AuthLabel htmlFor="min_increment">
+                      Minimal Kenaikan Bid
+                    </AuthLabel>
                     <AuthInput
                       id="min_increment"
                       type="number"
@@ -80,16 +93,28 @@ export default function SellerCreateAuctionPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     <AuthLabel htmlFor="starts_at">Tanggal Mulai</AuthLabel>
-                    <AuthInput id="starts_at" type="datetime-local" name="starts_at" required />
+                    <AuthInput
+                      id="starts_at"
+                      type="datetime-local"
+                      name="starts_at"
+                      required
+                    />
                   </div>
                   <div>
                     <AuthLabel htmlFor="ends_at">Tanggal Selesai</AuthLabel>
-                    <AuthInput id="ends_at" type="datetime-local" name="ends_at" required />
+                    <AuthInput
+                      id="ends_at"
+                      type="datetime-local"
+                      name="ends_at"
+                      required
+                    />
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-4">
-                  <AuthButtonLink href="/seller/dashboard">Kembali</AuthButtonLink>
+                  <AuthButtonLink href="/seller/dashboard">
+                    Kembali
+                  </AuthButtonLink>
                   <AuthButton type="submit">Ajukan Lelang</AuthButton>
                 </div>
               </>

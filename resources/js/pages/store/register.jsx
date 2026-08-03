@@ -57,7 +57,7 @@ export default function StoreRegisterPage() {
               value={data.store_name}
               onChange={(e) => setData('store_name', e.target.value)}
               placeholder="Contoh: Toko Antik Jaya"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:outline-none focus:ring-2 focus:ring-[#4a5b4d]/20"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:ring-2 focus:ring-[#4a5b4d]/20 focus:outline-none"
               required
             />
             {errors.store_name && (
@@ -75,7 +75,7 @@ export default function StoreRegisterPage() {
               value={data.category}
               onChange={(e) => setData('category', e.target.value)}
               placeholder="Contoh: Barang Antik"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:outline-none focus:ring-2 focus:ring-[#4a5b4d]/20"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:ring-2 focus:ring-[#4a5b4d]/20 focus:outline-none"
               required
             />
             {errors.category && (
@@ -93,7 +93,7 @@ export default function StoreRegisterPage() {
               onChange={(e) => setData('description', e.target.value)}
               placeholder="Ceritakan tentang toko Anda..."
               rows="4"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:outline-none focus:ring-2 focus:ring-[#4a5b4d]/20"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:ring-2 focus:ring-[#4a5b4d]/20 focus:outline-none"
               required
             />
             {errors.description && (
@@ -111,7 +111,7 @@ export default function StoreRegisterPage() {
               value={data.location}
               onChange={(e) => setData('location', e.target.value)}
               placeholder="Contoh: Jakarta Selatan"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:outline-none focus:ring-2 focus:ring-[#4a5b4d]/20"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-[#4a5b4d] focus:ring-2 focus:ring-[#4a5b4d]/20 focus:outline-none"
               required
             />
             {errors.location && (

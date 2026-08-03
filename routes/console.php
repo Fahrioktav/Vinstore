@@ -1,12 +1,12 @@
 <?php
 
+use App\Models\Auction;
+use App\Models\AuctionBid;
+use App\Models\Order;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
-use App\Models\Auction;
-use App\Models\AuctionBid;
-use App\Models\Order;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -26,7 +26,7 @@ Artisan::command('auctions:finish', function () {
             DB::transaction(function () use ($auction) {
                 $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->first();
 
-                if (!$auction || $auction->status === 'ended') {
+                if (! $auction || $auction->status === 'ended') {
                     return;
                 }
 
@@ -46,15 +46,23 @@ Artisan::command('auctions:finish', function () {
 
                 $auction->update($updates);
 
-                if ($highestBid && !Order::where('auction_id', $auction->id)->exists()) {
+                if ($highestBid && ! Order::where('auction_id', $auction->id)->exists()) {
                     $order = Order::create([
                         'user_id' => $highestBid->user_id,
                         'product_id' => null,
+                        // Snapshot agar riwayat pesanan lelang tetap terbaca
+                        // meski lelang atau tokonya dihapus.
+                        'product_name' => $auction->name,
+                        'product_price' => $highestBid->amount,
                         'auction_id' => $auction->id,
                         'store_id' => $auction->store_id,
+                        'store_name' => $auction->store?->store_name,
                         'quantity' => 1,
                         'price' => $highestBid->amount,
                         'status' => 'Waiting',
+                        // Lelang tidak punya form checkout, jadi alamat diambil
+                        // dari profil pemenang agar seller punya tujuan kirim.
+                        'shipping_address' => $highestBid->user?->address,
                         'payment_status' => 'pending',
                         'payment_method' => 'midtrans',
                     ]);
@@ -76,17 +84,61 @@ Artisan::command('tebak-harga:finish', function () {
 
 Schedule::command('tebak-harga:finish')->everyMinute();
 
+/**
+ * Selesaikan pesanan yang sudah lewat masa sanggah pembeli.
+ *
+ * Command ini HANYA memindahkan status Delivered -> Completed supaya siklus
+ * pesanan tidak menggantung saat pembeli lupa mengonfirmasi. Ia tidak lagi
+ * menyentuh uang: pencairan dana kini selalu lewat pengajuan seller yang
+ * disetujui admin (PayoutRequest).
+ *
+ * Pesanan yang punya pengajuan refund berstatus pending sengaja dilewati:
+ * sengketanya harus diputus admin lebih dulu.
+ */
+Artisan::command('orders:auto-complete', function () {
+    $deadline = now()->subDays(Order::BUYER_CONFIRMATION_WINDOW_DAYS);
+    $completed = 0;
+
+    Order::where('status', 'Delivered')
+        ->where('payment_status', 'paid')
+        ->whereNull('completed_at')
+        ->whereNotNull('delivered_at')
+        ->where('delivered_at', '<=', $deadline)
+        ->whereDoesntHave('refundRequest', fn ($query) => $query->where('status', 'pending'))
+        ->each(function (Order $order) use (&$completed) {
+            DB::transaction(function () use ($order, &$completed) {
+                $locked = Order::whereKey($order->getKey())->lockForUpdate()->first();
+
+                if (! $locked || $locked->status !== 'Delivered') {
+                    return;
+                }
+
+                $locked->forceFill([
+                    'status' => 'Completed',
+                    'completed_at' => now(),
+                ])->save();
+
+                $completed++;
+            });
+        });
+
+    $this->info("Auto-completed {$completed} order(s) past the buyer confirmation window.");
+})->purpose('Complete delivered orders whose buyer confirmation window has expired');
+
+Schedule::command('orders:auto-complete')->hourly();
+
 // Test command untuk simulasi webhook Midtrans barter payment
 Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', function ($paymentReference, $status) {
     $serverKey = config('services.midtrans.server_key');
-    
+
     if (empty($serverKey)) {
         $this->error('MIDTRANS_SERVER_KEY not configured');
+
         return 1;
     }
 
     // Generate signature sesuai format Midtrans
-    $statusCode = match($status) {
+    $statusCode = match ($status) {
         'settlement', 'capture' => '200',
         'pending' => '201',
         'deny' => '400',
@@ -97,16 +149,17 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
 
     // Cari barter berdasarkan payment reference
     $barter = \App\Models\BarterRequest::where('payment_reference', $paymentReference)->first();
-    
-    if (!$barter) {
+
+    if (! $barter) {
         $this->error("Barter with payment reference '{$paymentReference}' not found");
+
         return 1;
     }
 
     $grossAmount = (string) (int) $barter->additional_cash;
-    $transactionId = 'TEST-' . time();
+    $transactionId = 'TEST-'.time();
 
-    $signature = hash('sha512', $paymentReference . $statusCode . $grossAmount . $serverKey);
+    $signature = hash('sha512', $paymentReference.$statusCode.$grossAmount.$serverKey);
 
     $payload = [
         'transaction_time' => now()->toIso8601String(),
@@ -123,7 +176,7 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
         'currency' => 'IDR',
     ];
 
-    $this->info("Sending webhook notification to: /midtrans/barter/notification");
+    $this->info('Sending webhook notification to: /midtrans/barter/notification');
     $this->info("Payment Reference: {$paymentReference}");
     $this->info("Status: {$status}");
     $this->line('');
@@ -137,25 +190,26 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
 
         if ($response->successful()) {
             $this->info('✅ Webhook sent successfully!');
-            $this->line('Response: ' . $response->body());
-            
+            $this->line('Response: '.$response->body());
+
             // Refresh barter status
             $barter->refresh();
             $this->line('');
             $this->info('Updated Barter Status:');
             $this->line("  Payment Status: {$barter->payment_status}");
             $this->line("  Barter Status: {$barter->status}");
-            
+
             if ($barter->payment_status === 'paid') {
                 $this->info('  ✅ Payment completed and products exchanged!');
             }
         } else {
             $this->error('❌ Webhook failed!');
-            $this->line('Status: ' . $response->status());
-            $this->line('Response: ' . $response->body());
+            $this->line('Status: '.$response->status());
+            $this->line('Response: '.$response->body());
         }
     } catch (\Exception $e) {
-        $this->error('❌ Error: ' . $e->getMessage());
+        $this->error('❌ Error: '.$e->getMessage());
+
         return 1;
     }
 

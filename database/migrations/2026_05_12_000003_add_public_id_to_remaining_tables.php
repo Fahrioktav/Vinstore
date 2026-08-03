@@ -55,7 +55,7 @@ return new class extends Migration
     private function generatePublicId(string $tableName, string $prefix): string
     {
         do {
-            $publicId = $prefix . random_int(10000000, 99999999);
+            $publicId = $prefix.random_int(10000000, 99999999);
         } while (DB::table($tableName)->where('public_id', $publicId)->exists());
 
         return $publicId;

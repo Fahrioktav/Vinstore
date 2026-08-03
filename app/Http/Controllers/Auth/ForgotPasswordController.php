@@ -16,7 +16,7 @@ class ForgotPasswordController extends Controller
     public function showLinkRequestForm()
     {
         return Inertia::render('auth/forgot-password', [
-            'heroText' => 'Lupa Password?'
+            'heroText' => 'Lupa Password?',
         ]);
     }
 
@@ -26,41 +26,33 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ], [
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
-            'email.exists' => 'Email tidak terdaftar di sistem kami.',
         ]);
+
+        // Balasan seragam untuk semua kasus. Membedakan "email terdaftar" dan
+        // "tidak terdaftar" akan membocorkan daftar akun ke penyerang.
+        $genericMessage = 'Jika email tersebut terdaftar, kami telah mengirimkan link reset password ke sana. Silakan periksa kotak masuk Anda.';
 
         $user = User::where('email', $request->email)->first();
 
-        if ($user && $user->google_id && empty($user->password)) {
+        if (! $user) {
+            return back()->with('status', $genericMessage);
+        }
+
+        if ($user->google_id && empty($user->password)) {
             return back()->withErrors([
                 'email' => 'Akun ini terdaftar menggunakan Google. Silakan login dengan tombol Google.',
             ]);
         }
 
-        if (config('mail.default') === 'log') {
-            // Generate token untuk reset password
-            $token = app('auth.password.broker')->createToken($user);
+        // Link reset HANYA dikirim lewat email. Sebelumnya, saat MAIL_MAILER=log
+        // token reset dikembalikan langsung ke browser — siapa pun bisa mengambil
+        // alih akun mana pun cukup dengan mengetahui alamat emailnya.
+        Password::sendResetLink($request->only('email'));
 
-            return back()
-                ->with('status', 'Mode email masih log. Gunakan link reset di bawah ini untuk mengganti password.')
-                ->with('reset_url', route('password.reset', [
-                    'token' => $token,
-                    'email' => $user->email,
-                ]));
-        }
-
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return back()->with('status', 'Link reset password telah dikirim ke email Anda!');
-        }
-
-        return back()->withErrors(['email' => 'Gagal mengirim link reset password.']);
+        return back()->with('status', $genericMessage);
     }
 }

@@ -105,7 +105,10 @@ export default function CategoriesIndex({ categories }) {
                                 icon: '🗑️',
                                 variant: 'destructive',
                                 onClick: () =>
-                                  handleDelete(category.public_id, category.name),
+                                  handleDelete(
+                                    category.public_id,
+                                    category.name
+                                  ),
                               },
                             ]}
                           />

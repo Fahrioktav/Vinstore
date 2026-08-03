@@ -39,7 +39,7 @@ class PriceGuess extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'PGS' . random_int(10000000, 99999999);
+            $publicId = 'PGS'.random_int(10000000, 99999999);
         } while (DB::table('price_guesses')->where('public_id', $publicId)->exists());
 
         return $publicId;

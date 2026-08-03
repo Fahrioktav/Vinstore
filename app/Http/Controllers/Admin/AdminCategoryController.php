@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Category;
-use Inertia\Inertia;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class AdminCategoryController extends Controller
 {
     public function index()
     {
         $categories = Category::all();
+
         return Inertia::render('admin/categories/index', compact('categories'));
     }
 
@@ -25,7 +26,7 @@ class AdminCategoryController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $data = ['name' => $request->name];
@@ -43,6 +44,7 @@ class AdminCategoryController extends Controller
     public function edit($id)
     {
         $category = Category::where('public_id', $id)->firstOrFail();
+
         return Inertia::render('admin/categories/edit', compact('category'));
     }
 
@@ -50,7 +52,7 @@ class AdminCategoryController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $category = Category::where('public_id', $id)->firstOrFail();
@@ -73,13 +75,14 @@ class AdminCategoryController extends Controller
     public function destroy($id)
     {
         $category = Category::where('public_id', $id)->firstOrFail();
-        
+
         // Hapus gambar jika ada
         if ($category->image && Storage::disk('public')->exists($category->image)) {
             Storage::disk('public')->delete($category->image);
         }
-        
+
         $category->delete();
+
         return back()->with('success', 'Kategori berhasil dihapus.');
     }
 }

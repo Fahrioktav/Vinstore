@@ -70,11 +70,19 @@ function storageUrl(path) {
     return null;
   }
 
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/')) {
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('/')
+  ) {
     return path;
   }
 
-  if (path.startsWith('storage/') || path.startsWith('uploads/') || path.startsWith('assets/')) {
+  if (
+    path.startsWith('storage/') ||
+    path.startsWith('uploads/') ||
+    path.startsWith('assets/')
+  ) {
     return `/${path}`;
   }
 

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Store;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +13,6 @@ use Inertia\Inertia;
 
 class StoreController extends Controller
 {
-
     public function showRegisterForm()
     {
         $user = Auth::user();
@@ -32,45 +31,46 @@ class StoreController extends Controller
         $latitude = $request->query('latitude');
         $longitude = $request->query('longitude');
         $radius = $request->query('radius', 10); // Default 10 km
-        
+
         // Jika ada koordinat, gunakan nearby search
         if ($latitude !== null && $longitude !== null) {
             $query = Store::nearby(
-                floatval($latitude), 
-                floatval($longitude), 
+                floatval($latitude),
+                floatval($longitude),
                 floatval($radius)
             );
-            
+
             // Filter berdasarkan keyword jika ada
-            if (!empty($keyword)) {
+            if (! empty($keyword)) {
                 $query->where(function ($q) use ($keyword) {
                     $q->where('store_name', 'like', "%{$keyword}%")
-                    ->orWhere('description', 'like', "%{$keyword}%")
-                    ->orWhere('category', 'like', "%{$keyword}%")
-                    ->orWhere('location', 'like', "%{$keyword}%");
+                        ->orWhere('description', 'like', "%{$keyword}%")
+                        ->orWhere('category', 'like', "%{$keyword}%")
+                        ->orWhere('location', 'like', "%{$keyword}%");
                 });
             }
-            
+
             $stores = $query->get()->map(function ($store) {
                 // Tambahkan informasi jarak yang sudah diformat
                 $store->distance_text = $store->distance < 1
-                    ? round($store->distance * 1000) . ' meter'
-                    : round($store->distance, 1) . ' km';
+                    ? round($store->distance * 1000).' meter'
+                    : round($store->distance, 1).' km';
+
                 return $store;
             });
         } else {
             // Jika tidak ada koordinat, tampilkan semua toko (mode lama)
             $query = Store::latest();
 
-            if (!empty($keyword)) {
+            if (! empty($keyword)) {
                 $query->where(function ($q) use ($keyword) {
                     $q->where('store_name', 'like', "%{$keyword}%")
-                    ->orWhere('description', 'like', "%{$keyword}%")
-                    ->orWhere('category', 'like', "%{$keyword}%")
-                    ->orWhere('location', 'like', "%{$keyword}%");
+                        ->orWhere('description', 'like', "%{$keyword}%")
+                        ->orWhere('category', 'like', "%{$keyword}%")
+                        ->orWhere('location', 'like', "%{$keyword}%");
                 });
             }
-            
+
             $stores = $query->get();
         }
 
@@ -82,7 +82,6 @@ class StoreController extends Controller
             'searchRadius' => floatval($radius),
         ]);
     }
-
 
     public function register(Request $request)
     {
@@ -104,13 +103,13 @@ class StoreController extends Controller
         ]);
 
         $storeData = [
-            'user_id'     => $user->id,
-            'store_name'  => $request->store_name,
-            'category'    => $request->category,
+            'user_id' => $user->id,
+            'store_name' => $request->store_name,
+            'category' => $request->category,
             'description' => $request->description,
-            'location'    => $request->location,
-            'latitude'    => $request->latitude,
-            'longitude'   => $request->longitude,
+            'location' => $request->location,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
         ];
 
         // Handle photo upload
@@ -123,7 +122,7 @@ class StoreController extends Controller
         Store::create($storeData);
 
         User::where('id', $user->id)->update([
-            'role' => 'seller'
+            'role' => 'seller',
         ]);
 
         return redirect('/profile')->with('success', 'Toko berhasil didaftarkan!');
@@ -164,7 +163,7 @@ class StoreController extends Controller
         $user = Auth::user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return redirect()->route('store.register')->with('error', 'Anda belum memiliki toko!');
         }
 
@@ -176,7 +175,7 @@ class StoreController extends Controller
         $user = Auth::user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return redirect()->route('store.register')->with('error', 'Anda belum memiliki toko!');
         }
 

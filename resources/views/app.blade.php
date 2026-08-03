@@ -25,7 +25,9 @@
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192x192.png') }}">
     
     <!-- Midtrans Snap Script -->
-    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    {{-- URL-nya mengikuti MIDTRANS_IS_PRODUCTION. Sebelumnya di-hardcode ke
+         sandbox, sehingga token yang dibuat server produksi tidak bisa dibuka. --}}
+    <script type="text/javascript" src="{{ config('services.midtrans.snap_js_url') }}" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
     
     @vite('resources/js/app.jsx')
     @inertiaHead

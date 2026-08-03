@@ -56,11 +56,11 @@ export default function ProductDetailPage() {
                   ? getProductImage({ image: activeImage })
                   : getProductImage(product)
               }
-              className="h-80 w-full object-contain bg-gray-50"
+              className="h-80 w-full bg-gray-50 object-contain"
               alt={product.name}
             />
           </div>
-          
+
           {/* Thumbnail Gallery */}
           {gallery.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
@@ -84,7 +84,7 @@ export default function ProductDetailPage() {
               ))}
             </div>
           )}
-          
+
           {/* Video Produk */}
           {product.video && (
             <div className="rounded-lg border border-gray-200 p-4">
@@ -104,8 +104,10 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           {/* Nama Produk & Badges */}
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h3 className="text-2xl font-bold text-[#2F3E46]">{product.name}</h3>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h3 className="text-2xl font-bold text-[#2F3E46]">
+                {product.name}
+              </h3>
             </div>
             <div className="flex flex-wrap gap-2">
               {isTebakHarga && (
@@ -129,15 +131,21 @@ export default function ProductDetailPage() {
           {/* Informasi Toko */}
           {product.store && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Penjual</p>
+              <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
+                Penjual
+              </p>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#53685B] flex items-center justify-center text-white font-bold">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#53685B] font-bold text-white">
                   {product.store.store_name?.[0]?.toUpperCase() || 'S'}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{product.store.store_name || 'Toko'}</p>
+                  <p className="font-semibold text-gray-900">
+                    {product.store.store_name || 'Toko'}
+                  </p>
                   {product.store.address && (
-                    <p className="text-xs text-gray-500">📍 {product.store.address}</p>
+                    <p className="text-xs text-gray-500">
+                      📍 {product.store.address}
+                    </p>
                   )}
                 </div>
               </div>
@@ -148,7 +156,9 @@ export default function ProductDetailPage() {
           <div className="rounded-lg border-2 border-[#B77C4C] bg-[#B77C4C]/5 p-4">
             <div className="space-y-2">
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Harga</p>
+                <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
+                  Harga
+                </p>
                 <p className="text-3xl font-bold text-[#B77C4C]">
                   {priceHidden ? (
                     <span>??? (Tebak Harga)</span>
@@ -157,11 +167,15 @@ export default function ProductDetailPage() {
                   )}
                 </p>
               </div>
-              <div className="pt-2 border-t border-gray-200">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Stok Tersedia</p>
+              <div className="border-t border-gray-200 pt-2">
+                <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
+                  Stok Tersedia
+                </p>
                 <p className="text-lg font-bold text-gray-900">
                   {product.stock > 0 ? (
-                    <span className="text-green-600">✓ {product.stock} unit</span>
+                    <span className="text-green-600">
+                      ✓ {product.stock} unit
+                    </span>
                   ) : (
                     <span className="text-red-600">✗ Habis</span>
                   )}
@@ -172,8 +186,10 @@ export default function ProductDetailPage() {
 
           {/* Deskripsi */}
           <div className="rounded-lg border border-gray-200 p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Deskripsi Produk</p>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+            <p className="mb-2 text-xs font-semibold text-gray-500 uppercase">
+              Deskripsi Produk
+            </p>
+            <p className="text-sm leading-relaxed whitespace-pre-line text-gray-700">
               {product.description || 'Tidak ada deskripsi'}
             </p>
           </div>
@@ -182,12 +198,12 @@ export default function ProductDetailPage() {
           {product.certificate && (
             <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4">
               <div className="flex items-start gap-3">
-                <BadgeIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                <BadgeIcon className="mt-1 h-6 w-6 flex-shrink-0 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-800 mb-1">
+                  <p className="mb-1 font-semibold text-green-800">
                     Produk Bersertifikat
                   </p>
-                  <p className="text-sm text-green-700 mb-2">
+                  <p className="mb-2 text-sm text-green-700">
                     Produk ini dilengkapi dengan sertifikat keaslian resmi
                   </p>
                   <a
@@ -229,7 +245,7 @@ function NormalPurchaseActions({ product }) {
 
       <Link
         href={`/checkout/product/${product.public_id}`}
-        className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:cursor-pointer hover:bg-[#3c4a3e] inline-block"
+        className="inline-block rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:cursor-pointer hover:bg-[#3c4a3e]"
       >
         Beli Sekarang
       </Link>
@@ -270,7 +286,10 @@ function TebakHargaSection({ product, tebakHarga }) {
       {status === 'scheduled' && (
         <p className="mt-4 rounded-md bg-white p-4 text-sm text-gray-600">
           Periode tebak harga belum dimulai. Silakan kembali lagi pada{' '}
-          <span className="font-semibold">{formatDateTime(guess_starts_at)}</span>.
+          <span className="font-semibold">
+            {formatDateTime(guess_starts_at)}
+          </span>
+          .
         </p>
       )}
 
@@ -344,7 +363,7 @@ function TebakHargaSection({ product, tebakHarga }) {
                 <div className="mt-4">
                   <Link
                     href={`/checkout/product/${product.public_id}`}
-                    className="rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e] inline-block"
+                    className="inline-block rounded-md bg-[#53685B] px-6 py-2 font-semibold text-white hover:bg-[#3c4a3e]"
                   >
                     Beli Sekarang
                   </Link>

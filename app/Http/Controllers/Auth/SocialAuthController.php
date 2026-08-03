@@ -44,7 +44,7 @@ class SocialAuthController extends Controller
 
             if ($user) {
                 // Update google_id jika belum ada
-                if (!$user->google_id) {
+                if (! $user->google_id) {
                     $user->google_id = $googleId;
                     $user->save();
                 }
@@ -95,7 +95,7 @@ class SocialAuthController extends Controller
         $counter = 1;
 
         while (User::where('username', $username)->exists()) {
-            $username = $baseUsername . $counter;
+            $username = $baseUsername.$counter;
             $counter++;
         }
 
@@ -107,12 +107,12 @@ class SocialAuthController extends Controller
      */
     private function generateGooglePlaceholderPhone($googleId)
     {
-        $basePhone = 'google-' . $googleId;
+        $basePhone = 'google-'.$googleId;
         $phone = $basePhone;
         $counter = 1;
 
         while (User::where('phone', $phone)->exists()) {
-            $phone = $basePhone . '-' . $counter;
+            $phone = $basePhone.'-'.$counter;
             $counter++;
         }
 

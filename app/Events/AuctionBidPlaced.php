@@ -14,6 +14,7 @@ class AuctionBidPlaced implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $bid;
+
     public $auctionData;
 
     /**
@@ -30,7 +31,7 @@ class AuctionBidPlaced implements ShouldBroadcastNow
      */
     public function broadcastOn(): Channel
     {
-        return new Channel('auction.' . $this->bid->auction_id);
+        return new Channel('auction.'.$this->bid->auction_id);
     }
 
     /**

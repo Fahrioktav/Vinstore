@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Auction;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -57,14 +57,14 @@ class ValidatorController extends Controller
                 ->whereIn('approval_status', [Product::STATUS_PENDING_ADMIN, Product::STATUS_APPROVED])
                 ->count()
                 + Auction::where('validated_by', Auth::id())
-                ->whereIn('approval_status', [Auction::STATUS_PENDING_ADMIN, Auction::STATUS_APPROVED])
-                ->count(),
+                    ->whereIn('approval_status', [Auction::STATUS_PENDING_ADMIN, Auction::STATUS_APPROVED])
+                    ->count(),
             'rejected' => Product::where('validated_by', Auth::id())
                 ->where('approval_status', Product::STATUS_REJECTED)
                 ->count()
                 + Auction::where('validated_by', Auth::id())
-                ->where('approval_status', Auction::STATUS_REJECTED)
-                ->count(),
+                    ->where('approval_status', Auction::STATUS_REJECTED)
+                    ->count(),
         ];
 
         return Inertia::render('validator/dashboard', compact(

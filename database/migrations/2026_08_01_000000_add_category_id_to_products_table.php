@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -24,7 +24,7 @@ return new class extends Migration
                 continue;
             }
             $catId = DB::table('categories')->where('name', $name)->value('id');
-            if (!$catId) {
+            if (! $catId) {
                 $catId = DB::table('categories')->insertGetId([
                     'name' => $name,
                     'created_at' => now(),

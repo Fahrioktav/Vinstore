@@ -22,3 +22,6 @@ yarn-error.log
 /.vscode
 /.zed
 docs/
+
+# Arsip build lokal (128 MB) — jangan pernah di-commit
+app.zip

@@ -57,9 +57,7 @@ export default function LocationPicker({
     longitude !== undefined &&
     longitude !== '';
 
-  const position = hasPosition
-    ? [Number(latitude), Number(longitude)]
-    : null;
+  const position = hasPosition ? [Number(latitude), Number(longitude)] : null;
 
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState(null);
@@ -82,10 +80,12 @@ export default function LocationPicker({
         setLocating(false);
       },
       () => {
-        setError('Gagal mengambil lokasi. Izinkan akses lokasi atau pilih manual di peta.');
+        setError(
+          'Gagal mengambil lokasi. Izinkan akses lokasi atau pilih manual di peta.'
+        );
         setLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -140,10 +140,12 @@ export default function LocationPicker({
 
       <div className="flex flex-wrap gap-4 text-xs text-gray-600">
         <span>
-          Latitude: <strong>{hasPosition ? Number(latitude).toFixed(6) : '-'}</strong>
+          Latitude:{' '}
+          <strong>{hasPosition ? Number(latitude).toFixed(6) : '-'}</strong>
         </span>
         <span>
-          Longitude: <strong>{hasPosition ? Number(longitude).toFixed(6) : '-'}</strong>
+          Longitude:{' '}
+          <strong>{hasPosition ? Number(longitude).toFixed(6) : '-'}</strong>
         </span>
       </div>
 

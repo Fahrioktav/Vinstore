@@ -97,7 +97,9 @@ export default function SupportChat() {
                   <div
                     className={cn(
                       'max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm',
-                      mine ? 'bg-[#53685B] text-white' : 'bg-white text-gray-700'
+                      mine
+                        ? 'bg-[#53685B] text-white'
+                        : 'bg-white text-gray-700'
                     )}
                   >
                     {!mine && (

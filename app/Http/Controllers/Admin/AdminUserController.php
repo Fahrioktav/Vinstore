@@ -12,24 +12,26 @@ class AdminUserController extends Controller
     public function index()
     {
         $users = User::where('role', 'user')->get();
+
         return Inertia::render('admin/users/index', compact('users'));
     }
 
     public function edit($id)
     {
         $editedUser = User::where('role', 'user')->where('public_id', $id)->firstOrFail();
+
         return Inertia::render('admin/users/edit', compact('editedUser'));
     }
 
     public function update(Request $request, $id)
     {
         $user = User::where('role', 'user')->where('public_id', $id)->firstOrFail();
-        
+
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users,username,' . $user->getKey(),
+            'username' => 'required|string|max:255|unique:users,username,'.$user->getKey(),
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->getKey(),
+            'email' => 'required|email|unique:users,email,'.$user->getKey(),
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
         ]);
@@ -42,12 +44,12 @@ class AdminUserController extends Controller
     public function destroy($id)
     {
         $user = User::where('role', 'user')->where('public_id', $id)->firstOrFail();
-        
+
         // Hapus orders yang terkait
         $user->orders()->delete();
-        
+
         $user->delete();
-        
+
         return redirect()->back()->with('success', 'User berhasil dihapus.');
     }
 }

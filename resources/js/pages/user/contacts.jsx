@@ -14,7 +14,9 @@ export default function UserContacts({ contacts }) {
       closed: 'Ditutup',
     };
     return (
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badges[status]}`}>
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-semibold ${badges[status]}`}
+      >
         {labels[status]}
       </span>
     );
@@ -68,7 +70,9 @@ export default function UserContacts({ contacts }) {
               </div>
 
               <div className="mb-4 rounded-lg bg-gray-50 p-4">
-                <p className="text-sm font-semibold text-gray-700">Pesan Anda:</p>
+                <p className="text-sm font-semibold text-gray-700">
+                  Pesan Anda:
+                </p>
                 <p className="mt-2 text-gray-600">{contact.message}</p>
               </div>
 

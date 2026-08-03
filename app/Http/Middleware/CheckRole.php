@@ -9,11 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    static $defaultRoutesByRole = [
+    public static $defaultRoutesByRole = [
         'user' => '/',
         'seller' => '/seller/dashboard',
         'validator' => '/validator/dashboard',
-        'admin' => '/admin/dashboard'
+        'admin' => '/admin/dashboard',
     ];
 
     /**
@@ -25,7 +25,7 @@ class CheckRole
     {
         // Jika guest (belum login) dan middleware tidak mengandung route:guestOnly
         // suruh guest untuk login
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             if (in_array('guestOnly', $roles)) {
                 return $next($request);
             } else {
@@ -37,7 +37,7 @@ class CheckRole
         // arahkan ke route default
         $role = Auth::user()->role;
 
-        if (!in_array($role, $roles)) {
+        if (! in_array($role, $roles)) {
             return redirect(self::$defaultRoutesByRole[$role] ?? '/');
         }
 

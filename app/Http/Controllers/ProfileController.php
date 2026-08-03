@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-use App\Models\User;
 
 class ProfileController extends Controller
 {
@@ -15,7 +15,7 @@ class ProfileController extends Controller
     {
         $userId = Auth::id();
         $user = User::with('store')->find($userId);
-        
+
         return Inertia::render('profile/edit', compact('user'));
     }
 
@@ -26,14 +26,14 @@ class ProfileController extends Controller
 
         // Validasi input
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users,username,' . $user->id . ',id',
+            'username' => 'required|string|max:255|unique:users,username,'.$user->id.',id',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id . ',id',
-            'phone' => 'required|string|max:20|unique:users,phone,' . $user->id . ',id',
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id.',id',
+            'phone' => 'required|string|max:20|unique:users,phone,'.$user->id.',id',
             'address' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'password' => 'nullable|string|min:6|confirmed'
+            'password' => 'nullable|string|min:6|confirmed',
         ]);
 
         // Update data user hanya jika field diisi

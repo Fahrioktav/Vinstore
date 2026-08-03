@@ -7,7 +7,11 @@ export default function AdminAuctions() {
   const { auctions, success, error } = usePage().props;
 
   const approve = (publicId) => {
-    router.post(`/admin/auctions/${publicId}/approve`, {}, { preserveScroll: true });
+    router.post(
+      `/admin/auctions/${publicId}/approve`,
+      {},
+      { preserveScroll: true }
+    );
   };
 
   const reject = (publicId) => {
@@ -78,7 +82,10 @@ export default function AdminAuctions() {
               <tbody>
                 {auctions.length > 0 ? (
                   auctions.map((auction) => (
-                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={auction.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3">
                         <img
                           src={getAuctionImage(auction)}
@@ -92,7 +99,9 @@ export default function AdminAuctions() {
                           {auction.bids_count} bid
                         </p>
                       </td>
-                      <td className="px-4 py-3">{auction.store?.store_name || '-'}</td>
+                      <td className="px-4 py-3">
+                        {auction.store?.store_name || '-'}
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-semibold text-[#53685B]">
                           {formatIDR(auction.current_price)}
@@ -108,22 +117,33 @@ export default function AdminAuctions() {
                       <td className="px-4 py-3 text-xs">
                         {auction.validator ? (
                           <div>
-                            <p className="font-semibold text-gray-700">{auction.validator.name}</p>
+                            <p className="font-semibold text-gray-700">
+                              {auction.validator.name}
+                            </p>
                             <p className="text-gray-500">
-                              {auction.validated_at ? formatDateTime(auction.validated_at) : '-'}
+                              {auction.validated_at
+                                ? formatDateTime(auction.validated_at)
+                                : '-'}
                             </p>
                           </div>
                         ) : (
-                          <span className="text-gray-400">Belum divalidasi</span>
+                          <span className="text-gray-400">
+                            Belum divalidasi
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[auction.approval_status] || 'bg-gray-100 text-gray-700'}`}>
-                          {approvalLabels[auction.approval_status] || auction.approval_status}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[auction.approval_status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {approvalLabels[auction.approval_status] ||
+                            auction.approval_status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusColors[auction.status] || 'bg-gray-100 text-gray-700'}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusColors[auction.status] || 'bg-gray-100 text-gray-700'}`}
+                        >
                           {auction.status}
                         </span>
                       </td>
@@ -155,7 +175,10 @@ export default function AdminAuctions() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="9"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       Belum ada lelang.
                     </td>
                   </tr>

@@ -13,6 +13,7 @@ class RefundRequest extends Model
     protected $fillable = [
         'public_id',
         'order_id',
+        'barter_request_id',
         'user_id',
         'reason',
         'proof_image',
@@ -25,9 +26,23 @@ class RefundRequest extends Model
     protected $hidden = [
         'id',
         'order_id',
+        'barter_request_id',
         'user_id',
         'reviewed_by',
     ];
+
+    protected $appends = [
+        'source_type',
+    ];
+
+    /**
+     * 'order' atau 'barter' — sanggahan bisa menunjuk pesanan jual-beli atau
+     * selisih uang barter yang gagal.
+     */
+    public function getSourceTypeAttribute(): string
+    {
+        return $this->barter_request_id !== null ? 'barter' : 'order';
+    }
 
     protected $casts = [
         'reviewed_at' => 'datetime',
@@ -45,7 +60,7 @@ class RefundRequest extends Model
     public static function generatePublicId(): string
     {
         do {
-            $publicId = 'REF' . random_int(10000000, 99999999);
+            $publicId = 'REF'.random_int(10000000, 99999999);
         } while (DB::table('refund_requests')->where('public_id', $publicId)->exists());
 
         return $publicId;
@@ -59,6 +74,11 @@ class RefundRequest extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function barterRequest()
+    {
+        return $this->belongsTo(BarterRequest::class);
     }
 
     public function user()

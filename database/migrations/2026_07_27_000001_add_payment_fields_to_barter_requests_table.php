@@ -21,18 +21,18 @@ return new class extends Migration
                 'pending',      // menunggu pembayaran
                 'paid',         // sudah dibayar
                 'failed',       // pembayaran gagal
-                'expired'       // pembayaran kadaluarsa
+                'expired',       // pembayaran kadaluarsa
             ])->default('not_required')->after('status');
 
             // Reference ID untuk tracking payment
             $table->string('payment_reference')->nullable()->after('payment_status');
-            
+
             // Snap token dari Midtrans
             $table->string('snap_token')->nullable()->after('payment_reference');
-            
+
             // Transaction ID dari Midtrans
             $table->string('midtrans_transaction_id')->nullable()->after('snap_token');
-            
+
             // Timestamp kapan payment selesai
             $table->timestamp('paid_at')->nullable()->after('midtrans_transaction_id');
         });

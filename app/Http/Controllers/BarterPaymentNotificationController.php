@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BarterRequest;
-use App\Models\Product;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,18 +18,20 @@ class BarterPaymentNotificationController extends Controller
         $payload = $request->all();
 
         // Validasi signature Midtrans
-        if (!$midtrans->isValidSignature($payload)) {
+        if (! $midtrans->isValidSignature($payload)) {
             Log::warning('Invalid Midtrans signature for barter payment', ['payload' => $payload]);
+
             return response()->json(['message' => 'Invalid Midtrans signature.'], 403);
         }
 
         $paymentReference = $payload['order_id'] ?? null;
-        
+
         // Cari barter request berdasarkan payment reference
         $barter = BarterRequest::where('payment_reference', $paymentReference)->first();
 
-        if (!$barter) {
+        if (! $barter) {
             Log::warning('Barter not found for payment reference', ['payment_reference' => $paymentReference]);
+
             return response()->json(['message' => 'Barter tidak ditemukan.'], 404);
         }
 
@@ -44,51 +45,36 @@ class BarterPaymentNotificationController extends Controller
 
         try {
             DB::transaction(function () use ($barter, $barterPaymentStatus, $payload) {
+                // Kunci baris agar webhook yang dikirim ulang oleh Midtrans
+                // tidak diproses dua kali secara bersamaan.
+                $barter = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
+
                 // Update payment status
                 $barter->payment_status = $barterPaymentStatus;
                 $barter->midtrans_transaction_id = $payload['transaction_id'] ?? $barter->midtrans_transaction_id;
 
-                // Jika pembayaran berhasil, tukar kepemilikan produk
                 if ($barterPaymentStatus === BarterRequest::PAYMENT_PAID) {
-                    $barter->paid_at = now();
+                    if ($barter->paid_at === null) {
+                        $barter->paid_at = now();
+                    }
                     $barter->save();
 
-                    // Lock dan tukar kepemilikan produk
-                    $offered = Product::where('id', $barter->offered_product_id)->lockForUpdate()->first();
-                    $requested = Product::where('id', $barter->requested_product_id)->lockForUpdate()->first();
-
-                    if ($offered && $requested) {
-                        // Tukar kepemilikan
-                        $requesterStoreId = $barter->requester_store_id;
-                        $responderStoreId = $barter->responder_store_id;
-
-                        $offered->store_id = $responderStoreId;
-                        $requested->store_id = $requesterStoreId;
-
-                        // Matikan flag barter
-                        $offered->is_barterable = false;
-                        $requested->is_barterable = false;
-
-                        $offered->save();
-                        $requested->save();
-
-                        // Batalkan pengajuan pending lain
-                        BarterRequest::where('status', BarterRequest::STATUS_PENDING)
-                            ->where('id', '!=', $barter->id)
-                            ->where(function ($query) use ($barter) {
-                                $query->whereIn('offered_product_id', [$barter->offered_product_id, $barter->requested_product_id])
-                                    ->orWhereIn('requested_product_id', [$barter->offered_product_id, $barter->requested_product_id]);
-                            })
-                            ->update([
-                                'status' => BarterRequest::STATUS_CANCELLED,
-                                'responded_at' => now(),
-                            ]);
-
-                        Log::info('Barter products exchanged after payment', [
-                            'barter_id' => $barter->public_id,
-                            'payment_reference' => $barter->payment_reference,
-                        ]);
+                    // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
+                    // Kedua seller harus saling mengirim barang lebih dulu, lalu
+                    // saling mengonfirmasi penerimaan (temuan T-08). Kepemilikan
+                    // berpindah di BarterController::confirmReceipt().
+                    if (! in_array($barter->status, [BarterRequest::STATUS_SHIPPING, BarterRequest::STATUS_COMPLETED], true)) {
+                        // shipping_started_at menandai awal tenggat pengiriman.
+                        $barter->forceFill([
+                            'status' => BarterRequest::STATUS_SHIPPING,
+                            'shipping_started_at' => now(),
+                        ])->save();
                     }
+
+                    Log::info('Barter payment settled, entering shipping stage', [
+                        'barter_id' => $barter->public_id,
+                        'payment_reference' => $barter->payment_reference,
+                    ]);
                 } else {
                     // Jika pembayaran gagal/expired/cancelled, update status saja
                     $barter->save();
@@ -109,6 +95,7 @@ class BarterPaymentNotificationController extends Controller
                 'payment_reference' => $paymentReference,
                 'error' => $e->getMessage(),
             ]);
+
             return response()->json(['message' => 'Error processing notification.'], 500);
         }
 

@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
+    // Halaman "/" memanggil PriceGuessService::sync() dan mengambil produk,
+    // jadi test ini membutuhkan skema database yang sudah termigrasi.
+    use RefreshDatabase;
+
     /**
      * A basic test example.
      */

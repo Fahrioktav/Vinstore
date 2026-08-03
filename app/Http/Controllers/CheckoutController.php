@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,6 +12,7 @@ class CheckoutController extends Controller
     public function show($productId)
     {
         $product = Product::where('public_id', $productId)->firstOrFail();
+
         return view('checkout', compact('product'));
     }
 
@@ -19,14 +20,14 @@ class CheckoutController extends Controller
     {
         $request->validate([
             'product_id' => 'required',
-            'quantity' => 'required|integer|min:1'
+            'quantity' => 'required|integer|min:1',
         ]);
 
         $product = Product::where('public_id', $request->product_id)->firstOrFail();
 
         // Cek apakah stok tersedia
         if ($product->stock < $request->quantity) {
-            return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product->stock);
+            return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: '.$product->stock);
         }
 
         // Cek apakah stok habis
@@ -36,12 +37,12 @@ class CheckoutController extends Controller
 
         // Buat order
         Order::create([
-            'user_id'    => Auth::id(),
+            'user_id' => Auth::id(),
             'product_id' => $product->id,
-            'store_id'   => $product->store_id,
-            'quantity'   => $request->quantity,
-            'price'      => $product->price * $request->quantity,
-            'status'     => 'Waiting'
+            'store_id' => $product->store_id,
+            'quantity' => $request->quantity,
+            'price' => $product->price * $request->quantity,
+            'status' => 'Waiting',
         ]);
 
         // Kurangi stok produk

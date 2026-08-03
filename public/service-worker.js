@@ -1,8 +1,53 @@
-const CACHE_NAME = 'vinstore-v1';
+const CACHE_NAME = 'vinstore-v2';
+
+// HANYA aset statis yang boleh di-cache.
+//
+// Sebelumnya service worker menyimpan SEMUA respons 200, termasuk halaman
+// Inertia yang memuat data pribadi (riwayat pesanan, invoice, profil,
+// dashboard admin) di dalam atribut data-page. Cache itu tidak per-user dan
+// tidak dibersihkan saat logout, sehingga di perangkat bersama data pengguna
+// sebelumnya masih bisa tersaji dalam kondisi offline.
 const urlsToCache = [
-  '/',
   '/manifest.json',
+  '/favicon.ico',
 ];
+
+// Awalan path yang aman untuk di-cache: aset build Vite, ikon, dan gambar.
+const CACHEABLE_PATH_PREFIXES = [
+  '/build/',
+  '/icons/',
+  '/assets/',
+];
+
+const CACHEABLE_FILE_PATTERN = /\.(css|js|mjs|woff2?|ttf|eot|png|jpe?g|gif|svg|webp|ico)$/i;
+
+/**
+ * Boleh di-cache hanya jika: satu origin dengan aplikasi, bukan navigasi
+ * dokumen (halaman HTML selalu bisa berisi data pribadi), dan merupakan aset
+ * statis berdasarkan path atau ekstensinya.
+ */
+function isCacheableRequest(request) {
+  if (request.method !== 'GET') return false;
+  if (request.mode === 'navigate') return false;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch (e) {
+    return false;
+  }
+
+  if (url.origin !== self.location.origin) return false;
+
+  // Permintaan data Inertia/XHR tidak pernah boleh masuk cache.
+  if (request.headers.get('X-Inertia')) return false;
+  if (request.destination === 'document') return false;
+
+  if (urlsToCache.includes(url.pathname)) return true;
+  if (CACHEABLE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return true;
+
+  return CACHEABLE_FILE_PATTERN.test(url.pathname);
+}
 
 // Install Service Worker
 self.addEventListener('install', (event) => {
@@ -34,7 +79,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Strategy: Network First, fallback to Cache
+// Fetch Strategy: Network First, fallback to Cache — khusus aset statis.
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
@@ -42,14 +87,18 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome extensions and other schemas
   if (!event.request.url.startsWith('http')) return;
 
+  // Navigasi halaman dan permintaan data dibiarkan lewat apa adanya, tanpa
+  // pernah disimpan maupun disajikan dari cache. Halaman Vinstore memuat data
+  // pribadi, jadi menyajikannya dari cache bisa membocorkan data pengguna
+  // sebelumnya di perangkat yang sama.
+  if (!isCacheableRequest(event.request)) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone the response
-        const responseToCache = response.clone();
-
-        // Cache API responses and assets
-        if (response.status === 200) {
+        // Hanya cache respons yang benar-benar milik origin ini dan sukses.
+        if (response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
@@ -58,15 +107,10 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Network failed, try cache
+        // Network gagal: sajikan aset dari cache bila ada.
         return caches.match(event.request).then((response) => {
           if (response) {
             return response;
-          }
-
-          // Return offline page if available
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
           }
 
           return new Response('Offline - Content not available', {
@@ -79,6 +123,15 @@ self.addEventListener('fetch', (event) => {
         });
       })
   );
+});
+
+// Bersihkan cache saat user logout, dipicu dari aplikasi lewat postMessage.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((names) => Promise.all(names.map((name) => caches.delete(name))))
+    );
+  }
 });
 
 // Background Sync (untuk order yang pending)

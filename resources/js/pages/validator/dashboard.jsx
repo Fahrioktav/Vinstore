@@ -1,6 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
-import { cn, formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
+import {
+  cn,
+  formatIDR,
+  getProductCertificate,
+  getProductImage,
+} from '@/lib/utils';
 import { BadgeIcon } from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
 
@@ -19,13 +24,23 @@ const statusColors = {
 };
 
 export default function ValidatorDashboard() {
-  const { pendingProducts, pendingAuctions, reviewedProducts, reviewedAuctions, stats } = usePage().props;
+  const {
+    pendingProducts,
+    pendingAuctions,
+    reviewedProducts,
+    reviewedAuctions,
+    stats,
+  } = usePage().props;
 
   const handleApprove = (publicId) => {
     if (confirm('Validasi produk ini dan teruskan ke admin?')) {
-      router.post(`/validator/products/${publicId}/approve`, {}, {
-        preserveScroll: true,
-      });
+      router.post(
+        `/validator/products/${publicId}/approve`,
+        {},
+        {
+          preserveScroll: true,
+        }
+      );
     }
   };
 
@@ -40,9 +55,13 @@ export default function ValidatorDashboard() {
 
   const handleApproveAuction = (publicId) => {
     if (confirm('Validasi lelang ini dan teruskan ke admin?')) {
-      router.post(`/validator/auctions/${publicId}/approve`, {}, {
-        preserveScroll: true,
-      });
+      router.post(
+        `/validator/auctions/${publicId}/approve`,
+        {},
+        {
+          preserveScroll: true,
+        }
+      );
     }
   };
 
@@ -56,9 +75,21 @@ export default function ValidatorDashboard() {
   };
 
   const statCards = [
-    { label: 'Menunggu Validasi', value: stats?.pending ?? 0, color: 'from-yellow-500 to-yellow-600' },
-    { label: 'Diteruskan ke Admin', value: stats?.forwarded ?? 0, color: 'from-blue-500 to-blue-600' },
-    { label: 'Ditolak', value: stats?.rejected ?? 0, color: 'from-red-500 to-red-600' },
+    {
+      label: 'Menunggu Validasi',
+      value: stats?.pending ?? 0,
+      color: 'from-yellow-500 to-yellow-600',
+    },
+    {
+      label: 'Diteruskan ke Admin',
+      value: stats?.forwarded ?? 0,
+      color: 'from-blue-500 to-blue-600',
+    },
+    {
+      label: 'Ditolak',
+      value: stats?.rejected ?? 0,
+      color: 'from-red-500 to-red-600',
+    },
   ];
 
   return (
@@ -103,7 +134,10 @@ export default function ValidatorDashboard() {
               <tbody>
                 {pendingProducts.length > 0 ? (
                   pendingProducts.map((product) => (
-                    <tr key={product.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={product.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3">
                         <img
                           src={getProductImage(product)}
@@ -112,7 +146,9 @@ export default function ValidatorDashboard() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-gray-800">{product.name}</p>
+                        <p className="font-semibold text-gray-800">
+                          {product.name}
+                        </p>
                         <p className="mt-1 text-xs text-gray-500">
                           {product.description?.substring(0, 40)}
                           {product.description?.length > 40 ? '...' : ''}
@@ -173,8 +209,13 @@ export default function ValidatorDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                      <p className="text-lg">✅ Tidak ada produk yang menunggu validasi</p>
+                    <td
+                      colSpan="7"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      <p className="text-lg">
+                        ✅ Tidak ada produk yang menunggu validasi
+                      </p>
                     </td>
                   </tr>
                 )}
@@ -204,16 +245,25 @@ export default function ValidatorDashboard() {
               <tbody>
                 {pendingAuctions && pendingAuctions.length > 0 ? (
                   pendingAuctions.map((auction) => (
-                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={auction.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3">
                         <img
-                          src={auction.image ? `/storage/${auction.image}` : '/assets/placeholder.png'}
+                          src={
+                            auction.image
+                              ? `/storage/${auction.image}`
+                              : '/assets/placeholder.png'
+                          }
                           className="h-16 w-16 rounded-lg object-cover shadow-sm"
                           alt={auction.name}
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-gray-800">{auction.name}</p>
+                        <p className="font-semibold text-gray-800">
+                          {auction.name}
+                        </p>
                         <p className="mt-1 text-xs text-gray-500">
                           {auction.description?.substring(0, 40)}
                           {auction.description?.length > 40 ? '...' : ''}
@@ -226,13 +276,16 @@ export default function ValidatorDashboard() {
                         {formatIDR(auction.starting_price)}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600">
-                        {new Date(auction.starts_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {new Date(auction.starts_at).toLocaleDateString(
+                          'id-ID',
+                          {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600">
                         {new Date(auction.ends_at).toLocaleDateString('id-ID', {
@@ -240,7 +293,7 @@ export default function ValidatorDashboard() {
                           month: 'short',
                           year: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
                         })}
                       </td>
                       <td className="px-4 py-3">
@@ -250,13 +303,15 @@ export default function ValidatorDashboard() {
                               {
                                 label: 'Validasi',
                                 icon: '✅',
-                                onClick: () => handleApproveAuction(auction.public_id),
+                                onClick: () =>
+                                  handleApproveAuction(auction.public_id),
                               },
                               {
                                 label: 'Tolak',
                                 icon: '🚫',
                                 variant: 'destructive',
-                                onClick: () => handleRejectAuction(auction.public_id),
+                                onClick: () =>
+                                  handleRejectAuction(auction.public_id),
                               },
                             ]}
                           />
@@ -266,8 +321,13 @@ export default function ValidatorDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                      <p className="text-lg">✅ Tidak ada lelang yang menunggu validasi</p>
+                    <td
+                      colSpan="7"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      <p className="text-lg">
+                        ✅ Tidak ada lelang yang menunggu validasi
+                      </p>
                     </td>
                   </tr>
                 )}
@@ -295,7 +355,10 @@ export default function ValidatorDashboard() {
               <tbody>
                 {reviewedProducts.length > 0 ? (
                   reviewedProducts.map((product) => (
-                    <tr key={product.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={product.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3 font-semibold text-gray-800">
                         {product.name}
                       </td>
@@ -306,10 +369,12 @@ export default function ValidatorDashboard() {
                         <span
                           className={cn(
                             'rounded-full px-3 py-1 text-xs font-semibold',
-                            statusColors[product.approval_status] || 'bg-gray-100 text-gray-700'
+                            statusColors[product.approval_status] ||
+                              'bg-gray-100 text-gray-700'
                           )}
                         >
-                          {statusLabels[product.approval_status] || product.approval_status}
+                          {statusLabels[product.approval_status] ||
+                            product.approval_status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-red-600">
@@ -332,7 +397,10 @@ export default function ValidatorDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="5"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       Belum ada riwayat validasi
                     </td>
                   </tr>
@@ -360,7 +428,10 @@ export default function ValidatorDashboard() {
               <tbody>
                 {reviewedAuctions && reviewedAuctions.length > 0 ? (
                   reviewedAuctions.map((auction) => (
-                    <tr key={auction.public_id} className="border-t hover:bg-gray-50">
+                    <tr
+                      key={auction.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3 font-semibold text-gray-800">
                         {auction.name}
                       </td>
@@ -371,10 +442,12 @@ export default function ValidatorDashboard() {
                         <span
                           className={cn(
                             'rounded-full px-3 py-1 text-xs font-semibold',
-                            statusColors[auction.approval_status] || 'bg-gray-100 text-gray-700'
+                            statusColors[auction.approval_status] ||
+                              'bg-gray-100 text-gray-700'
                           )}
                         >
-                          {statusLabels[auction.approval_status] || auction.approval_status}
+                          {statusLabels[auction.approval_status] ||
+                            auction.approval_status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-red-600">
@@ -384,7 +457,10 @@ export default function ValidatorDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="4"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       Belum ada riwayat validasi lelang
                     </td>
                   </tr>

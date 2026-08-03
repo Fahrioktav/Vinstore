@@ -47,8 +47,13 @@ export default function AdminSellers() {
               <tbody>
                 {sellers.length > 0 ? (
                   sellers.map((seller) => (
-                    <tr key={seller.public_id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold">{seller.public_id}</td>
+                    <tr
+                      key={seller.public_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {seller.public_id}
+                      </td>
                       <td className="px-4 py-3">{seller.username}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {seller.email}
@@ -59,7 +64,7 @@ export default function AdminSellers() {
                             {seller.store.store_name}
                           </span>
                         ) : (
-                          <span className="text-xs italic text-gray-400">
+                          <span className="text-xs text-gray-400 italic">
                             Belum punya toko
                           </span>
                         )}
