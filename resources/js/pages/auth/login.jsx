@@ -54,12 +54,25 @@ export default function LoginPage() {
                   <AuthLabel variant="brown" htmlFor="password">
                     Password
                   </AuthLabel>
-                  <Link
+                  {/*
+                    Tautan lupa password disembunyikan sementara.
+
+                    Alurnya sendiri sudah benar (ForgotPasswordController +
+                    ResetPasswordController), tetapi MAIL_MAILER masih 'log'
+                    sehingga email reset hanya ditulis ke storage/logs dan tidak
+                    pernah sampai ke kotak masuk pengguna.
+
+                    Kembalikan tautan ini setelah MAIL_MAILER diarahkan ke SMTP
+                    sungguhan di .env — tidak ada perubahan kode lain yang
+                    diperlukan. Route password.request/password.email masih
+                    terdaftar di routes/web.php.
+                  */}
+                  {/* <Link
                     href="/forgot-password"
                     className="text-xs text-[#B77C4C] hover:underline"
                   >
                     Lupa Password?
-                  </Link>
+                  </Link> */}
                 </div>
                 <div className="relative">
                   <AuthInput
