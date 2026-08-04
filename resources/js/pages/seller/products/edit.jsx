@@ -68,9 +68,10 @@ export default function SellerEditProductPage() {
               </select>
               {isTebakHarga && (
                 <p className="mt-1 text-xs text-gray-500">
-                  Harga asli disembunyikan dari pembeli (ditampilkan ???).
-                  Pembeli mengirim satu tebakan; tebakan terdekat menang dan
-                  berhak membeli lebih dulu selama 24 jam.
+                  Produk ditawarkan dengan harga diskon yang harus ditebak.
+                  Harga normal tetap terlihat sebagai patokan; harga diskonnya
+                  disembunyikan (ditampilkan ???). Pembeli mengirim satu
+                  tebakan.
                 </p>
               )}
             </div>
@@ -89,7 +90,7 @@ export default function SellerEditProductPage() {
 
               <div>
                 <AuthLabel htmlFor="price">
-                  {isTebakHarga ? 'Harga Asli (disembunyikan)' : 'Harga'}
+                  {isTebakHarga ? 'Harga Normal (tetap terlihat)' : 'Harga'}
                 </AuthLabel>
                 <AuthInput
                   id="price"
@@ -105,7 +106,30 @@ export default function SellerEditProductPage() {
               <div className="grid gap-6 rounded-lg border border-[#53685B]/30 bg-[#53685B]/5 p-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <p className="text-sm font-semibold text-[#2F3E46]">
-                    Periode Tebak Harga
+                    Pengaturan Tebak Harga
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Harga di atas menjadi harga normal dan tetap terlihat
+                    pembeli. Yang ditebak adalah harga diskonnya.
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <AuthLabel htmlFor="guess_discount_price">
+                    Harga Diskon (yang ditebak)
+                  </AuthLabel>
+                  <AuthInput
+                    id="guess_discount_price"
+                    type="number"
+                    name="guess_discount_price"
+                    min="1"
+                    defaultValue={product.guess_discount_price ?? ''}
+                    required={isTebakHarga}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Harus lebih kecil dari harga normal. Pembeli yang menebak
+                    paling dekat — meleset maksimal 5% — menang dan berhak
+                    membelinya di harga ini selama 24 jam. Bila tidak ada yang
+                    cukup dekat, produk dijual di harga normal.
                   </p>
                 </div>
                 <div>

@@ -47,6 +47,19 @@ class Product extends Model
      */
     public const WINNER_PRIORITY_HOURS = 24;
 
+    /**
+     * Seberapa meleset sebuah tebakan masih dianggap benar, dalam persen dari
+     * harga diskon.
+     *
+     * Menuntut tebakan persis sampai rupiah membuat fitur ini praktis tidak
+     * pernah punya pemenang. Sebaliknya, tanpa ambang sama sekali, tebakan
+     * terdekat selalu menang berapa pun melesetnya — itulah perilaku lama yang
+     * membuat tebakan Rp 750.000 memenangkan produk seharga Rp 800.000.
+     *
+     * Naikkan angka ini bila ingin pemenang lebih sering muncul.
+     */
+    public const GUESS_TOLERANCE_PERCENT = 5;
+
     protected $fillable = [
         'public_id',
         'store_id',
@@ -68,6 +81,7 @@ class Product extends Model
         'validated_at',
         'validated_by',
         'sale_type',
+        'guess_discount_price',
         'guess_starts_at',
         'guess_ends_at',
         'guess_status',
@@ -93,6 +107,7 @@ class Product extends Model
         'guess_finished_at' => 'datetime',
         'winner_priority_until' => 'datetime',
         'guess_winning_amount' => 'decimal:2',
+        'guess_discount_price' => 'decimal:2',
     ];
 
     /**
@@ -254,9 +269,63 @@ class Product extends Model
     }
 
     /**
-     * Harga asli WAJIB disembunyikan dari pembeli selama periode tebak harga
-     * dan masa hak prioritas (kecuali pemenang yang sedang punya prioritas).
-     * Saat status sudah 'public' atau produk normal, harga ditampilkan.
+     * Berapa rupiah sebuah tebakan masih boleh meleset dan tetap dianggap benar.
+     */
+    public function guessToleranceAmount(): ?float
+    {
+        if ($this->guess_discount_price === null) {
+            return null;
+        }
+
+        return (float) $this->guess_discount_price * (self::GUESS_TOLERANCE_PERCENT / 100);
+    }
+
+    /**
+     * Apakah sebuah tebakan cukup dekat dengan harga diskon untuk dianggap benar.
+     *
+     * Produk tanpa harga diskon (belum dikonfigurasi) tidak mungkin ditebak
+     * dengan benar — lebih baik tidak ada pemenang daripada memenangkan
+     * seseorang atas angka yang tidak pernah ditetapkan.
+     */
+    public function isGuessWithinTolerance(float $amount): bool
+    {
+        $tolerance = $this->guessToleranceAmount();
+
+        if ($tolerance === null) {
+            return false;
+        }
+
+        return abs($amount - (float) $this->guess_discount_price) <= $tolerance;
+    }
+
+    /**
+     * Harga yang benar-benar ditagihkan kepada pembeli ini.
+     *
+     * Pemenang tebak harga yang masih dalam masa prioritas membayar harga
+     * DISKON; semua orang lain — termasuk pemenang yang prioritasnya sudah
+     * lewat — membayar harga normal.
+     */
+    public function effectivePriceFor(?User $user): float
+    {
+        if ($this->isTebakHarga()
+            && $this->guess_discount_price !== null
+            && $user
+            && $this->guess_winner_id === $user->id
+            && $this->isWinnerPriorityActive()
+        ) {
+            return (float) $this->guess_discount_price;
+        }
+
+        return (float) $this->price;
+    }
+
+    /**
+     * Harga DISKON wajib disembunyikan dari pembeli selama periode tebak harga
+     * dan masa hak prioritas — itulah angka yang sedang ditebak. Harga normal
+     * (`price`) justru tetap terlihat, karena menjadi patokan pembeli menebak
+     * berapa diskonnya.
+     *
+     * Pemenang yang sedang memegang prioritas berhak melihatnya.
      */
     public function shouldHidePriceFor(?User $user): bool
     {
@@ -272,13 +341,14 @@ class Product extends Model
     }
 
     /**
-     * Sembunyikan kolom harga asli dari serialisasi untuk viewer yang tidak berhak.
-     * Dipakai pada endpoint publik (marketplace, detail produk) sebelum dikirim ke Inertia.
+     * Sembunyikan harga diskon dari serialisasi untuk viewer yang tidak berhak.
+     * Dipakai pada endpoint publik (marketplace, detail produk) sebelum dikirim
+     * ke Inertia.
      */
     public function maskRealPriceFor(?User $user): self
     {
         if ($this->shouldHidePriceFor($user)) {
-            $this->makeHidden(['price']);
+            $this->makeHidden(['guess_discount_price']);
         }
 
         return $this;

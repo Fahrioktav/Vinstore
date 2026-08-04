@@ -134,6 +134,7 @@ class ProductController extends Controller
             'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'is_barterable' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
+            'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
             'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
             'guess_ends_at' => 'nullable|required_if:sale_type,tebak_harga|date|after:guess_starts_at',
         ]);
@@ -187,6 +188,7 @@ class ProductController extends Controller
             'is_barterable' => $isTebakHarga ? false : $request->boolean('is_barterable'),
             'approval_status' => Product::STATUS_PENDING_VALIDATOR,
             'sale_type' => $saleType,
+            'guess_discount_price' => $isTebakHarga ? $request->guess_discount_price : null,
             'guess_starts_at' => $isTebakHarga
                 ? Carbon::createFromFormat('Y-m-d\TH:i', $request->guess_starts_at, config('app.timezone'))
                 : null,
@@ -219,6 +221,7 @@ class ProductController extends Controller
             'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'is_barterable' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
+            'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
             'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
             'guess_ends_at' => 'nullable|required_if:sale_type,tebak_harga|date|after:guess_starts_at',
         ]);
@@ -314,6 +317,7 @@ class ProductController extends Controller
 
         // Atur ulang konfigurasi & siklus hidup tebak harga.
         $product->sale_type = $saleType;
+        $product->guess_discount_price = $isTebakHarga ? $request->guess_discount_price : null;
         $product->guess_starts_at = $isTebakHarga
             ? Carbon::createFromFormat('Y-m-d\TH:i', $request->guess_starts_at, config('app.timezone'))
             : null;

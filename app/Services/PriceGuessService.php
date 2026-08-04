@@ -10,11 +10,16 @@ use Illuminate\Support\Facades\DB;
  * Mengelola siklus hidup fitur Tebak Harga:
  *   scheduled -> active -> ended -> public
  *
+ * Produk ditawarkan dengan harga DISKON (`guess_discount_price`) yang harus
+ * ditebak pembeli. Harga normal (`price`) tetap terlihat sebagai patokan.
+ *
  * - activateScheduled(): produk terjadwal yang sudah memasuki periode -> active.
- * - finalizeEnded(): periode selesai -> tentukan pemenang (tebakan terdekat),
- *   beri hak prioritas 24 jam. Jika tidak ada tebakan -> langsung public.
+ * - finalizeEnded(): periode selesai -> tentukan pemenang (tebakan terdekat yang
+ *   masih masuk ambang toleransi), beri hak prioritas 24 jam untuk membeli di
+ *   harga diskon. Bila tidak ada tebakan yang cukup dekat -> langsung public
+ *   dan dijual di harga normal.
  * - revertExpiredPriority(): hak prioritas pemenang habis & belum dipakai -> public
- *   (berubah menjadi penjualan biasa dengan harga ditampilkan).
+ *   (dijual biasa di harga normal).
  */
 class PriceGuessService
 {
@@ -88,7 +93,8 @@ class PriceGuessService
             $winner = $this->determineWinner($product);
 
             if (! $winner) {
-                // Tidak ada tebakan -> langsung jadi penjualan biasa (harga ditampilkan).
+                // Tidak ada tebakan, atau tidak ada yang cukup dekat dengan
+                // harga diskon -> produk dijual biasa di HARGA NORMAL.
                 $product->update([
                     'guess_status' => Product::GUESS_PUBLIC,
                     'guess_finished_at' => now(),
@@ -111,18 +117,30 @@ class PriceGuessService
     }
 
     /**
-     * Pemenang = tebakan dengan selisih absolut terkecil terhadap harga asli.
+     * Pemenang = tebakan TERDEKAT terhadap harga diskon yang MASIH MASUK AMBANG
+     * toleransi (Product::GUESS_TOLERANCE_PERCENT).
+     *
+     * Sebelumnya tebakan terdekat selalu menang berapa pun melesetnya — sebuah
+     * tebakan Rp 750.000 memenangkan produk seharga Rp 800.000. Sekarang bila
+     * tidak ada satu pun tebakan yang cukup dekat, tidak ada pemenang dan
+     * produknya dijual di harga normal.
+     *
      * Tie-break: tebakan yang dikirim lebih dulu (created_at paling awal).
      */
     public function determineWinner(Product $product): ?PriceGuess
     {
-        $realPrice = (float) $product->price;
+        if ($product->guess_discount_price === null) {
+            return null;
+        }
+
+        $discountPrice = (float) $product->guess_discount_price;
 
         return PriceGuess::where('product_id', $product->id)
             ->get()
-            ->sort(function (PriceGuess $a, PriceGuess $b) use ($realPrice) {
-                $da = abs((float) $a->amount - $realPrice);
-                $db = abs((float) $b->amount - $realPrice);
+            ->filter(fn (PriceGuess $guess) => $product->isGuessWithinTolerance((float) $guess->amount))
+            ->sort(function (PriceGuess $a, PriceGuess $b) use ($discountPrice) {
+                $da = abs((float) $a->amount - $discountPrice);
+                $db = abs((float) $b->amount - $discountPrice);
 
                 if ($da === $db) {
                     return $a->created_at <=> $b->created_at;

@@ -5,8 +5,16 @@ import { BadgeIcon } from './icons';
 
 export default function ProductCard({ product }) {
   const isTebakHarga = product.sale_type === 'tebak_harga';
-  // Harga disembunyikan dari pembeli (price tidak dikirim backend) -> tampilkan ???
-  const isPriceHidden = product.price === null || product.price === undefined;
+  // Pada tebak harga, yang disembunyikan adalah harga diskonnya. Harga normal
+  // tetap ditampilkan sebagai patokan pembeli menebak.
+  const isDiscountHidden =
+    product.guess_discount_price === null ||
+    product.guess_discount_price === undefined;
+  // Setelah status 'public' yang berlaku adalah harga normal, jadi harga diskon
+  // tidak lagi ditampilkan agar tidak menyesatkan.
+  const showDiscount =
+    isTebakHarga &&
+    ['scheduled', 'active', 'ended'].includes(product.guess_status);
 
   return (
     <Link
@@ -49,9 +57,16 @@ export default function ProductCard({ product }) {
           <div className="mt-auto border-t border-gray-200 pt-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="font-bold text-[#B77C4C]">
-                {isPriceHidden ? (
-                  <span title="Harga disembunyikan selama tebak harga">
-                    ???
+                {showDiscount ? (
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-xs text-gray-400 line-through">
+                      {formatIDR(product.price)}
+                    </span>
+                    {isDiscountHidden ? (
+                      <span title="Tebak harga diskonnya">???</span>
+                    ) : (
+                      formatIDR(product.guess_discount_price)
+                    )}
                   </span>
                 ) : (
                   formatIDR(product.price)
@@ -65,7 +80,7 @@ export default function ProductCard({ product }) {
             </div>
 
             <div className="w-full rounded-md bg-[#B77C4C] px-3 py-3 text-center text-sm font-medium text-white transition group-hover:bg-[#a0683d]">
-              {isTebakHarga && isPriceHidden
+              {showDiscount && isDiscountHidden
                 ? 'Ikuti Tebak Harga'
                 : 'Lihat Detail'}
             </div>

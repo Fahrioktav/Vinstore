@@ -195,7 +195,9 @@ class OrderController extends Controller
                     throw new \RuntimeException('Stok produk tidak mencukupi atau sudah habis. Stok tersedia: '.$product->stock);
                 }
 
-                $unitPrice = (int) round((float) $product->price);
+                // Pemenang tebak harga yang masih memegang prioritas membayar
+                // harga diskon; selebihnya harga normal.
+                $unitPrice = (int) round($product->effectivePriceFor($user));
                 $shippingCost = $request->shipping_method === 'express' ? 25000 : 10000;
                 $totalPrice = ($unitPrice * $quantity) + $shippingCost;
 
@@ -384,7 +386,9 @@ class OrderController extends Controller
                         throw new \RuntimeException('Stok produk "'.$product->name.'" tidak mencukupi. Stok tersedia: '.$product->stock);
                     }
 
-                    $unitPrice = (int) round((float) $product->price);
+                    // Pemenang tebak harga yang masih memegang prioritas
+                    // membayar harga diskon; selebihnya harga normal.
+                    $unitPrice = (int) round($product->effectivePriceFor($user));
                     $lineTotal = $unitPrice * $quantity;
 
                     $storeKey = $product->store_id ?? 'none';

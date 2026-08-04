@@ -28,8 +28,19 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(gallery[0] ?? null);
 
   const isTebakHarga = product.sale_type === 'tebak_harga';
-  // Harga asli disembunyikan -> backend tidak mengirim field price.
-  const priceHidden = product.price === null || product.price === undefined;
+  // Yang disembunyikan pada tebak harga adalah HARGA DISKON — itulah angka
+  // yang sedang ditebak. Harga normal (product.price) justru tetap dikirim
+  // backend sebagai patokan pembeli menebak.
+  const discountHidden =
+    product.guess_discount_price === null ||
+    product.guess_discount_price === undefined;
+  // Harga diskon hanya relevan selama diskonnya masih bisa diperoleh: saat
+  // periode tebak berjalan, dan saat pemenang masih memegang prioritas.
+  // Begitu status 'public', yang berlaku adalah harga normal — memajang harga
+  // diskon di situ membuat angka paling menonjol bukan angka yang ditagih.
+  const showDiscount =
+    isTebakHarga &&
+    ['scheduled', 'active', 'ended'].includes(product.guess_status);
 
   return (
     <div className="mx-auto mt-10 max-w-5xl rounded-md border bg-white p-6 shadow-md">
@@ -157,15 +168,39 @@ export default function ProductDetailPage() {
             <div className="space-y-2">
               <div>
                 <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
-                  Harga
+                  {showDiscount ? 'Harga Normal' : 'Harga'}
                 </p>
-                <p className="text-3xl font-bold text-[#B77C4C]">
-                  {priceHidden ? (
-                    <span>??? (Tebak Harga)</span>
-                  ) : (
-                    formatIDR(product.price)
-                  )}
+                <p
+                  className={`font-bold text-[#B77C4C] ${
+                    showDiscount
+                      ? 'text-2xl line-through decoration-gray-400'
+                      : 'text-3xl'
+                  }`}
+                >
+                  {formatIDR(product.price)}
                 </p>
+
+                {showDiscount && (
+                  <div className="mt-2">
+                    <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
+                      Harga Diskon
+                    </p>
+                    <p className="text-3xl font-bold text-[#B77C4C]">
+                      {discountHidden ? (
+                        <span>??? (Tebak Harga)</span>
+                      ) : (
+                        formatIDR(product.guess_discount_price)
+                      )}
+                    </p>
+                    {discountHidden && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Tebak harga diskonnya. Yang paling dekat — meleset
+                        maksimal 5% — berhak membelinya di harga itu. Bila tidak
+                        ada yang cukup dekat, produk dijual di harga normal.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="border-t border-gray-200 pt-2">
                 <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
@@ -313,7 +348,7 @@ function TebakHargaSection({ product, tebakHarga }) {
               {({ errors, processing }) => (
                 <>
                   <label className="block text-sm font-semibold text-gray-700">
-                    Tebak harga asli produk ini (hanya bisa sekali)
+                    Tebak harga diskon produk ini (hanya bisa sekali)
                   </label>
                   <input
                     type="number"
@@ -350,7 +385,7 @@ function TebakHargaSection({ product, tebakHarga }) {
           {is_winner ? (
             <div className="rounded-md border border-green-300 bg-green-50 p-4">
               <p className="font-semibold text-green-800">
-                🎉 Selamat! Tebakan Anda paling mendekati harga asli.
+                🎉 Selamat! Tebakan Anda paling mendekati harga diskon.
               </p>
               <p className="mt-1 text-sm text-green-700">
                 Anda memiliki hak prioritas untuk membeli produk ini sampai{' '}
@@ -398,8 +433,9 @@ function TebakHargaSection({ product, tebakHarga }) {
       {status === 'public' && (
         <div className="mt-4">
           <p className="mb-3 rounded-md bg-white p-3 text-sm text-gray-600">
-            Hak prioritas pemenang telah berakhir. Produk kini dijual normal
-            dengan harga asli.
+            Produk kini dijual biasa dengan harga normal — entah karena tidak
+            ada tebakan yang cukup dekat, atau hak prioritas pemenang sudah
+            berakhir.
           </p>
           <NormalPurchaseActions product={product} />
         </div>
