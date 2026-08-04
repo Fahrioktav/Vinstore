@@ -36,8 +36,14 @@ class BarterRequest extends Model
 
     public const PAYMENT_EXPIRED = 'expired';
 
-    // Selisih uang dikembalikan ke pengaju karena barternya gagal.
+    // Selisih uang dikembalikan ke pembayarnya karena barternya gagal.
     public const PAYMENT_REFUNDED = 'refunded';
+
+    // Peran yang wajib membayar selisih harga. Pihak yang produknya lebih
+    // murahlah yang membayar — bisa pengaju, bisa juga penerima.
+    public const PAYER_REQUESTER = 'requester';
+
+    public const PAYER_RESPONDER = 'responder';
 
     protected $fillable = [
         'public_id',
@@ -46,6 +52,7 @@ class BarterRequest extends Model
         'offered_product_id',
         'requested_product_id',
         'additional_cash',
+        'payer_role',
         'note',
         'status',
         'responded_at',
@@ -140,6 +147,89 @@ class BarterRequest extends Model
     public function requiresPayment(): bool
     {
         return $this->additional_cash > 0;
+    }
+
+    /* ============ Siapa yang membayar selisih, siapa yang menerima ============ */
+
+    /**
+     * Peran yang wajib membayar selisih harga, atau null bila tidak ada selisih.
+     *
+     * Data lama tidak punya kolom ini; sebelum perubahan selisih dua arah,
+     * satu-satunya pembayar yang mungkin adalah pengaju.
+     */
+    public function payerRole(): ?string
+    {
+        if (! $this->requiresPayment()) {
+            return null;
+        }
+
+        return $this->payer_role ?? self::PAYER_REQUESTER;
+    }
+
+    /**
+     * Peran yang berhak menerima selisih — kebalikan dari pembayarnya.
+     */
+    public function payeeRole(): ?string
+    {
+        return match ($this->payerRole()) {
+            self::PAYER_REQUESTER => self::PAYER_RESPONDER,
+            self::PAYER_RESPONDER => self::PAYER_REQUESTER,
+            default => null,
+        };
+    }
+
+    public function payerStoreId(): ?int
+    {
+        return match ($this->payerRole()) {
+            self::PAYER_REQUESTER => $this->requester_store_id,
+            self::PAYER_RESPONDER => $this->responder_store_id,
+            default => null,
+        };
+    }
+
+    /**
+     * Apakah toko ini yang wajib membayar selisihnya.
+     */
+    public function isPayer(?Store $store): bool
+    {
+        $payerStoreId = $this->payerStoreId();
+
+        return $store !== null
+            && $payerStoreId !== null
+            && $payerStoreId === $store->id;
+    }
+
+    /**
+     * Bolehkah toko ini membayar selisih sekarang.
+     */
+    public function canPayBy(?Store $store): bool
+    {
+        return $this->isPayer($store)
+            && $this->status === self::STATUS_ACCEPTED
+            && $this->payment_status === self::PAYMENT_PENDING;
+    }
+
+    /**
+     * Nama toko yang membayar selisih. Dipakai panel admin saat memutuskan
+     * pencairan — sejak selisih dua arah, pembayarnya tidak selalu pengaju.
+     */
+    public function getPayerStoreNameAttribute(): ?string
+    {
+        return match ($this->payerRole()) {
+            self::PAYER_REQUESTER => $this->requesterStore?->store_name,
+            self::PAYER_RESPONDER => $this->responderStore?->store_name,
+            default => null,
+        };
+    }
+
+    /**
+     * Label pihak pembayar untuk pesan yang dibaca kedua seller.
+     */
+    public function payerLabel(): string
+    {
+        return $this->payerRole() === self::PAYER_RESPONDER
+            ? 'penerima barter'
+            : 'pengaju barter';
     }
 
     /**
@@ -392,16 +482,21 @@ class BarterRequest extends Model
     }
 
     /**
-     * Selisih uang barter adalah hak RESPONDER — pihak yang menyerahkan produk
-     * lebih mahal. Requester-lah yang membayarnya.
+     * Selisih uang barter adalah hak pihak yang menyerahkan produk LEBIH MAHAL —
+     * yaitu kebalikan dari pembayarnya. Bisa responder (pengaju yang menambah
+     * uang) maupun requester (penerima yang menambah uang).
      */
     public function payoutRecipientStoreId(): ?int
     {
-        return $this->responder_store_id;
+        return match ($this->payeeRole()) {
+            self::PAYER_REQUESTER => $this->requester_store_id,
+            self::PAYER_RESPONDER => $this->responder_store_id,
+            default => null,
+        };
     }
 
     /**
-     * Bolehkah responder mengajukan pencairan selisih uang barter ini?
+     * Bolehkah penerima selisih mengajukan pencairan uang barter ini?
      *
      * Syaratnya mengikuti pola escrow pesanan: barang harus benar-benar sudah
      * sampai di kedua belah pihak. Status 'completed' hanya tercapai setelah
@@ -413,10 +508,34 @@ class BarterRequest extends Model
             && $this->payment_status === self::PAYMENT_PAID
             && $this->status === self::STATUS_COMPLETED
             && $this->payout_released_at === null
-            && $this->responder_store_id !== null
+            && $this->payoutRecipientStoreId() !== null
             && ! $this->hasPendingRefund()
             && ! $this->hasApprovedRefund()
             && $this->activePayoutRequest() === null;
+    }
+
+    /**
+     * Versi ber-viewer: hanya penerima selisih yang boleh mencairkan.
+     *
+     * Sejak selisih bisa mengalir dua arah, peran penerima tidak lagi bisa
+     * disimpulkan dari daftar mana kartu itu ditampilkan.
+     */
+    public function canRequestPayoutBy(?Store $store): bool
+    {
+        $recipientStoreId = $this->payoutRecipientStoreId();
+
+        return $store !== null
+            && $recipientStoreId !== null
+            && $recipientStoreId === $store->id
+            && $this->canRequestPayout();
+    }
+
+    /**
+     * Versi ber-viewer: hanya pembayar yang boleh meminta uangnya kembali.
+     */
+    public function canRequestRefundBy(?Store $store): bool
+    {
+        return $this->isPayer($store) && $this->canRequestRefund();
     }
 
     public function payoutBlockReason(): ?string
@@ -430,7 +549,7 @@ class BarterRequest extends Model
         }
 
         if ($this->payment_status !== self::PAYMENT_PAID) {
-            return 'Selisih uang barter ini belum dibayar pengaju.';
+            return 'Selisih uang barter ini belum dibayar '.$this->payerLabel().'.';
         }
 
         if ($this->status !== self::STATUS_COMPLETED) {
@@ -438,7 +557,7 @@ class BarterRequest extends Model
         }
 
         if ($this->hasApprovedRefund()) {
-            return 'Selisih uang barter ini sudah dikembalikan ke pengaju.';
+            return 'Selisih uang barter ini sudah dikembalikan ke '.$this->payerLabel().'.';
         }
 
         if ($this->hasPendingRefund()) {
@@ -453,7 +572,7 @@ class BarterRequest extends Model
     }
 
     /**
-     * Bolehkah requester meminta uangnya kembali?
+     * Bolehkah pembayar selisih meminta uangnya kembali?
      *
      * Berlaku ketika selisih sudah dibayar tapi barternya tidak pernah tuntas —
      * misalnya pihak lawan tidak pernah mengirimkan barangnya. Keputusan akhir
@@ -476,17 +595,41 @@ class BarterRequest extends Model
 
     public function getCanRequestPayoutAttribute(): bool
     {
-        return $this->canRequestPayout();
+        return $this->canRequestPayoutBy(Auth::user()?->store);
     }
 
     public function getPayoutBlockReasonAttribute(): ?string
     {
+        // Alasan pemblokiran hanya relevan bagi pihak yang berhak menerima
+        // selisihnya; pembayar tidak perlu melihat kenapa lawannya belum cair.
+        $recipientStoreId = $this->payoutRecipientStoreId();
+        $store = Auth::user()?->store;
+
+        if ($store === null || $recipientStoreId === null || $recipientStoreId !== $store->id) {
+            return null;
+        }
+
         return $this->payoutBlockReason();
     }
 
     public function getCanRequestRefundAttribute(): bool
     {
-        return $this->canRequestRefund();
+        return $this->canRequestRefundBy(Auth::user()?->store);
+    }
+
+    public function getIsPayerAttribute(): bool
+    {
+        return $this->isPayer(Auth::user()?->store);
+    }
+
+    public function getCanPayAttribute(): bool
+    {
+        return $this->canPayBy(Auth::user()?->store);
+    }
+
+    public function getPayerLabelAttribute(): ?string
+    {
+        return $this->requiresPayment() ? $this->payerLabel() : null;
     }
 
     public function getLatestPayoutAttribute(): ?array

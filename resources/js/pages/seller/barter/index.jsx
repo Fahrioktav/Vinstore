@@ -301,7 +301,9 @@ export default function SellerBarterPage() {
         <IncomingTab requests={incomingRequests} bankPrefill={bankPrefill} />
       )}
 
-      {tab === 'outgoing' && <OutgoingTab requests={outgoingRequests} />}
+      {tab === 'outgoing' && (
+        <OutgoingTab requests={outgoingRequests} bankPrefill={bankPrefill} />
+      )}
 
       {target && (
         <OfferModal
@@ -440,22 +442,12 @@ function IncomingTab({ requests, bankPrefill }) {
                 Tolak
               </button>
             </div>
-          ) : req.status === 'shipping' ? (
-            <div className="flex flex-col items-end gap-3">
-              <ShipmentPanel req={req} role="responder" />
-              <StalledNotice req={req} />
-            </div>
-          ) : req.can_request_payout ? (
-            <BarterPayoutButton req={req} bankPrefill={bankPrefill} />
           ) : (
-            <div className="text-right">
-              <StatusBadge status={req.status} />
-              {req.payout_block_reason && !req.latest_payout && (
-                <p className="mt-2 text-xs text-gray-500 italic">
-                  {req.payout_block_reason}
-                </p>
-              )}
-            </div>
+            <BarterActions
+              req={req}
+              role="responder"
+              bankPrefill={bankPrefill}
+            />
           )}
         </RequestCard>
       ))}
@@ -463,7 +455,73 @@ function IncomingTab({ requests, bankPrefill }) {
   );
 }
 
-function OutgoingTab({ requests }) {
+/**
+ * Aksi setelah barter disetujui. Dipakai oleh kedua tab karena sejak selisih
+ * harga mengalir dua arah, pembayar maupun penerima selisih bisa berada di
+ * peran mana pun. Server yang menentukan lewat can_pay / can_request_payout /
+ * can_request_refund.
+ */
+function BarterActions({ req, role, bankPrefill }) {
+  const pay = (publicId) => router.get(`/seller/barter/${publicId}/pay`);
+
+  if (req.can_pay) {
+    return (
+      <button
+        onClick={() => pay(req.public_id)}
+        className="animate-pulse rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
+      >
+        💳 Bayar Sekarang
+      </button>
+    );
+  }
+
+  // Menunggu pihak lawan membayar: tanpa penjelasan ini kartunya terlihat
+  // seperti barter yang macet tanpa sebab.
+  if (req.status === 'accepted' && req.payment_status === 'pending') {
+    return (
+      <div className="max-w-xs text-right">
+        <StatusBadge status={req.status} />
+        <p className="mt-2 text-xs text-gray-500 italic">
+          Menunggu {req.payer_label ?? 'pihak lawan'} membayar selisih harga
+          sebelum barang dikirim.
+        </p>
+      </div>
+    );
+  }
+
+  if (req.status === 'shipping') {
+    return (
+      <div className="flex flex-col items-end gap-3">
+        <ShipmentPanel req={req} role={role} />
+        <StalledNotice req={req} />
+        {req.can_request_refund && !req.can_report_stalled && (
+          <BarterRefundButton req={req} />
+        )}
+      </div>
+    );
+  }
+
+  if (req.can_request_payout) {
+    return <BarterPayoutButton req={req} bankPrefill={bankPrefill} />;
+  }
+
+  if (req.can_request_refund) {
+    return <BarterRefundButton req={req} />;
+  }
+
+  return (
+    <div className="max-w-xs text-right">
+      <StatusBadge status={req.status} />
+      {req.payout_block_reason && !req.latest_payout && (
+        <p className="mt-2 text-xs text-gray-500 italic">
+          {req.payout_block_reason}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OutgoingTab({ requests, bankPrefill }) {
   if (requests.length === 0) {
     return (
       <p className="rounded-lg bg-white/90 p-6 text-gray-600">
@@ -478,8 +536,6 @@ function OutgoingTab({ requests }) {
       {},
       { preserveScroll: true }
     );
-
-  const pay = (publicId) => router.get(`/seller/barter/${publicId}/pay`);
 
   return (
     <div className="flex flex-col gap-4">
@@ -503,25 +559,12 @@ function OutgoingTab({ requests }) {
             >
               Batalkan
             </button>
-          ) : req.status === 'accepted' && req.payment_status === 'pending' ? (
-            <button
-              onClick={() => pay(req.public_id)}
-              className="animate-pulse rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
-            >
-              💳 Bayar Sekarang
-            </button>
-          ) : req.status === 'shipping' ? (
-            <div className="flex flex-col items-end gap-3">
-              <ShipmentPanel req={req} role="requester" />
-              <StalledNotice req={req} />
-              {req.can_request_refund && !req.can_report_stalled && (
-                <BarterRefundButton req={req} />
-              )}
-            </div>
-          ) : req.can_request_refund ? (
-            <BarterRefundButton req={req} />
           ) : (
-            <StatusBadge status={req.status} />
+            <BarterActions
+              req={req}
+              role="requester"
+              bankPrefill={bankPrefill}
+            />
           )}
         </RequestCard>
       ))}
@@ -938,13 +981,13 @@ function RequestCard({
               <p className="text-xs text-gray-600">
                 {paymentStatus === 'paid'
                   ? '✅ Pembayaran telah selesai'
-                  : paymentStatus === 'pending'
-                    ? counterpartLabel === 'Dari'
-                      ? 'Seller pengaju harus membayar tambahan ini'
+                  : req.is_payer
+                    ? req.status === 'pending'
+                      ? 'Anda harus membayar tambahan ini jika barter disetujui'
                       : '⚠️ Anda harus membayar tambahan ini untuk menyelesaikan barter'
-                    : counterpartLabel === 'Dari'
-                      ? 'Seller pengaju harus membayar tambahan ini jika Anda setujui'
-                      : 'Anda harus membayar tambahan ini jika barter disetujui'}
+                    : req.status === 'pending'
+                      ? `Seller ${counterpartName ?? 'lawan'} harus membayar tambahan ini jika barter disetujui`
+                      : `Menunggu seller ${counterpartName ?? 'lawan'} membayar tambahan ini`}
               </p>
             </div>
           </div>
@@ -996,13 +1039,14 @@ function OfferModal({ target, myProducts, onClose }) {
   const offered = myProducts.find((p) => p.public_id === offeredId);
   const priceDiff =
     offered != null ? Number(target.price) - Number(offered.price) : 0;
-  const additionalCash = Math.max(0, priceDiff);
+  // Selisihnya dua arah: yang produknya lebih murah yang membayar.
+  const additionalCash = Math.abs(priceDiff);
 
   const submit = (e) => {
     e.preventDefault();
 
     // Konfirmasi jika ada pembayaran tambahan
-    if (additionalCash > 0) {
+    if (priceDiff > 0) {
       const confirmMsg = `Anda akan menambah pembayaran sebesar ${formatIDR(additionalCash)} karena produk yang Anda tawarkan lebih murah. Lanjutkan?`;
       if (!confirm(confirmMsg)) {
         return;
@@ -1081,14 +1125,14 @@ function OfferModal({ target, myProducts, onClose }) {
                 <span className="text-2xl">{priceDiff > 0 ? '💰' : '✅'}</span>
                 <span className="font-semibold text-gray-900">
                   {priceDiff > 0
-                    ? 'Pembayaran Tambahan Diperlukan'
-                    : 'Produk Anda Lebih Mahal'}
+                    ? 'Anda Membayar Selisih'
+                    : 'Seller Lawan Membayar Selisih'}
                 </span>
               </div>
               <p className="mb-2 text-sm text-gray-700">
                 Selisih harga:{' '}
                 <span className="text-lg font-bold">
-                  {formatIDR(Math.abs(priceDiff))}
+                  {formatIDR(additionalCash)}
                 </span>
               </p>
               {priceDiff > 0 ? (
@@ -1102,8 +1146,12 @@ function OfferModal({ target, myProducts, onClose }) {
                 </p>
               ) : (
                 <p className="text-xs text-gray-600">
-                  ✨ Produk Anda lebih mahal. Tidak ada pembayaran tambahan
-                  diperlukan.
+                  ✨ Produk Anda lebih mahal. Seller pemilik produk harus
+                  membayar Anda{' '}
+                  <span className="font-semibold">
+                    {formatIDR(additionalCash)}
+                  </span>{' '}
+                  jika ia menyetujui barter ini.
                 </p>
               )}
             </div>

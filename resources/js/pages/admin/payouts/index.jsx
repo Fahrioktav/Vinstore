@@ -112,8 +112,8 @@ export default function AdminPayouts() {
                             </p>
                             <p className="text-xs text-gray-400">
                               Selisih dibayar{' '}
-                              {payout.barter_request?.requester_store
-                                ?.store_name || 'pengaju'}
+                              {payout.barter_request?.payer_store_name ||
+                                'pihak yang produknya lebih murah'}
                             </p>
                           </>
                         ) : (

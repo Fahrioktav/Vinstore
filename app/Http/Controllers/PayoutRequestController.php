@@ -139,7 +139,12 @@ class PayoutRequestController extends Controller
             'barterRequest.offeredProduct',
             'barterRequest.requestedProduct',
             'barterRequest.requesterStore',
+            'barterRequest.responderStore',
         ])->latest()->get();
+
+        // Pembayar selisih bisa pengaju maupun penerima, jadi namanya dihitung
+        // di server alih-alih ditebak frontend dari requester_store.
+        $payouts->each(fn ($payout) => $payout->barterRequest?->append('payer_store_name'));
 
         return Inertia::render('admin/payouts/index', compact('payouts'));
     }

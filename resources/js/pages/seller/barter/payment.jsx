@@ -5,7 +5,20 @@ import { formatIDR, getProductImage } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
 
 export default function BarterPaymentPage() {
-  const { barter, snapToken } = usePage().props;
+  const { barter, snapToken, viewerRole } = usePage().props;
+  // Pembayar selisih bisa pengaju maupun penerima, jadi label "produk Anda"
+  // tidak lagi selalu berarti produk yang ditawarkan.
+  const isRequester = viewerRole !== 'responder';
+  const myProduct = isRequester
+    ? barter.offered_product
+    : barter.requested_product;
+  const theirProduct = isRequester
+    ? barter.requested_product
+    : barter.offered_product;
+  const myStore = isRequester ? barter.requester_store : barter.responder_store;
+  const theirStore = isRequester
+    ? barter.responder_store
+    : barter.requester_store;
   const [processing, setProcessing] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [pollingStatus, setPollingStatus] = useState(false);
@@ -38,7 +51,9 @@ export default function BarterPaymentPage() {
         if (data.is_paid) {
           setPollingStatus(false);
           setProcessing(false);
-          alert('Pembayaran berhasil! Produk telah ditukar.');
+          alert(
+            'Pembayaran berhasil! Silakan saling mengirim barang dan isi nomor resinya.'
+          );
           router.visit('/seller/barter');
         }
       } catch (error) {
@@ -121,15 +136,15 @@ export default function BarterPaymentPage() {
             {/* Products */}
             <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
               <ProductCard
-                product={barter.offered_product}
+                product={myProduct}
                 label="Produk Anda"
-                store={barter.requester_store}
+                store={myStore}
               />
               <div className="text-center text-3xl text-[#B77C4C]">⇄</div>
               <ProductCard
-                product={barter.requested_product}
+                product={theirProduct}
                 label="Produk Mereka"
-                store={barter.responder_store}
+                store={theirStore}
               />
             </div>
           </div>
@@ -147,13 +162,13 @@ export default function BarterPaymentPage() {
               <div className="flex justify-between">
                 <span>Harga Produk Mereka:</span>
                 <span className="font-semibold">
-                  {formatIDR(barter.requested_product?.price)}
+                  {formatIDR(theirProduct?.price)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Harga Produk Anda:</span>
                 <span className="font-semibold">
-                  {formatIDR(barter.offered_product?.price)}
+                  {formatIDR(myProduct?.price)}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2 text-base font-bold text-[#B77C4C]">
@@ -164,8 +179,9 @@ export default function BarterPaymentPage() {
 
             <p className="mb-4 text-xs text-gray-600">
               ⚠️ Karena produk Anda lebih murah, Anda perlu membayar selisih
-              harga untuk menyelesaikan barter. Setelah pembayaran berhasil,
-              kepemilikan kedua produk akan otomatis ditukar.
+              harga untuk melanjutkan barter. Setelah pembayaran berhasil, kedua
+              seller saling mengirim barang dan mengisi nomor resi. Kepemilikan
+              baru berpindah setelah keduanya mengonfirmasi barang diterima.
             </p>
 
             {paymentCompleted ? (
@@ -173,7 +189,7 @@ export default function BarterPaymentPage() {
                 <div className="mb-2 animate-bounce text-3xl">✅</div>
                 <p className="font-bold text-green-800">Pembayaran Berhasil!</p>
                 <p className="mb-2 text-sm text-green-700">
-                  Sedang memproses pertukaran produk...
+                  Sedang menyiapkan tahap pengiriman...
                 </p>
                 {pollingStatus && (
                   <div className="flex items-center justify-center gap-2 text-xs text-green-600">

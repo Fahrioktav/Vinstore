@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -67,21 +68,26 @@ class BarterController extends Controller
             ->latest()
             ->get();
 
-        // Responder yang berhak mencairkan selisih; requester yang berhak
-        // memintanya kembali. Karena itu atribut turunannya berbeda per daftar.
-        // Pelaporan barter macet terbuka untuk kedua peran, jadi atributnya
-        // ikut di kedua daftar.
-        $reportAttributes = ['can_report_stalled', 'report_block_reason', 'shipping_deadline_at'];
+        // Sejak selisih harga mengalir dua arah, peran pembayar/penerima tidak
+        // lagi bisa disimpulkan dari daftar mana kartunya muncul: penerima pun
+        // bisa menjadi pembayar. Karena itu kedua daftar mendapat atribut yang
+        // sama, dan masing-masing atribut sudah menilai toko yang sedang login.
+        $barterAttributes = [
+            'is_payer',
+            'can_pay',
+            'payer_label',
+            'can_request_payout',
+            'payout_block_reason',
+            'can_request_refund',
+            'latest_payout',
+            'latest_refund',
+            'can_report_stalled',
+            'report_block_reason',
+            'shipping_deadline_at',
+        ];
 
-        $incomingRequests->each->append(array_merge(
-            ['can_request_payout', 'payout_block_reason', 'latest_payout', 'latest_refund'],
-            $reportAttributes
-        ));
-
-        $outgoingRequests->each->append(array_merge(
-            ['can_request_refund', 'latest_refund', 'latest_payout'],
-            $reportAttributes
-        ));
+        $incomingRequests->each->append($barterAttributes);
+        $outgoingRequests->each->append($barterAttributes);
 
         $lastPayout = PayoutRequest::where('store_id', $store->id)->latest('id')->first();
 
@@ -149,11 +155,20 @@ class BarterController extends Controller
             return back()->with('error', 'Anda sudah mengajukan barter untuk produk ini dan masih menunggu persetujuan.');
         }
 
-        // Hitung selisih harga otomatis
-        // Jika produk yang ditawarkan lebih murah, maka seller pengaju harus menambah uang
+        // Hitung selisih harga otomatis. Selisihnya berlaku DUA ARAH: pihak yang
+        // produknya lebih murah wajib menambah uang. Sebelumnya hanya arah
+        // "pengaju menambah" yang dihitung, sehingga barter dengan produk
+        // pengaju yang lebih mahal berjalan tanpa ada yang membayar selisihnya.
         $offeredPrice = (float) $offeredProduct->price;
         $requestedPrice = (float) $requestedProduct->price;
-        $additionalCash = max(0, $requestedPrice - $offeredPrice);
+        $priceDifference = $requestedPrice - $offeredPrice;
+        $additionalCash = abs($priceDifference);
+
+        $payerRole = match (true) {
+            $priceDifference > 0 => BarterRequest::PAYER_REQUESTER,
+            $priceDifference < 0 => BarterRequest::PAYER_RESPONDER,
+            default => null,
+        };
 
         BarterRequest::create([
             'requester_store_id' => $store->id,
@@ -161,12 +176,19 @@ class BarterController extends Controller
             'offered_product_id' => $offeredProduct->id,
             'requested_product_id' => $requestedProduct->id,
             'additional_cash' => $additionalCash,
+            'payer_role' => $payerRole,
             'note' => $request->input('note'),
             'status' => BarterRequest::STATUS_PENDING,
         ]);
 
-        if ($additionalCash > 0) {
-            return back()->with('success', 'Pengajuan barter berhasil dikirim. Anda perlu membayar tambahan '.number_format($additionalCash, 0, ',', '.').' jika barter disetujui.');
+        $formattedCash = number_format($additionalCash, 0, ',', '.');
+
+        if ($payerRole === BarterRequest::PAYER_REQUESTER) {
+            return back()->with('success', 'Pengajuan barter berhasil dikirim. Anda perlu membayar tambahan Rp '.$formattedCash.' jika barter disetujui.');
+        }
+
+        if ($payerRole === BarterRequest::PAYER_RESPONDER) {
+            return back()->with('success', 'Pengajuan barter berhasil dikirim. Karena produk Anda lebih mahal, seller pemilik produk perlu membayar tambahan Rp '.$formattedCash.' jika ia menyetujui.');
         }
 
         return back()->with('success', 'Pengajuan barter berhasil dikirim. Menunggu persetujuan seller pemilik produk.');
@@ -238,7 +260,13 @@ class BarterController extends Controller
         }
 
         if ($barter->requiresPayment()) {
-            return back()->with('success', 'Barter disetujui. Pengaju harus membayar selisih Rp '.number_format($barter->additional_cash, 0, ',', '.').' sebelum barang dikirim. Kedua produk sementara dikunci dari penjualan.');
+            $selisih = 'Rp '.number_format($barter->additional_cash, 0, ',', '.');
+
+            $pesan = $barter->payerRole() === BarterRequest::PAYER_RESPONDER
+                ? 'Barter disetujui. Karena produk Anda lebih murah, Anda harus membayar selisih '.$selisih.' sebelum barang dikirim.'
+                : 'Barter disetujui. Pengaju harus membayar selisih '.$selisih.' sebelum barang dikirim.';
+
+            return back()->with('success', $pesan.' Kedua produk sementara dikunci dari penjualan.');
         }
 
         return back()->with('success', 'Barter disetujui. Silakan saling mengirim barang dan isi nomor resinya.');
@@ -291,15 +319,40 @@ class BarterController extends Controller
     }
 
     /**
-     * Requester melakukan pembayaran untuk additional_cash setelah barter disetujui.
+     * Pembayar selisih melakukan pembayaran additional_cash setelah barter
+     * disetujui. Pembayarnya adalah pihak yang produknya lebih murah — bisa
+     * pengaju, bisa juga penerima.
      * Generate Midtrans Snap Token dan redirect ke halaman pembayaran.
      */
     public function pay(BarterRequest $barter)
     {
         $store = Auth::user()->store;
 
-        if (! $store || $barter->requester_store_id !== $store->id) {
+        if (! $barter->isPayer($store)) {
             abort(403, 'Anda tidak memiliki akses untuk membayar barter ini.');
+        }
+
+        // Transaksi Midtrans sudah pernah dibuat sebelumnya: pastikan dulu ia
+        // belum lunas. Tanpa ini, pembayaran yang webhook-nya tidak sampai akan
+        // membuka Snap lagi untuk order_id yang sudah dibayar — dan Midtrans
+        // menolaknya, sehingga pembayarannya terlihat macet selamanya.
+        if ($barter->snap_token && $barter->payment_status === BarterRequest::PAYMENT_PENDING) {
+            try {
+                $this->syncPaymentFromMidtrans($barter);
+                $barter->refresh();
+            } catch (\Throwable $e) {
+                // Midtrans tidak dapat dihubungi bukan alasan untuk memblokir
+                // pembayaran; lanjutkan saja ke Snap seperti biasa.
+                Log::warning('Gagal menyelaraskan status pembayaran barter', [
+                    'barter_id' => $barter->public_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($barter->payment_status === BarterRequest::PAYMENT_PAID) {
+            return redirect()->route('seller.barter.index')
+                ->with('success', 'Pembayaran selisih sudah lunas. Silakan kirim barang Anda dan isi nomor resinya.');
         }
 
         // Validasi: barter harus sudah accepted dan payment pending
@@ -321,6 +374,7 @@ class BarterController extends Controller
                     'responderStore',
                 ]),
                 'snapToken' => $barter->snap_token,
+                'viewerRole' => $barter->roleOfStore($store),
             ]);
         }
 
@@ -378,6 +432,7 @@ class BarterController extends Controller
                     'responderStore',
                 ]),
                 'snapToken' => $response['token'],
+                'viewerRole' => $barter->roleOfStore($store),
             ]);
         } catch (\Throwable $e) {
             return back()->with('error', 'Gagal membuat pembayaran Midtrans: '.$e->getMessage());
@@ -385,53 +440,79 @@ class BarterController extends Controller
     }
 
     /**
-     * Check status payment dari Midtrans (untuk fallback jika webhook gagal)
+     * Check status payment dari Midtrans (untuk fallback jika webhook gagal).
+     *
+     * Yang berhak memanggil adalah PEMBAYAR selisih — bisa pengaju maupun
+     * penerima. Sebelumnya dikunci ke pengaju, sehingga ketika penerima yang
+     * membayar, polling di halaman pembayaran selalu 403 dan pembayarannya
+     * tidak pernah tercatat lunas.
      */
     public function checkPaymentStatus(BarterRequest $barter)
     {
-        $store = Auth::user()->store;
-
-        if (! $store || $barter->requester_store_id !== $store->id) {
+        if (! $barter->isPayer(Auth::user()->store)) {
             abort(403);
         }
 
         try {
-            $midtransService = app(\App\Services\MidtransService::class);
-            $status = $midtransService->getTransactionStatus($barter->payment_reference);
-
-            $paymentStatus = $midtransService->mapPaymentStatus(
-                $status['transaction_status'] ?? null,
-                $status['fraud_status'] ?? null
-            );
-
-            // Jika payment berhasil tapi belum diproses (webhook lambat/gagal)
-            if ($paymentStatus === 'paid' && $barter->payment_status !== BarterRequest::PAYMENT_PAID) {
-                DB::transaction(function () use ($barter, $status) {
-                    $locked = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
-
-                    if ($locked->payment_status === BarterRequest::PAYMENT_PAID) {
-                        return;
-                    }
-
-                    $locked->forceFill([
-                        'payment_status' => BarterRequest::PAYMENT_PAID,
-                        'midtrans_transaction_id' => $status['transaction_id'] ?? null,
-                        'paid_at' => now(),
-                    ])->save();
-
-                    // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
-                    // Barter masuk tahap saling kirim barang lebih dulu.
-                    $this->startShipping($locked);
-                });
-            }
-
-            return response()->json([
-                'payment_status' => $barter->fresh()->payment_status,
-                'is_paid' => $barter->fresh()->payment_status === BarterRequest::PAYMENT_PAID,
-            ]);
+            $this->syncPaymentFromMidtrans($barter);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+
+        $fresh = $barter->fresh();
+
+        return response()->json([
+            'payment_status' => $fresh->payment_status,
+            'is_paid' => $fresh->payment_status === BarterRequest::PAYMENT_PAID,
+        ]);
+    }
+
+    /**
+     * Tanyakan status transaksi ke Midtrans dan tandai lunas bila memang sudah.
+     *
+     * Dipakai sebagai jaring pengaman ketika webhook tidak sampai — kondisi
+     * yang normal terjadi di localhost. Idempoten dan aman dipanggil berulang:
+     * baris barter dikunci, dan barter yang sudah lunas langsung dilewati.
+     */
+    private function syncPaymentFromMidtrans(BarterRequest $barter): void
+    {
+        if ($barter->payment_status === BarterRequest::PAYMENT_PAID) {
+            return;
+        }
+
+        if (empty($barter->payment_reference)) {
+            return;
+        }
+
+        $midtransService = app(\App\Services\MidtransService::class);
+        $status = $midtransService->getTransactionStatus($barter->payment_reference);
+
+        $paymentStatus = $midtransService->mapPaymentStatus(
+            $status['transaction_status'] ?? null,
+            $status['fraud_status'] ?? null
+        );
+
+        if ($paymentStatus !== 'paid') {
+            return;
+        }
+
+        DB::transaction(function () use ($barter, $status) {
+            $locked = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->payment_status === BarterRequest::PAYMENT_PAID) {
+                return;
+            }
+
+            $locked->forceFill([
+                'payment_status' => BarterRequest::PAYMENT_PAID,
+                'midtrans_transaction_id' => $status['transaction_id'] ?? null,
+                'paid_at' => now(),
+            ])->save();
+
+            // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
+            // Barter masuk tahap saling kirim barang lebih dulu.
+            $this->startShipping($locked);
+        });
     }
 
     /**

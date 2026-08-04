@@ -70,10 +70,10 @@ class RefundRequestController extends Controller
 
         $store = Auth::user()->store;
 
-        // Yang membayar selisih adalah requester, jadi hanya dia yang berhak
-        // memintanya kembali.
-        if (! $store || $barter->requester_store_id !== $store->id) {
-            abort(403, 'Hanya pengaju barter yang dapat meminta pengembalian dana.');
+        // Hanya pihak yang benar-benar membayar selisihnya yang berhak
+        // memintanya kembali — bisa pengaju, bisa juga penerima barter.
+        if (! $barter->isPayer($store)) {
+            abort(403, 'Hanya pembayar selisih barter yang dapat meminta pengembalian dana.');
         }
 
         if (! $barter->canRequestRefund()) {
@@ -232,7 +232,7 @@ class RefundRequestController extends Controller
     }
 
     /**
-     * Barter gagal: selisih uang dikembalikan ke pengaju, barternya dibatalkan,
+     * Barter gagal: selisih uang dikembalikan ke pembayarnya, barternya dibatalkan,
      * dan kedua produk dilepas dari kunci barter agar bisa dijual/dibarter lagi.
      *
      * Kepemilikan produk tidak pernah berpindah di jalur ini — pertukaran hanya
