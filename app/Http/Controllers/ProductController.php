@@ -236,6 +236,14 @@ class ProductController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Produk Tebak Harga yang sedang berjalan atau sudah selesai tidak dapat diubah.');
         }
 
+        // Harga produk yang sedang terikat barter dibekukan. Selisih yang harus
+        // dibayar dikunci saat barter disetujui, jadi mengubah harga sesudahnya
+        // hanya membuat kartu barter menampilkan angka yang bertentangan dengan
+        // yang benar-benar ditagih (temuan V3-05).
+        if ($product->isLockedForBarter() && (float) $request->input('price') !== (float) $product->price) {
+            return back()->with('error', 'Harga produk ini tidak dapat diubah karena sedang terikat proses barter. Selesaikan atau batalkan barternya terlebih dahulu.');
+        }
+
         // Update gambar utama jika ada gambar baru
         if ($request->hasFile('image')) {
             // Hapus gambar lama jika ada

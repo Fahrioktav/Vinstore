@@ -155,20 +155,7 @@ class BarterController extends Controller
             return back()->with('error', 'Anda sudah mengajukan barter untuk produk ini dan masih menunggu persetujuan.');
         }
 
-        // Hitung selisih harga otomatis. Selisihnya berlaku DUA ARAH: pihak yang
-        // produknya lebih murah wajib menambah uang. Sebelumnya hanya arah
-        // "pengaju menambah" yang dihitung, sehingga barter dengan produk
-        // pengaju yang lebih mahal berjalan tanpa ada yang membayar selisihnya.
-        $offeredPrice = (float) $offeredProduct->price;
-        $requestedPrice = (float) $requestedProduct->price;
-        $priceDifference = $requestedPrice - $offeredPrice;
-        $additionalCash = abs($priceDifference);
-
-        $payerRole = match (true) {
-            $priceDifference > 0 => BarterRequest::PAYER_REQUESTER,
-            $priceDifference < 0 => BarterRequest::PAYER_RESPONDER,
-            default => null,
-        };
+        [$additionalCash, $payerRole] = $this->calculatePriceDifference($offeredProduct, $requestedProduct);
 
         BarterRequest::create([
             'requester_store_id' => $store->id,
@@ -229,6 +216,17 @@ class BarterController extends Controller
                 // Update status barter menjadi accepted
                 $barter->status = BarterRequest::STATUS_ACCEPTED;
                 $barter->responded_at = now();
+
+                // Harga bisa berubah antara pengajuan dikirim dan disetujui.
+                // Penerima menyetujui berdasarkan harga yang ia LIHAT sekarang,
+                // jadi selisihnya dihitung ulang di sini — bukan memakai angka
+                // beku dari saat pengajuan dibuat. Tanpa ini, menaikkan harga
+                // produk sendiri setelah mengajukan membuat pihak yang justru
+                // menyerahkan barang lebih mahal tetap ditagih.
+                [$additionalCash, $payerRole] = $this->calculatePriceDifference($offered, $requested);
+
+                $barter->additional_cash = $additionalCash;
+                $barter->payer_role = $payerRole;
 
                 // Cek apakah ada additional_cash yang perlu dibayar
                 if ($barter->requiresPayment()) {
@@ -623,6 +621,29 @@ class BarterController extends Controller
         }
 
         return back()->with('success', 'Penerimaan dikonfirmasi. Menunggu pihak lain mengonfirmasi juga.');
+    }
+
+    /**
+     * Hitung selisih harga barter beserta pihak yang wajib membayarnya.
+     *
+     * Selisihnya berlaku DUA ARAH: pihak yang produknya lebih murah yang
+     * menambah uang. Dikembalikan sebagai [nominal, peran pembayar] — peran
+     * bernilai null ketika kedua harga sama.
+     *
+     * Dipakai bersama oleh store() dan accept() supaya kedua momen itu tidak
+     * pernah memakai rumus yang berbeda.
+     */
+    private function calculatePriceDifference(Product $offered, Product $requested): array
+    {
+        $difference = (float) $requested->price - (float) $offered->price;
+
+        $payerRole = match (true) {
+            $difference > 0 => BarterRequest::PAYER_REQUESTER,
+            $difference < 0 => BarterRequest::PAYER_RESPONDER,
+            default => null,
+        };
+
+        return [abs($difference), $payerRole];
     }
 
     /**
