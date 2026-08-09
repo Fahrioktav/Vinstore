@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { EditIcon, SaveIcon } from '@/components/icons';
 
 export default function EditStore() {
   const { store, errors: serverErrors } = usePage().props;
@@ -23,7 +24,8 @@ export default function EditStore() {
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-3xl font-bold text-[#53685B]">
-            ✏️ Edit Toko
+            <EditIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Edit Toko
           </h2>
 
           <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -106,7 +108,8 @@ export default function EditStore() {
                 disabled={processing}
                 className="flex-1 rounded-lg bg-[#53685B] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#3c4a3e] hover:shadow-lg disabled:opacity-50"
               >
-                💾 Simpan Perubahan
+                <SaveIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                Simpan Perubahan
               </button>
               <Link
                 href="/admin/stores"

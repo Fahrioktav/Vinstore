@@ -127,6 +127,45 @@ Artisan::command('orders:auto-complete', function () {
 
 Schedule::command('orders:auto-complete')->hourly();
 
+/**
+ * Lepaskan reservasi stok pesanan yang ditinggalkan tanpa dibayar.
+ *
+ * Checkout menahan stok agar dua orang tidak sama-sama membayar guci terakhir.
+ * Tetapi pembeli yang menutup popup Snap lalu tidak pernah kembali akan menahan
+ * barang itu selamanya — dan untuk barang antik yang stoknya kerap hanya 1,
+ * satu orang yang berubah pikiran cukup untuk membuatnya tidak bisa dibeli
+ * siapa pun.
+ *
+ * Tenggatnya disamakan dengan masa berlaku transaksi Midtrans (24 jam). Lewat
+ * dari itu pesanannya ditandai kedaluwarsa dan reservasinya dilepas.
+ *
+ * Webhook Midtrans tetap jalur utamanya; command ini jaring pengaman untuk
+ * notifikasi yang tidak pernah sampai — yang SELALU terjadi di lingkungan lokal
+ * karena Midtrans tidak bisa menghubungi localhost.
+ */
+Artisan::command('orders:release-abandoned', function () {
+    $deadline = now()->subHours(Order::PAYMENT_WINDOW_HOURS);
+    $released = 0;
+
+    Order::whereIn('payment_status', ['pending', 'unpaid'])
+        ->whereNull('stock_restored_at')
+        ->whereNull('stock_committed_at')
+        ->where('created_at', '<=', $deadline)
+        ->each(function (Order $order) use (&$released) {
+            $order->update([
+                'status' => 'Cancelled',
+                'payment_status' => 'expired',
+            ]);
+
+            $order->restoreReservedStock();
+            $released++;
+        });
+
+    $this->info("Released {$released} abandoned reservation(s).");
+})->purpose('Lepaskan stok pesanan yang tidak dibayar sampai tenggat');
+
+Schedule::command('orders:release-abandoned')->hourly();
+
 // Test command untuk simulasi webhook Midtrans barter payment
 Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', function ($paymentReference, $status) {
     $serverKey = config('services.midtrans.server_key');

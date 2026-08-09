@@ -2,6 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
+import { BarterIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
+import { promptDialog } from '@/lib/dialog';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -20,12 +22,21 @@ export default function AdminPayouts() {
     input.type = 'file';
     input.accept = 'image/png,image/jpeg';
 
-    input.onchange = () => {
+    input.onchange = async () => {
       const file = input.files?.[0];
 
       if (!file) return;
 
-      const adminNote = prompt('Catatan pencairan (opsional):') || '';
+      const adminNote = await promptDialog({
+        title: 'Setujui pencairan ini?',
+        description:
+          'Setujui hanya setelah dana benar-benar ditransfer ke rekening seller.',
+        label: 'Catatan pencairan',
+        placeholder: 'Mis. nomor referensi transfer...',
+        confirmLabel: 'Setujui pencairan',
+      });
+
+      if (adminNote === null) return;
 
       router.post(
         `/admin/payouts/${publicId}/approve`,
@@ -37,8 +48,17 @@ export default function AdminPayouts() {
     input.click();
   };
 
-  const reject = (publicId) => {
-    const adminNote = prompt('Alasan penolakan pencairan (opsional):') || '';
+  const reject = async (publicId) => {
+    const adminNote = await promptDialog({
+      title: 'Tolak pencairan ini?',
+      description: 'Alasannya akan terlihat oleh seller yang mengajukan.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: rekening tidak sesuai nama pemilik toko...',
+      confirmLabel: 'Tolak pencairan',
+      variant: 'destructive',
+    });
+
+    if (adminNote === null) return;
 
     router.post(
       `/admin/payouts/${publicId}/reject`,
@@ -50,7 +70,7 @@ export default function AdminPayouts() {
   return (
     <>
       <Head title="Pencairan Dana Pesanan" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700">
             {success}
@@ -104,11 +124,11 @@ export default function AdminPayouts() {
                               {payout.barter_request?.public_id || '-'}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {payout.barter_request?.offered_product?.name ||
-                                '?'}{' '}
-                              ⇄{' '}
-                              {payout.barter_request?.requested_product?.name ||
-                                '?'}
+                              {payout.barter_request
+                                ?.display_offered_product_name || '?'}{' '}
+                              <BarterIcon className="mx-1 inline h-3 w-3 align-text-bottom" />
+                              {payout.barter_request
+                                ?.display_requested_product_name || '?'}
                             </p>
                             <p className="text-xs text-gray-400">
                               Selisih dibayar{' '}
@@ -135,7 +155,7 @@ export default function AdminPayouts() {
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-semibold">
-                          {payout.store?.store_name || '-'}
+                          {payout.display_store_name || '-'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {payout.store?.user?.email || '-'}
@@ -167,12 +187,12 @@ export default function AdminPayouts() {
                               items={[
                                 {
                                   label: 'Setujui',
-                                  icon: '✅',
+                                  icon: <SuccessIcon />,
                                   onClick: () => approve(payout.public_id),
                                 },
                                 {
                                   label: 'Tolak',
-                                  icon: '🚫',
+                                  icon: <BlockedIcon />,
                                   variant: 'destructive',
                                   onClick: () => reject(payout.public_id),
                                 },

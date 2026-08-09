@@ -6,18 +6,29 @@ import {
   getProductCertificate,
   getProductImage,
 } from '@/lib/utils';
-import { BadgeIcon } from '@/components/icons';
+import {
+  BadgeIcon,
+  BlockedIcon,
+  DeleteIcon,
+  EditIcon,
+  EmptyStateIcon,
+  ProductIcon,
+  SuccessIcon,
+} from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
+import { confirmDestructive, promptDialog } from '@/lib/dialog';
 
 export default function AdminProducts() {
   const { products, success } = usePage().props;
 
-  const handleDelete = (publicId) => {
-    if (confirm('Yakin ingin menghapus produk ini?')) {
-      router.delete(`/admin/products/${publicId}`, {
-        preserveScroll: true,
-      });
-    }
+  const handleDelete = async (publicId) => {
+    const ok = await confirmDestructive({
+      title: 'Hapus produk ini?',
+      description: 'Produk yang dihapus tidak dapat dikembalikan.',
+    });
+
+    if (ok)
+      router.delete(`/admin/products/${publicId}`, { preserveScroll: true });
   };
 
   const handleApprove = (publicId) => {
@@ -30,8 +41,19 @@ export default function AdminProducts() {
     );
   };
 
-  const handleReject = (publicId) => {
-    const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
+  const handleReject = async (publicId) => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak produk ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: foto kurang jelas, sertifikat tidak terbaca...',
+      confirmLabel: 'Tolak produk',
+      variant: 'destructive',
+    });
+
+    // null berarti dibatalkan; string kosong berarti ditolak tanpa alasan.
+    if (rejectionReason === null) return;
 
     router.post(
       `/admin/products/${publicId}/reject`,
@@ -65,16 +87,20 @@ export default function AdminProducts() {
   return (
     <>
       <Head title="Kelola Produk" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700 shadow-sm">
-            <p className="font-semibold">✓ {success}</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <SuccessIcon className="h-5 w-5 shrink-0" />
+              {success}
+            </p>
           </div>
         )}
 
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            📦 Kelola Data Produk
+            <ProductIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Kelola Data Produk
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -171,24 +197,24 @@ export default function AdminProducts() {
                             items={[
                               product.approval_status === 'pending_admin' && {
                                 label: 'Setujui',
-                                icon: '✅',
+                                icon: <SuccessIcon />,
                                 onClick: () => handleApprove(product.public_id),
                               },
                               ['pending_admin', 'approved'].includes(
                                 product.approval_status
                               ) && {
                                 label: 'Tolak',
-                                icon: '🚫',
+                                icon: <BlockedIcon />,
                                 onClick: () => handleReject(product.public_id),
                               },
                               {
                                 label: 'Edit',
-                                icon: '✏️',
+                                icon: <EditIcon />,
                                 href: `/admin/products/${product.public_id}/edit`,
                               },
                               {
                                 label: 'Hapus',
-                                icon: '🗑️',
+                                icon: <DeleteIcon />,
                                 variant: 'destructive',
                                 onClick: () => handleDelete(product.public_id),
                               },
@@ -204,7 +230,10 @@ export default function AdminProducts() {
                       colSpan="9"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">📦 Belum ada produk</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <EmptyStateIcon className="h-10 w-10 text-gray-300" />
+                        <p className="text-lg">Belum ada produk</p>
+                      </div>
                     </td>
                   </tr>
                 )}

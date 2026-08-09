@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Auction;
 use App\Models\Category;
 use App\Models\Order;
+use App\Models\PlatformRevenue;
 use App\Models\Product;
 use App\Models\SupportMessage;
 use App\Models\User;
@@ -30,10 +31,15 @@ class AdminDashboardController extends Controller
         $totalPendingProducts = Product::where('approval_status', Product::STATUS_PENDING_ADMIN)->count();
         $totalPendingAuctions = Auction::where('approval_status', Auction::STATUS_PENDING_ADMIN)->count();
 
+        // Saldo dompet admin = akumulasi biaya layanan dari pesanan yang lunas,
+        // dikurangi pembalikan atas refund yang disetujui.
+        $platformBalance = PlatformRevenue::balance();
+
         return Inertia::render('admin/dashboard', compact(
             'totalUsers', 'totalSellers', 'totalProducts',
             'totalOrders', 'totalCategories', 'totalMessages',
-            'totalPendingProducts', 'totalPendingAuctions'
+            'totalPendingProducts', 'totalPendingAuctions',
+            'platformBalance'
         ));
     }
 }

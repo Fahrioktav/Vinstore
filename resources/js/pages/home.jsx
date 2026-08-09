@@ -51,7 +51,7 @@ export default function HomePage() {
 
       {/* {-- KATEGORI SECTION --} */}
       <section className="px-6 py-20 md:px-16">
-        <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
+        <h2 className="mb-6 text-xl font-bold text-[#3E2723] sm:text-3xl">
           Kategori Populer
         </h2>
         <div className="flex flex-wrap justify-center gap-8">
@@ -89,7 +89,7 @@ export default function HomePage() {
       {/* {-- PRODUK POPULER --} */}
       <section id="products" className="px-6 py-20 md:px-16">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-[#3E2723]">
+          <h2 className="text-xl font-bold text-[#3E2723] sm:text-3xl">
             Barang Paling Populer
           </h2>
           <Link
@@ -114,7 +114,7 @@ export default function HomePage() {
       {/* {-- REKOMENDASI SECTION --} */}
       <section className="bg-[#fdf8f3] py-20">
         <div className="mx-auto max-w-6xl px-6 text-center md:px-16">
-          <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
+          <h2 className="mb-6 text-xl font-bold text-[#3E2723] sm:text-3xl">
             Rekomendasi Untukmu
           </h2>
           <p className="mb-10 text-gray-700">

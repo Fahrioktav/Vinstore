@@ -1,35 +1,74 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import ActionMenu from '@/components/ui/action-menu';
+import {
+  BlockedIcon,
+  EditIcon,
+  EmptyStateIcon,
+  StoreIcon,
+  SuccessIcon,
+} from '@/components/icons';
+import { confirmDialog, promptDialog } from '@/lib/dialog';
 
 export default function AdminSellers() {
   const { sellers, success } = usePage().props;
 
-  const handleDelete = (publicId) => {
-    if (
-      confirm(
-        'Yakin ingin menghapus seller ini? Semua toko dan produknya juga akan terhapus.'
-      )
-    ) {
-      router.delete(`/admin/sellers/${publicId}`, {
-        preserveScroll: true,
+  // Akun tidak pernah dihapus, hanya dinonaktifkan. Menghapus seller ikut
+  // menghapus produknya, padahal pesanan lama masih merujuk padanya
+  // (temuan V4-12).
+  const toggleActive = async (seller) => {
+    if (seller.deactivated_at) {
+      const ok = await confirmDialog({
+        title: `Aktifkan kembali ${seller.username}?`,
+        description: 'Produk tokonya akan tampil lagi di etalase.',
+        confirmLabel: 'Ya, aktifkan',
       });
+
+      if (ok) {
+        router.delete(`/admin/sellers/${seller.public_id}`, {
+          preserveScroll: true,
+        });
+      }
+
+      return;
     }
+
+    const reason = await promptDialog({
+      title: `Nonaktifkan ${seller.username}?`,
+      description:
+        'Akun tidak bisa masuk lagi dan produk tokonya berhenti tampil di etalase. Produk maupun riwayat pesanannya tidak dihapus dan dapat dipulihkan kapan saja.',
+      label: 'Alasan penonaktifan',
+      placeholder:
+        'Contoh: barang tidak sesuai deskripsi, tidak pernah mengirim...',
+      confirmLabel: 'Nonaktifkan akun',
+      variant: 'destructive',
+    });
+
+    if (reason === null) return;
+
+    router.delete(`/admin/sellers/${seller.public_id}`, {
+      data: { reason },
+      preserveScroll: true,
+    });
   };
 
   return (
     <>
       <Head title="Kelola Seller" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700 shadow-sm">
-            <p className="font-semibold">✓ {success}</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <SuccessIcon className="h-5 w-5 shrink-0" />
+              {success}
+            </p>
           </div>
         )}
 
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🏪 Kelola Data Seller
+            <StoreIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Kelola Data Seller
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -40,7 +79,7 @@ export default function AdminSellers() {
                   <th className="px-4 py-3 text-left">Email</th>
                   <th className="px-4 py-3 text-left">Nama Toko</th>
                   <th className="px-4 py-3 text-left">Lokasi Toko</th>
-                  <th className="px-4 py-3 text-left">Role</th>
+                  <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -73,9 +112,18 @@ export default function AdminSellers() {
                         {seller.store?.location || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                          {seller.role}
-                        </span>
+                        {seller.deactivated_at ? (
+                          <span
+                            className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                            title={seller.deactivation_reason || undefined}
+                          >
+                            Nonaktif
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                            Aktif
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center">
@@ -83,15 +131,21 @@ export default function AdminSellers() {
                             items={[
                               {
                                 label: 'Edit',
-                                icon: '✏️',
+                                icon: <EditIcon />,
                                 href: `/admin/sellers/${seller.public_id}/edit`,
                               },
-                              {
-                                label: 'Hapus',
-                                icon: '🗑️',
-                                variant: 'destructive',
-                                onClick: () => handleDelete(seller.public_id),
-                              },
+                              seller.deactivated_at
+                                ? {
+                                    label: 'Aktifkan',
+                                    icon: <SuccessIcon />,
+                                    onClick: () => toggleActive(seller),
+                                  }
+                                : {
+                                    label: 'Nonaktifkan',
+                                    icon: <BlockedIcon />,
+                                    variant: 'destructive',
+                                    onClick: () => toggleActive(seller),
+                                  },
                             ]}
                           />
                         </div>
@@ -104,7 +158,10 @@ export default function AdminSellers() {
                       colSpan="7"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">🏪 Belum ada seller</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <EmptyStateIcon className="h-10 w-10 text-gray-300" />
+                        <p className="text-lg">Belum ada seller</p>
+                      </div>
                     </td>
                   </tr>
                 )}

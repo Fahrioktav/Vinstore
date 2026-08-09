@@ -1,5 +1,17 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { formatIDR } from '@/lib/utils';
+import {
+  AuctionIcon,
+  CategoryIcon,
+  ChatIcon,
+  MoneyIcon,
+  OrderIcon,
+  PendingIcon,
+  StockIcon,
+  StoreIcon,
+  UsersIcon,
+} from '@/components/icons';
 
 export default function AdminDashboard() {
   const {
@@ -11,74 +23,87 @@ export default function AdminDashboard() {
     totalMessages,
     totalPendingProducts,
     totalPendingAuctions,
+    platformBalance,
   } = usePage().props;
 
+  // Ikon berupa komponen, bukan berkas PNG: warnanya ikut kelas Tailwind,
+  // tajam di layar kepadatan tinggi, dan tidak menambah permintaan jaringan.
   const stats = [
     {
       label: 'Total User',
       value: totalUsers,
-      icon: '/assets/1.png',
+      icon: UsersIcon,
       href: '/admin/users',
-      color: 'from-blue-500 to-blue-600',
     },
     {
       label: 'Total Seller',
       value: totalSellers,
-      icon: '/assets/2.png',
+      icon: StoreIcon,
       href: '/admin/sellers',
-      color: 'from-green-500 to-green-600',
     },
     {
       label: 'Total Stock',
       value: totalProducts,
-      icon: '/assets/4.png',
+      icon: StockIcon,
       href: '/admin/products',
-      color: 'from-orange-500 to-orange-600',
     },
     {
       label: 'Total Order',
       value: totalOrders,
-      icon: '/assets/5.png',
+      icon: OrderIcon,
       href: '/admin/orders',
-      color: 'from-red-500 to-red-600',
     },
     {
       label: 'Category',
       value: totalCategories,
-      icon: '/assets/6.png',
+      icon: CategoryIcon,
       href: '/admin/categories',
-      color: 'from-indigo-500 to-indigo-600',
     },
     {
       label: 'Messages',
       value: totalMessages,
-      icon: '/assets/icons/social-whatsapp.png',
+      icon: ChatIcon,
       href: '/admin/bantuan',
-      color: 'from-teal-500 to-teal-600',
     },
     {
       label: 'Produk Menunggu',
       value: totalPendingProducts,
-      icon: '/assets/4.png',
+      icon: PendingIcon,
       href: '/admin/products/pending',
-      color: 'from-amber-500 to-amber-600',
     },
     {
       label: 'Lelang Menunggu',
       value: totalPendingAuctions,
-      icon: '/assets/5.png',
+      icon: AuctionIcon,
       href: '/admin/auctions',
-      color: 'from-purple-500 to-purple-600',
     },
   ];
 
   return (
     <div className="">
       <Head title="Admin Dashboard" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <h2 className="mt-2 mb-6 text-3xl font-bold text-[#E9E19E]/90">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <h2 className="mt-2 mb-6 text-xl font-bold text-[#E9E19E]/90 sm:text-3xl">
           Dashboard Admin
         </h2>
+
+        {/* Dompet admin: pemasukan marketplace dari biaya layanan */}
+        <Link
+          href="/admin/pendapatan"
+          className="mb-8 block rounded-2xl bg-gradient-to-br from-[#53685B] to-[#3c4a3e] p-6 shadow-lg transition hover:brightness-110"
+        >
+          <p className="text-sm font-medium text-[#E9E19E]/80">
+            <MoneyIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Dompet Admin (biaya layanan)
+          </p>
+          <p className="mt-1 text-2xl font-bold text-white sm:text-4xl">
+            {formatIDR(platformBalance ?? 0)}
+          </p>
+          <p className="mt-2 text-xs text-white/70">
+            Akumulasi biaya layanan dari pesanan lunas, dikurangi pembalikan
+            atas refund. Klik untuk melihat rinciannya.
+          </p>
+        </Link>
 
         {/* Stats Grid */}
         <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -90,10 +115,10 @@ export default function AdminDashboard() {
             >
               <div className="flex items-center gap-4">
                 <div className="rounded-xl bg-[#53685B]/10 p-3 transition group-hover:bg-[#53685B]/20">
-                  <img src={stat.icon} className="h-8 w-8" alt={stat.label} />
+                  <stat.icon className="h-8 w-8 text-[#53685B]" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-[#53685B]">
+                  <p className="text-xl font-bold text-[#53685B] sm:text-3xl">
                     {stat.value}
                   </p>
                   <p className="text-sm font-medium text-gray-600">
@@ -101,7 +126,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="absolute top-3 right-4 text-4xl text-[#53685B] opacity-20 transition group-hover:opacity-40">
+              <div className="absolute top-3 right-4 text-2xl text-[#53685B] opacity-20 transition group-hover:opacity-40 sm:text-4xl">
                 →
               </div>
             </Link>

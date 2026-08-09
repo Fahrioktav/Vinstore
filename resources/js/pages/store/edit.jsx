@@ -5,9 +5,14 @@ import { AuthInput, AuthTextArea } from '@/components/auth/auth-layout';
 import { Camera } from 'lucide-react';
 import {
   CameraIcon,
+  CategoryFolderIcon,
   CheckIcon,
+  DocumentIcon,
   ErrorIcon,
+  LocationIcon,
+  MapViewIcon,
   SpinnerIcon,
+  StoreIcon,
 } from '@/components/icons';
 import { getStoreImage } from '@/lib/utils';
 import LocationPicker from '@/components/location-picker';
@@ -104,7 +109,7 @@ export default function StoreEditPage() {
             {/* Nama Toko */}
             <div className="group">
               <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
-                <span className="text-xl">🏪</span>
+                <StoreIcon className="h-5 w-5 text-[#53685B]" />
                 Nama Toko
               </label>
               <AuthInput
@@ -128,7 +133,7 @@ export default function StoreEditPage() {
               {/* Kategori Toko */}
               <div>
                 <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
-                  <span className="text-xl">📂</span>
+                  <CategoryFolderIcon className="h-5 w-5 text-[#53685B]" />
                   Kategori
                 </label>
                 <AuthInput
@@ -151,7 +156,7 @@ export default function StoreEditPage() {
               {/* Lokasi Toko */}
               <div>
                 <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
-                  <span className="text-xl">📍</span>
+                  <LocationIcon className="h-5 w-5 text-[#53685B]" />
                   Lokasi Toko
                 </label>
                 <AuthInput
@@ -175,7 +180,7 @@ export default function StoreEditPage() {
             {/* Deskripsi */}
             <div>
               <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
-                <span className="text-xl">📝</span>
+                <DocumentIcon className="h-5 w-5 text-[#53685B]" />
                 Deskripsi Toko
               </label>
               <AuthTextArea
@@ -198,7 +203,7 @@ export default function StoreEditPage() {
             {/* Titik Lokasi di Peta */}
             <div>
               <label className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2F3E46]">
-                <span className="text-xl">🗺️</span>
+                <MapViewIcon className="h-5 w-5 text-[#53685B]" />
                 Titik Lokasi di Peta
               </label>
               <LocationPicker

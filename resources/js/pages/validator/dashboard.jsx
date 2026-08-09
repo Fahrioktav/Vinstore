@@ -6,8 +6,17 @@ import {
   getProductCertificate,
   getProductImage,
 } from '@/lib/utils';
-import { BadgeIcon } from '@/components/icons';
+import {
+  AuctionIcon,
+  BadgeIcon,
+  BlockedIcon,
+  SearchIcon,
+  StockIcon,
+  SuccessIcon,
+  ViewIcon,
+} from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
+import { confirmDialog, promptDialog } from '@/lib/dialog';
 
 const statusLabels = {
   pending_validator: 'Menunggu Validasi',
@@ -32,8 +41,15 @@ export default function ValidatorDashboard() {
     stats,
   } = usePage().props;
 
-  const handleApprove = (publicId) => {
-    if (confirm('Validasi produk ini dan teruskan ke admin?')) {
+  const handleApprove = async (publicId) => {
+    if (
+      await confirmDialog({
+        title: 'Validasi produk ini?',
+        description:
+          'Produk diteruskan ke admin untuk persetujuan akhir sebelum tampil ke pembeli.',
+        confirmLabel: 'Ya, validasi',
+      })
+    ) {
       router.post(
         `/validator/products/${publicId}/approve`,
         {},
@@ -44,8 +60,18 @@ export default function ValidatorDashboard() {
     }
   };
 
-  const handleReject = (publicId) => {
-    const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
+  const handleReject = async (publicId) => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak produk ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: keaslian barang tidak dapat diverifikasi...',
+      confirmLabel: 'Tolak produk',
+      variant: 'destructive',
+    });
+
+    if (rejectionReason === null) return;
     router.post(
       `/validator/products/${publicId}/reject`,
       { rejection_reason: rejectionReason },
@@ -53,8 +79,15 @@ export default function ValidatorDashboard() {
     );
   };
 
-  const handleApproveAuction = (publicId) => {
-    if (confirm('Validasi lelang ini dan teruskan ke admin?')) {
+  const handleApproveAuction = async (publicId) => {
+    if (
+      await confirmDialog({
+        title: 'Validasi lelang ini?',
+        description:
+          'Lelang diteruskan ke admin untuk persetujuan akhir sebelum dibuka.',
+        confirmLabel: 'Ya, validasi',
+      })
+    ) {
       router.post(
         `/validator/auctions/${publicId}/approve`,
         {},
@@ -65,8 +98,18 @@ export default function ValidatorDashboard() {
     }
   };
 
-  const handleRejectAuction = (publicId) => {
-    const rejectionReason = prompt('Alasan penolakan lelang (opsional):') || '';
+  const handleRejectAuction = async (publicId) => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak lelang ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: keaslian barang tidak dapat diverifikasi...',
+      confirmLabel: 'Tolak lelang',
+      variant: 'destructive',
+    });
+
+    if (rejectionReason === null) return;
     router.post(
       `/validator/auctions/${publicId}/reject`,
       { rejection_reason: rejectionReason },
@@ -95,8 +138,8 @@ export default function ValidatorDashboard() {
   return (
     <>
       <Head title="Dashboard Validator" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <h2 className="mt-2 mb-6 text-3xl font-bold text-[#E9E19E]/90">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <h2 className="mt-2 mb-6 text-xl font-bold text-[#E9E19E]/90 sm:text-3xl">
           Dashboard Validator Barang Antik
         </h2>
 
@@ -107,7 +150,9 @@ export default function ValidatorDashboard() {
               key={i}
               className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg shadow-[#53685B]/10"
             >
-              <p className="text-3xl font-bold text-[#53685B]">{stat.value}</p>
+              <p className="text-xl font-bold text-[#53685B] sm:text-3xl">
+                {stat.value}
+              </p>
               <p className="text-sm font-medium text-gray-600">{stat.label}</p>
             </div>
           ))}
@@ -116,7 +161,8 @@ export default function ValidatorDashboard() {
         {/* Pending validation */}
         <div className="mb-10 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🔎 Produk Menunggu Validasi
+            <SearchIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Produk Menunggu Validasi
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -187,17 +233,17 @@ export default function ValidatorDashboard() {
                             items={[
                               {
                                 label: 'Lihat Detail',
-                                icon: '🔍',
+                                icon: <ViewIcon />,
                                 href: `/validator/products/${product.public_id}`,
                               },
                               {
                                 label: 'Validasi',
-                                icon: '✅',
+                                icon: <SuccessIcon />,
                                 onClick: () => handleApprove(product.public_id),
                               },
                               {
                                 label: 'Tolak',
-                                icon: '🚫',
+                                icon: <BlockedIcon />,
                                 variant: 'destructive',
                                 onClick: () => handleReject(product.public_id),
                               },
@@ -213,8 +259,9 @@ export default function ValidatorDashboard() {
                       colSpan="7"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">
-                        ✅ Tidak ada produk yang menunggu validasi
+                      <p className="flex items-center justify-center gap-2 text-lg">
+                        <SuccessIcon className="h-6 w-6 text-green-600" />
+                        Tidak ada produk yang menunggu validasi
                       </p>
                     </td>
                   </tr>
@@ -227,7 +274,8 @@ export default function ValidatorDashboard() {
         {/* Pending Auctions validation */}
         <div className="mb-10 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🔨 Lelang Menunggu Validasi
+            <AuctionIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Lelang Menunggu Validasi
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -302,13 +350,13 @@ export default function ValidatorDashboard() {
                             items={[
                               {
                                 label: 'Validasi',
-                                icon: '✅',
+                                icon: <SuccessIcon />,
                                 onClick: () =>
                                   handleApproveAuction(auction.public_id),
                               },
                               {
                                 label: 'Tolak',
-                                icon: '🚫',
+                                icon: <BlockedIcon />,
                                 variant: 'destructive',
                                 onClick: () =>
                                   handleRejectAuction(auction.public_id),
@@ -325,8 +373,9 @@ export default function ValidatorDashboard() {
                       colSpan="7"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">
-                        ✅ Tidak ada lelang yang menunggu validasi
+                      <p className="flex items-center justify-center gap-2 text-lg">
+                        <SuccessIcon className="h-6 w-6 text-green-600" />
+                        Tidak ada lelang yang menunggu validasi
                       </p>
                     </td>
                   </tr>
@@ -339,7 +388,8 @@ export default function ValidatorDashboard() {
         {/* Reviewed history */}
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🗂️ Riwayat Validasi
+            <StockIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Riwayat Validasi
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -386,7 +436,7 @@ export default function ValidatorDashboard() {
                             items={[
                               {
                                 label: 'Lihat Detail',
-                                icon: '🔍',
+                                icon: <ViewIcon />,
                                 href: `/validator/products/${product.public_id}`,
                               },
                             ]}
@@ -413,7 +463,8 @@ export default function ValidatorDashboard() {
         {/* Reviewed Auctions history */}
         <div className="mb-10 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🗂️ Riwayat Validasi Lelang
+            <StockIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Riwayat Validasi Lelang
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">

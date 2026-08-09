@@ -43,6 +43,16 @@ class PriceGuessController extends Controller
 
         try {
             DB::transaction(function () use ($product, $user, $validated) {
+                // Diperiksa ulang DI DALAM lock. Sejak sesi bisa ditutup lebih
+                // cepat oleh tebakan tepat, pengecekan di luar transaksi saja
+                // menyisakan celah: sesi bisa saja sudah tertutup di antara
+                // pengecekan itu dan penyimpanan tebakan ini.
+                $locked = Product::whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+
+                if (! $locked->isGuessingOpen()) {
+                    throw new \RuntimeException('Periode tebak harga untuk produk ini sudah ditutup.');
+                }
+
                 $alreadyGuessed = PriceGuess::where('product_id', $product->id)
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -60,6 +70,26 @@ class PriceGuessController extends Controller
             });
         } catch (Throwable $e) {
             return back()->with('error', $e->getMessage());
+        }
+
+        // Tebakan yang PERSIS pada harga diskon tidak mungkin dikalahkan siapa
+        // pun. Menunggu periodenya habis hanya membuat peserta lain menebak
+        // sia-sia, jadi sesinya ditutup sekarang juga dan pemenangnya diumumkan.
+        if ($product->isExactGuess((float) $validated['amount'])) {
+            app(PriceGuessService::class)->finalize($product, Product::FINISH_EXACT_GUESS);
+            $product->refresh();
+
+            // finalize() hanya menetapkan pemenang bila tebakannya masuk ambang
+            // toleransi — tebakan tepat pasti masuk. Pengecekan ini menjaga
+            // pesan agar tidak mengklaim kemenangan yang tidak terjadi, misalnya
+            // bila ada proses lain yang menutup sesinya lebih dulu.
+            if ($product->guess_winner_id === $user->id) {
+                return back()->with(
+                    'success',
+                    '🎯 Tebakan Anda tepat sasaran! Sesi tebak harga ditutup dan Anda keluar sebagai pemenang. '
+                    .'Anda punya waktu '.Product::WINNER_PRIORITY_HOURS.' jam untuk membeli produk ini di harga diskon.'
+                );
+            }
         }
 
         return back()->with('success', 'Tebakan harga Anda berhasil dikirim. Tebakan tidak dapat diubah lagi.');

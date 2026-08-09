@@ -7,7 +7,15 @@ import {
   getProductImage,
   getUserImage,
 } from '@/lib/utils';
-import { BadgeIcon } from '@/components/icons';
+import {
+  BadgeIcon,
+  CheckIcon,
+  CloseIcon,
+  GuessIcon,
+  LocationIcon,
+  WarningIcon,
+} from '@/components/icons';
+import { confirmDialog, promptDialog } from '@/lib/dialog';
 
 const statusLabels = {
   pending_validator: 'Menunggu Validasi',
@@ -27,8 +35,15 @@ export default function ValidatorProductDetail() {
   const { product } = usePage().props;
   const isPending = product.approval_status === 'pending_validator';
 
-  const handleApprove = () => {
-    if (confirm('Validasi produk ini dan teruskan ke admin?')) {
+  const handleApprove = async () => {
+    if (
+      await confirmDialog({
+        title: 'Validasi produk ini?',
+        description:
+          'Produk diteruskan ke admin untuk persetujuan akhir sebelum tampil ke pembeli.',
+        confirmLabel: 'Ya, validasi',
+      })
+    ) {
       router.post(
         `/validator/products/${product.public_id}/approve`,
         {},
@@ -39,8 +54,18 @@ export default function ValidatorProductDetail() {
     }
   };
 
-  const handleReject = () => {
-    const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
+  const handleReject = async () => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak produk ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: keaslian barang tidak dapat diverifikasi...',
+      confirmLabel: 'Tolak produk',
+      variant: 'destructive',
+    });
+
+    if (rejectionReason === null) return;
     router.post(
       `/validator/products/${product.public_id}/reject`,
       { rejection_reason: rejectionReason },
@@ -95,7 +120,8 @@ export default function ValidatorProductDetail() {
                   </a>
                 ) : (
                   <p className="rounded-lg bg-red-50 px-4 py-2.5 text-center text-sm font-medium text-red-600">
-                    ⚠️ Produk tidak menyertakan sertifikat
+                    <WarningIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                    Produk tidak menyertakan sertifikat
                   </p>
                 )}
               </div>
@@ -110,7 +136,8 @@ export default function ValidatorProductDetail() {
               </h1>
               {product.sale_type === 'tebak_harga' && (
                 <span className="mt-2 inline-block rounded-md bg-[#53685B] px-2 py-1 text-xs font-semibold text-white">
-                  🎯 Tebak Harga
+                  <GuessIcon className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
+                  Tebak Harga
                 </span>
               )}
               <p className="mt-2 text-3xl font-bold text-[#B77C4C]">
@@ -123,7 +150,7 @@ export default function ValidatorProductDetail() {
               </p>
 
               {product.sale_type === 'tebak_harga' && (
-                <div className="mt-4 grid grid-cols-2 gap-4 rounded-lg bg-[#53685B]/5 p-4 text-sm">
+                <div className="mt-4 grid grid-cols-1 gap-4 rounded-lg bg-[#53685B]/5 p-4 text-sm sm:grid-cols-2">
                   <Info
                     label="Periode Mulai"
                     value={formatTebakDate(product.guess_starts_at)}
@@ -135,7 +162,7 @@ export default function ValidatorProductDetail() {
                 </div>
               )}
 
-              <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+              <div className="mt-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <Info label="Kategori" value={product.category} />
                 <Info label="Stok" value={product.stock} />
                 <Info label="ID Produk" value={product.public_id} />
@@ -199,7 +226,10 @@ export default function ValidatorProductDetail() {
                     {seller.username ? ` (@${seller.username})` : ''}
                   </p>
                   {store.location && (
-                    <p className="text-gray-500">📍 {store.location}</p>
+                    <p className="flex items-center gap-1 text-gray-500">
+                      <LocationIcon className="h-4 w-4 shrink-0" />
+                      {store.location}
+                    </p>
                   )}
                 </div>
               </div>
@@ -217,13 +247,15 @@ export default function ValidatorProductDetail() {
                   onClick={handleApprove}
                   className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
                 >
-                  ✓ Validasi & Teruskan ke Admin
+                  <CheckIcon className="mr-1 inline h-5 w-5 align-text-bottom" />
+                  Validasi & Teruskan ke Admin
                 </button>
                 <button
                   onClick={handleReject}
                   className="flex-1 rounded-lg bg-red-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
                 >
-                  ✕ Tolak Produk
+                  <CloseIcon className="mr-1 inline h-5 w-5 align-text-bottom" />
+                  Tolak Produk
                 </button>
               </div>
             )}

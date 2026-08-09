@@ -23,7 +23,7 @@ if ('serviceWorker' in navigator) {
       .register('/service-worker.js')
       .then((registration) => {
         console.log(
-          '✅ Service Worker registered successfully:',
+          'Service Worker registered successfully:',
           registration.scope
         );
 
@@ -33,7 +33,7 @@ if ('serviceWorker' in navigator) {
         }, 60000); // Check every minute
       })
       .catch((error) => {
-        console.log('❌ Service Worker registration failed:', error);
+        console.log('Service Worker registration failed:', error);
       });
   });
 }

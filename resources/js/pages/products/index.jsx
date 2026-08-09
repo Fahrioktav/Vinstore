@@ -54,7 +54,7 @@ export default function ProductsPage() {
         />
       )}
 
-      <div className="px-6 py-10 md:px-16">
+      <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
         <h2 className="mb-6 text-3xl font-bold text-[#E9E19E]">Semua Produk</h2>
         <form
           onSubmit={applyFilters}

@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\PlatformRevenue;
 use App\Models\Product;
+use App\Services\GeocodingService;
 use App\Services\MidtransService;
 use App\Services\PriceGuessService;
+use App\Services\ShippingCostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Throwable;
 
@@ -26,6 +30,12 @@ class OrderController extends Controller
 
         if ($product->approval_status !== 'approved') {
             return back()->with('error', 'Produk ini belum disetujui admin.');
+        }
+
+        // Scope approved() sudah menyaringnya dari daftar, tetapi halaman ini
+        // bisa dibuka lewat URL langsung.
+        if ($product->isSellerDeactivated()) {
+            return back()->with('error', 'Produk ini sedang tidak tersedia karena akun penjualnya dinonaktifkan.');
         }
 
         if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {
@@ -52,6 +62,9 @@ class OrderController extends Controller
 
         return Inertia::render('checkout', [
             'product' => $product,
+            // Tarif dikirim ke frontend supaya pratinjau biaya memakai angka
+            // yang sama persis dengan yang dihitung server saat menagih.
+            'feeRates' => app(ShippingCostService::class)->publicRates(),
         ]);
     }
 
@@ -155,12 +168,9 @@ class OrderController extends Controller
 
     public function processCheckout(Request $request, Product $product)
     {
-        $request->validate([
+        $request->validate(self::shippingRules() + [
             'quantity' => 'required|integer|min:1',
-            'shipping_address' => 'required|string|max:500',
-            'shipping_method' => 'required|in:standard,express',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        ], self::shippingMessages());
 
         $user = Auth::user();
 
@@ -176,10 +186,17 @@ class OrderController extends Controller
             return back()->with('error', $this->tebakHargaBlockMessage($product, $user));
         }
 
+        // Dibaca sebelum transaksi dibuka; lihat resolveShippingArea().
+        $shippingArea = self::resolveShippingArea($request);
+
         try {
-            $transaction = DB::transaction(function () use ($request, $product, $user) {
+            $transaction = DB::transaction(function () use ($request, $product, $user, $shippingArea) {
                 $quantity = (int) $request->quantity;
-                $product = Product::whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+                $product = Product::whereKey($product->getKey())->with('store')->lockForUpdate()->firstOrFail();
+
+                if ($product->isSellerDeactivated()) {
+                    throw new \RuntimeException('Produk ini sedang tidak tersedia karena akun penjualnya dinonaktifkan.');
+                }
 
                 if ($product->isTebakHarga() && ! $product->isPurchasableBy($user)) {
                     throw new \RuntimeException('Produk ini belum dapat dibeli.');
@@ -191,17 +208,36 @@ class OrderController extends Controller
                     throw new \RuntimeException('Produk ini sedang dalam proses barter dan belum tersedia untuk dibeli.');
                 }
 
-                if ($product->stock < $quantity || $product->stock <= 0) {
-                    throw new \RuntimeException('Stok produk tidak mencukupi atau sudah habis. Stok tersedia: '.$product->stock);
+                // Yang diperiksa adalah sisa yang BISA DIBELI, bukan stok
+                // mentah: sebagian stok bisa sedang ditahan pesanan orang lain
+                // yang belum lunas.
+                if ($product->available_stock < $quantity) {
+                    throw new \RuntimeException(self::stockErrorMessage($product, $quantity));
                 }
 
                 // Pemenang tebak harga yang masih memegang prioritas membayar
                 // harga diskon; selebihnya harga normal.
                 $unitPrice = (int) round($product->effectivePriceFor($user));
-                $shippingCost = $request->shipping_method === 'express' ? 25000 : 10000;
-                $totalPrice = ($unitPrice * $quantity) + $shippingCost;
 
-                $product->stock = $product->stock - $quantity;
+                // Seluruh komponen biaya dihitung ulang di sisi server. Angka
+                // yang dikirim frontend hanya pratinjau dan tidak dipercaya.
+                $quote = app(ShippingCostService::class)->quoteLine(
+                    $product,
+                    $quantity,
+                    $unitPrice,
+                    $request->shipping_method,
+                    self::floatOrNull($request->input('shipping_latitude')),
+                    self::floatOrNull($request->input('shipping_longitude')),
+                    true,
+                    $request->input('packaging_type'),
+                );
+
+                $totalPrice = $quote['total'];
+
+                // Stok DITAHAN, belum dipotong. Barangnya baru benar-benar
+                // keluar dari stok saat pembayaran lunas — sampai saat itu ia
+                // tetap tampil di etalase. Lihat Order::commitReservedStock().
+                $product->reserved_stock = $product->reserved_stock + $quantity;
 
                 // Pemenang tebak harga menggunakan hak prioritasnya -> produk menjadi penjualan biasa.
                 if ($product->isTebakHarga() && $product->guess_status === Product::GUESS_ENDED) {
@@ -226,8 +262,18 @@ class OrderController extends Controller
                     // Detail pengiriman disimpan sebagai bagian dari pesanan:
                     // tanpa ini seller tidak tahu ke mana barang dikirim.
                     'shipping_address' => $request->shipping_address,
+                    'shipping_area' => $shippingArea,
                     'shipping_method' => $request->shipping_method,
-                    'shipping_cost' => $shippingCost,
+                    'shipping_cost' => $quote['shipping_cost'],
+                    'packaging_fee' => $quote['packaging_fee'],
+                    'packaging_type' => $quote['packaging_type'],
+                    'weight_fee' => $quote['weight_fee'],
+                    'service_fee' => $quote['service_fee'],
+                    'weight_gram' => $quote['weight_gram'],
+                    'volumetric_weight_gram' => $quote['volumetric_weight_gram'],
+                    'shipping_distance_km' => $quote['distance_km'],
+                    'shipping_latitude' => self::floatOrNull($request->input('shipping_latitude')),
+                    'shipping_longitude' => self::floatOrNull($request->input('shipping_longitude')),
                     'notes' => $request->notes,
                     'payment_status' => 'pending',
                     'payment_method' => 'midtrans',
@@ -236,21 +282,17 @@ class OrderController extends Controller
                 $paymentReference = $order->public_id;
                 $order->update(['payment_reference' => $paymentReference]);
 
-                // Item details harus include shipping agar total match
-                $items = [
+                // Setiap komponen biaya menjadi barisnya sendiri. Midtrans
+                // menolak transaksi bila jumlah item_details tidak sama persis
+                // dengan gross_amount.
+                $items = array_merge([
                     [
                         'id' => $product->public_id,
                         'price' => $unitPrice,
                         'quantity' => $quantity,
-                        'name' => substr($product->name, 0, 50),
+                        'name' => MidtransService::truncate($product->name, 50),
                     ],
-                    [
-                        'id' => 'SHIPPING',
-                        'price' => $shippingCost,
-                        'quantity' => 1,
-                        'name' => $request->shipping_method === 'express' ? 'Pengiriman Express' : 'Pengiriman Standard',
-                    ],
-                ];
+                ], self::feeItemDetails($order, $quote, $request->shipping_method, $product->store?->store_name));
 
                 $transaction = app(MidtransService::class)->createSnapTransaction(
                     $paymentReference,
@@ -279,6 +321,7 @@ class OrderController extends Controller
         // Return ke halaman checkout dengan snap_token untuk trigger Snap Popup
         return Inertia::render('checkout', [
             'product' => $product,
+            'feeRates' => app(ShippingCostService::class)->publicRates(),
             'flash' => [
                 'success' => 'Order berhasil dibuat. Silakan selesaikan pembayaran.',
                 'snap_token' => $transaction['token'],
@@ -335,26 +378,38 @@ class OrderController extends Controller
 
     public function checkoutFromCart(Request $request)
     {
-        $request->validate([
-            'shipping_address' => 'required|string|max:500',
-            'shipping_method' => 'required|in:standard,express',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        // Di keranjang, metode pengiriman dan jenis pengemasan dipilih PER TOKO,
+        // bukan sekali untuk semua. Satu keranjang bisa memuat guci keramik dari
+        // satu toko dan koin dari toko lain — memaksa keduanya memakai peti kayu
+        // dan kurir yang sama membuat pembeli membayar perlindungan yang tidak
+        // ia butuhkan. Pembayarannya tetap satu transaksi Snap.
+        $request->validate(
+            self::cartShippingRules(),
+            self::shippingMessages() + [
+                'store_options.*.shipping_method.required' => 'Metode pengiriman untuk setiap toko wajib dipilih.',
+                'store_options.*.packaging_type.required' => 'Jenis pengemasan untuk setiap toko wajib dipilih.',
+            ]
+        );
 
         $user = Auth::user();
 
+        $shippingArea = self::resolveShippingArea($request);
+
         try {
-            $transaction = DB::transaction(function () use ($request, $user) {
+            $transaction = DB::transaction(function () use ($request, $user, $shippingArea) {
                 $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
 
                 if ($cartItems->isEmpty()) {
                     throw new \RuntimeException('Keranjang kamu kosong.');
                 }
 
-                $shippingCost = $request->shipping_method === 'express' ? 25000 : 10000;
+                $costs = app(ShippingCostService::class);
+                $destLat = self::floatOrNull($request->input('shipping_latitude'));
+                $destLng = self::floatOrNull($request->input('shipping_longitude'));
+                $storeOptions = (array) $request->input('store_options', []);
 
-                // Ongkir ditagih sekali per toko, bukan per baris keranjang:
-                // dua barang dari toko yang sama dikirim dalam satu paket.
+                // Ongkir dan biaya peti ditagih sekali per toko, bukan per baris
+                // keranjang: dua barang dari toko yang sama dikirim dalam satu paket.
                 $shippingChargedForStore = [];
 
                 $paymentReference = 'PAY'.random_int(100000000, 999999999);
@@ -363,11 +418,17 @@ class OrderController extends Controller
                 $orderIds = [];
 
                 foreach ($cartItems as $item) {
-                    $product = Product::whereKey($item->product_id)->lockForUpdate()->firstOrFail();
+                    $product = Product::whereKey($item->product_id)->with('store')->lockForUpdate()->firstOrFail();
                     $quantity = (int) $item->quantity;
 
                     if ($product->approval_status !== 'approved') {
                         throw new \RuntimeException('Produk "'.$product->name.'" belum disetujui admin.');
+                    }
+
+                    if ($product->isSellerDeactivated()) {
+                        throw new \RuntimeException(
+                            'Produk "'.$product->name.'" sedang tidak tersedia karena akun penjualnya dinonaktifkan.'
+                        );
                     }
 
                     if ($product->isTebakHarga() && ! $product->isPurchasableBy($user)) {
@@ -382,22 +443,40 @@ class OrderController extends Controller
                         throw new \RuntimeException('Keranjang Anda mengandung produk dari toko Anda sendiri. Silakan hapus produk tersebut terlebih dahulu.');
                     }
 
-                    if ($product->stock < $quantity || $product->stock <= 0) {
-                        throw new \RuntimeException('Stok produk "'.$product->name.'" tidak mencukupi. Stok tersedia: '.$product->stock);
+                    if ($product->available_stock < $quantity) {
+                        throw new \RuntimeException(self::stockErrorMessage($product, $quantity));
                     }
 
                     // Pemenang tebak harga yang masih memegang prioritas
                     // membayar harga diskon; selebihnya harga normal.
                     $unitPrice = (int) round($product->effectivePriceFor($user));
-                    $lineTotal = $unitPrice * $quantity;
 
-                    $storeKey = $product->store_id ?? 'none';
-                    $lineShipping = isset($shippingChargedForStore[$storeKey]) ? 0 : $shippingCost;
+                    // Kunci pengelompokan memakai public_id toko karena itulah
+                    // yang dikirim frontend; produk tanpa toko masuk kelompok
+                    // 'none' agar tetap punya satu ongkir sendiri.
+                    $storeKey = $product->store?->public_id ?? 'none';
+                    $firstOfStore = ! isset($shippingChargedForStore[$storeKey]);
                     $shippingChargedForStore[$storeKey] = true;
 
-                    $grossAmount += $lineTotal + $lineShipping;
+                    $options = $storeOptions[$storeKey] ?? [];
+                    $shippingMethod = $options['shipping_method'] ?? 'standard';
+                    $packagingType = $options['packaging_type'] ?? null;
 
-                    $product->stock = $product->stock - $quantity;
+                    $quote = $costs->quoteLine(
+                        $product,
+                        $quantity,
+                        $unitPrice,
+                        $shippingMethod,
+                        $destLat,
+                        $destLng,
+                        $firstOfStore,
+                        $packagingType,
+                    );
+
+                    $grossAmount += $quote['total'];
+
+                    // Ditahan, bukan dipotong — lihat catatan di processCheckout().
+                    $product->reserved_stock = $product->reserved_stock + $quantity;
 
                     if ($product->isTebakHarga() && $product->guess_status === Product::GUESS_ENDED) {
                         $product->guess_status = Product::GUESS_PUBLIC;
@@ -414,11 +493,21 @@ class OrderController extends Controller
                         'store_id' => $product->store_id,
                         'store_name' => $product->store?->store_name,
                         'quantity' => $quantity,
-                        'price' => $lineTotal + $lineShipping,
+                        'price' => $quote['total'],
                         'status' => 'Waiting',
                         'shipping_address' => $request->shipping_address,
-                        'shipping_method' => $request->shipping_method,
-                        'shipping_cost' => $lineShipping,
+                        'shipping_area' => $shippingArea,
+                        'shipping_method' => $shippingMethod,
+                        'shipping_cost' => $quote['shipping_cost'],
+                        'packaging_fee' => $quote['packaging_fee'],
+                        'packaging_type' => $quote['packaging_type'],
+                        'weight_fee' => $quote['weight_fee'],
+                        'service_fee' => $quote['service_fee'],
+                        'weight_gram' => $quote['weight_gram'],
+                        'volumetric_weight_gram' => $quote['volumetric_weight_gram'],
+                        'shipping_distance_km' => $quote['distance_km'],
+                        'shipping_latitude' => $destLat,
+                        'shipping_longitude' => $destLng,
                         'notes' => $request->notes,
                         'payment_reference' => $paymentReference,
                         'payment_status' => 'pending',
@@ -430,23 +519,17 @@ class OrderController extends Controller
                         'id' => $product->public_id,
                         'price' => $unitPrice,
                         'quantity' => $quantity,
-                        'name' => substr($product->name, 0, 50),
+                        // mb_substr, bukan substr: memotong per byte bisa
+                        // membelah karakter multibyte dan membuat payload gagal
+                        // di-encode ke JSON.
+                        'name' => MidtransService::truncate($product->name, 50),
                     ];
 
-                    // Baris ongkir dipisah agar total item_details cocok dengan
-                    // gross_amount — Midtrans menolak transaksi bila tidak sama.
-                    if ($lineShipping > 0) {
-                        $itemDetails[] = [
-                            'id' => 'SHIPPING-'.$order->public_id,
-                            'price' => $lineShipping,
-                            'quantity' => 1,
-                            'name' => substr(
-                                ($request->shipping_method === 'express' ? 'Ongkir Express - ' : 'Ongkir Standard - ')
-                                    .($product->store?->store_name ?? 'Toko'),
-                                0,
-                                50
-                            ),
-                        ];
+                    // Tiap komponen biaya jadi baris tersendiri agar total
+                    // item_details cocok dengan gross_amount — Midtrans menolak
+                    // transaksi bila tidak sama.
+                    foreach (self::feeItemDetails($order, $quote, $shippingMethod, $product->store?->store_name) as $feeItem) {
+                        $itemDetails[] = $feeItem;
                     }
                 }
 
@@ -491,6 +574,159 @@ class OrderController extends Controller
         }
 
         return Inertia::render('invoice', compact('order'));
+    }
+
+    /**
+     * Aturan validasi detail pengiriman, dipakai checkout produk maupun keranjang.
+     *
+     * Koordinat tujuan bersifat opsional — pembeli yang menolak izin lokasi tetap
+     * harus bisa berbelanja — tetapi harus lengkap: satu koordinat saja tanpa
+     * pasangannya tidak bisa dipakai menghitung jarak.
+     */
+    private static function shippingRules(): array
+    {
+        return [
+            'shipping_address' => 'required|string|max:500',
+            'shipping_method' => 'required|in:standard,express',
+            // Titik antar WAJIB. Sebelumnya opsional, dan ongkir jatuh ke tarif
+            // rata bila kosong — itu membuat ongkir berbasis jarak bisa
+            // dihindari cukup dengan tidak memilih titik (temuan V4-01).
+            'shipping_latitude' => 'required|numeric|between:-90,90',
+            'shipping_longitude' => 'required|numeric|between:-180,180',
+            // Pilihan pengemasan pembeli. Opsional supaya jalur lama tetap
+            // jalan; yang kosong memakai jenis default dari config.
+            'packaging_type' => ['nullable', Rule::in(array_keys(config('marketplace.packaging.options')))],
+            'notes' => 'nullable|string|max:500',
+        ];
+    }
+
+    /**
+     * Aturan checkout keranjang: alamat & titik antar berlaku untuk seluruh
+     * keranjang, tetapi metode pengiriman dan pengemasan dipilih per toko.
+     *
+     * `shipping_method` dan `packaging_type` tunggal sengaja dibuang dari sini —
+     * membiarkannya ikut diterima akan menciptakan dua sumber kebenaran untuk
+     * hal yang sama.
+     */
+    private static function cartShippingRules(): array
+    {
+        $rules = self::shippingRules();
+
+        unset($rules['shipping_method'], $rules['packaging_type']);
+
+        return $rules + [
+            'store_options' => 'required|array|min:1',
+            'store_options.*.shipping_method' => 'required|in:standard,express',
+            'store_options.*.packaging_type' => [
+                'required',
+                Rule::in(array_keys(config('marketplace.packaging.options'))),
+            ],
+        ];
+    }
+
+    private static function shippingMessages(): array
+    {
+        $titikWajib = 'Tentukan dulu titik pengantaran pada peta. '
+            .'Ongkos kirim dihitung dari jarak toko ke titik tersebut.';
+
+        return [
+            'shipping_latitude.required' => $titikWajib,
+            'shipping_longitude.required' => $titikWajib,
+            'shipping_address.required' => 'Detail alamat wajib diisi.',
+        ];
+    }
+
+    /**
+     * Nama wilayah titik antar, dibaca dari koordinatnya.
+     *
+     * Dipanggil DI LUAR transaksi: ini permintaan HTTP ke layanan luar, dan
+     * menahannya sambil memegang lockForUpdate atas baris produk akan mengunci
+     * stok selama jaringan lambat.
+     *
+     * Mengembalikan null bila layanannya mati atau titiknya tidak dikenali —
+     * checkout tetap berjalan, hanya keterangan wilayahnya yang kosong.
+     */
+    private static function resolveShippingArea(Request $request): ?string
+    {
+        return app(GeocodingService::class)->areaName(
+            self::floatOrNull($request->input('shipping_latitude')),
+            self::floatOrNull($request->input('shipping_longitude')),
+        );
+    }
+
+    /**
+     * Pesan yang menjelaskan KENAPA barangnya tidak bisa dibeli.
+     *
+     * Sejak stok ditahan alih-alih dipotong, produk bisa terlihat masih ada
+     * tetapi tidak bisa dibeli karena sedang dipesan orang lain. Tanpa
+     * penjelasan ini pembeli hanya melihat penolakan tanpa sebab.
+     */
+    private static function stockErrorMessage(Product $product, int $quantity): string
+    {
+        if ($product->stock <= 0) {
+            return 'Produk "'.$product->name.'" sudah habis.';
+        }
+
+        if ($product->is_fully_reserved) {
+            return 'Produk "'.$product->name.'" sedang dalam proses pembayaran pembeli lain. '
+                .'Silakan coba lagi beberapa saat lagi bila pembayarannya batal.';
+        }
+
+        return 'Stok produk "'.$product->name.'" tidak mencukupi. Tersisa: '.$product->available_stock
+            .', diminta: '.$quantity.'.';
+    }
+
+    private static function floatOrNull($value): ?float
+    {
+        return ($value === null || $value === '') ? null : (float) $value;
+    }
+
+    /**
+     * Ubah rincian biaya menjadi baris item_details Midtrans.
+     *
+     * Hanya komponen bernilai > 0 yang dikirim. Jumlah seluruh baris (termasuk
+     * baris barang) wajib sama persis dengan gross_amount.
+     *
+     * Id baris disuffiks public_id pesanan supaya tetap unik saat satu
+     * pembayaran mencakup beberapa pesanan sekaligus (checkout keranjang).
+     */
+    private static function feeItemDetails(Order $order, array $quote, string $method, ?string $storeName): array
+    {
+        $suffix = $order->public_id;
+        $methodLabel = $method === 'express' ? 'Express' : 'Standard';
+        $distanceLabel = $quote['distance_km'] !== null
+            ? ' '.number_format((float) $quote['distance_km'], 1, ',', '.').' km'
+            : '';
+
+        // Ditandai "volumetrik" bila yang menentukan tagihan adalah dimensi
+        // paketnya, bukan beratnya — supaya pembeli tahu dari mana angkanya.
+        $isVolumetric = ($quote['volumetric_weight_gram'] ?? 0) > ($quote['actual_weight_gram'] ?? 0);
+        $weightLabel = 'Biaya Berat '.number_format($quote['weight_gram'] / 1000, 2, ',', '.').' kg'
+            .($isVolumetric ? ' (volumetrik)' : '');
+
+        $rows = [
+            ['SHIP', $quote['shipping_cost'], 'Ongkir '.$methodLabel.$distanceLabel.' - '.($storeName ?? 'Toko')],
+            ['WEIGHT', $quote['weight_fee'], $weightLabel],
+            ['PACK', $quote['packaging_fee'], 'Pengemasan '.app(ShippingCostService::class)->packagingLabel($quote['packaging_type'] ?? null)],
+            ['SVC', $quote['service_fee'], 'Biaya Layanan'],
+        ];
+
+        $items = [];
+
+        foreach ($rows as [$prefix, $amount, $name]) {
+            if ((int) $amount <= 0) {
+                continue;
+            }
+
+            $items[] = [
+                'id' => MidtransService::truncate($prefix.'-'.$suffix, 50),
+                'price' => (int) $amount,
+                'quantity' => 1,
+                'name' => MidtransService::truncate($name, 50),
+            ];
+        }
+
+        return $items;
     }
 
     private function tebakHargaBlockMessage(Product $product, $user): string
@@ -547,6 +783,21 @@ class OrderController extends Controller
                 }
 
                 $order->update($updates);
+
+                // Lihat MidtransNotificationController: biaya layanan dicatat
+                // sekali saja, saat pesanan benar-benar lunas.
+                if ($applyStatus && $paymentStatus === 'paid') {
+                    $order->commitReservedStock();
+
+                    PlatformRevenue::recordServiceFee($order);
+                }
+
+                if ($applyStatus && $paymentStatus === 'refunded') {
+                    PlatformRevenue::reverseServiceFee(
+                        $order,
+                        'Pembalikan biaya layanan atas refund Midtrans pesanan '.$order->public_id
+                    );
+                }
 
                 if ($applyStatus && $isFailure) {
                     $order->restoreReservedStock();

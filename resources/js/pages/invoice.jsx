@@ -1,6 +1,20 @@
 import { usePage, Link, Head } from '@inertiajs/react';
 import { formatIDR } from '@/lib/utils';
+import {
+  CategoryFolderIcon,
+  CheckIcon,
+  LocationIcon,
+  MailIcon,
+  PrintIcon,
+} from '@/components/icons';
 import React, { useRef } from 'react';
+
+// Label jenis pengemasan. Disalin ke sini karena invoice tidak menerima prop
+// feeRates — tarifnya bisa berubah, tetapi nama jenisnya stabil.
+const packagingLabels = {
+  standard: 'Bubble Wrap + Kardus',
+  kayu: 'Peti Kayu',
+};
 
 export default function InvoicePage() {
   const { order } = usePage().props;
@@ -14,13 +28,56 @@ export default function InvoicePage() {
   const invoiceNumber = order.public_id;
   const item = order.product || order.auction;
 
-  // order.price sudah termasuk ongkir, jadi harga satuan tidak boleh dihitung
-  // dari order.price / quantity. Pakai snapshot product_price bila tersedia.
+  // order.price adalah TOTAL tagihan — sudah termasuk seluruh komponen biaya.
+  // Harga satuan karena itu tidak boleh dihitung dari order.price / quantity;
+  // pakai snapshot product_price bila tersedia.
   const shippingCost = Number(order.shipping_cost) || 0;
-  const itemSubtotal = Number(order.price) - shippingCost;
+  const packagingFee = Number(order.packaging_fee) || 0;
+  const weightFee = Number(order.weight_fee) || 0;
+  const serviceFee = Number(order.service_fee) || 0;
+
+  const itemSubtotal =
+    Number(order.price) - shippingCost - packagingFee - weightFee - serviceFee;
   const unitPrice = order.product_price
     ? Number(order.product_price)
     : itemSubtotal / (order.quantity || 1);
+
+  const distanceKm = order.shipping_distance_km
+    ? Number(order.shipping_distance_km)
+    : null;
+
+  // Baris biaya tambahan pada invoice. Yang bernilai nol tidak ditampilkan —
+  // pesanan lelang, misalnya, tidak punya komponen biaya sama sekali.
+  const feeRows = [
+    {
+      label: 'Biaya Pengiriman',
+      note:
+        (order.shipping_method || '-') +
+        (distanceKm !== null
+          ? ` · ${distanceKm.toLocaleString('id-ID', { maximumFractionDigits: 1 })} km`
+          : ''),
+      amount: shippingCost,
+    },
+    {
+      label: 'Biaya Berat',
+      note: order.weight_gram
+        ? `${(Number(order.weight_gram) / 1000).toLocaleString('id-ID', {
+            maximumFractionDigits: 2,
+          })} kg` +
+          (Number(order.volumetric_weight_gram) > 0 &&
+          Number(order.volumetric_weight_gram) >= Number(order.weight_gram)
+            ? ' (volumetrik)'
+            : '')
+        : '-',
+      amount: weightFee,
+    },
+    {
+      label: 'Biaya Pengemasan',
+      note: packagingLabels[order.packaging_type] ?? 'Peti & pembungkus',
+      amount: packagingFee,
+    },
+    { label: 'Biaya Layanan', note: 'Layanan marketplace', amount: serviceFee },
+  ].filter((row) => row.amount > 0);
 
   const statusBadge = {
     Waiting: 'bg-yellow-100 text-yellow-800',
@@ -46,9 +103,10 @@ export default function InvoicePage() {
             </Link>
             <button
               onClick={handlePrint}
-              className="rounded-lg bg-[#B77C4C] px-6 py-2 font-semibold text-white transition hover:bg-[#8d5e39]"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#B77C4C] px-6 py-2 font-semibold text-white transition hover:bg-[#8d5e39]"
             >
-              🖨️ Print / Download PDF
+              <PrintIcon className="h-5 w-5" />
+              Print / Download PDF
             </button>
           </div>
 
@@ -61,13 +119,13 @@ export default function InvoicePage() {
             <div className="mb-8 border-b-2 border-[#53685B] pb-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="mb-2 text-4xl font-bold text-[#53685B]">
+                  <h1 className="mb-2 text-2xl font-bold text-[#53685B] sm:text-4xl">
                     INVOICE
                   </h1>
                   <p className="text-lg text-gray-600">{invoiceNumber}</p>
                 </div>
                 <div className="text-right">
-                  <div className="mb-2 text-3xl font-bold text-[#B77C4C]">
+                  <div className="mb-2 text-xl font-bold text-[#B77C4C] sm:text-3xl">
                     VINSTORE
                   </div>
                   <p className="text-sm text-gray-600">
@@ -91,11 +149,13 @@ export default function InvoicePage() {
                   <p className="text-sm text-gray-600">
                     {order.store?.description || '-'}
                   </p>
-                  <p className="mt-2 text-sm text-gray-600">
-                    📍 {order.store?.location || '-'}
+                  <p className="mt-2 flex items-center gap-1.5 text-sm text-gray-600">
+                    <LocationIcon className="h-4 w-4 shrink-0" />
+                    {order.store?.location || '-'}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    📂 Kategori: {order.store?.category || '-'}
+                  <p className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <CategoryFolderIcon className="h-4 w-4 shrink-0" />
+                    Kategori: {order.store?.category || '-'}
                   </p>
                 </div>
               </div>
@@ -109,7 +169,10 @@ export default function InvoicePage() {
                   <p className="mb-1 text-xl font-bold text-[#53685B]">
                     {order.user.first_name} {order.user.last_name}
                   </p>
-                  <p className="text-sm text-gray-600">📧 {order.user.email}</p>
+                  <p className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <MailIcon className="h-4 w-4 shrink-0" />
+                    {order.user.email}
+                  </p>
                   <p className="mt-4 text-sm text-gray-600">
                     <span className="font-semibold">Tanggal:</span>{' '}
                     {invoiceDate.toLocaleDateString('id-ID', {
@@ -144,6 +207,11 @@ export default function InvoicePage() {
                 <h4 className="mb-2 font-semibold text-[#53685B]">
                   Alamat Pengiriman
                 </h4>
+                {order.shipping_area && (
+                  <p className="mb-1 text-sm font-semibold text-[#53685B]">
+                    {order.shipping_area}
+                  </p>
+                )}
                 <p className="text-sm whitespace-pre-line text-gray-700">
                   {order.shipping_address}
                 </p>
@@ -160,8 +228,8 @@ export default function InvoicePage() {
               <h3 className="mb-4 text-xl font-bold text-[#53685B]">
                 Detail Pesanan
               </h3>
-              <div className="overflow-hidden rounded-lg border border-gray-200">
-                <table className="w-full">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="w-full min-w-[32rem]">
                   <thead className="bg-[#53685B] text-white">
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold">
@@ -200,27 +268,27 @@ export default function InvoicePage() {
                         {formatIDR(itemSubtotal)}
                       </td>
                     </tr>
-                    {shippingCost > 0 && (
-                      <tr className="border-b border-gray-200">
+                    {feeRows.map((row) => (
+                      <tr key={row.label} className="border-b border-gray-200">
                         <td className="px-6 py-4">
                           <p className="font-semibold text-gray-900">
-                            Biaya Pengiriman
+                            {row.label}
                           </p>
                           <p className="text-sm text-gray-500 capitalize">
-                            {order.shipping_method || '-'}
+                            {row.note}
                           </p>
                         </td>
                         <td className="px-6 py-4 text-center font-semibold">
                           1
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {formatIDR(shippingCost)}
+                          {formatIDR(row.amount)}
                         </td>
                         <td className="px-6 py-4 text-right font-bold text-[#53685B]">
-                          {formatIDR(shippingCost)}
+                          {formatIDR(row.amount)}
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -232,7 +300,7 @@ export default function InvoicePage() {
                 <div className="rounded-lg bg-[#53685B] p-6 text-white">
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-semibold">TOTAL</span>
-                    <span className="text-3xl font-bold">
+                    <span className="text-xl font-bold sm:text-3xl">
                       {formatIDR(order.price)}
                     </span>
                   </div>
@@ -246,18 +314,17 @@ export default function InvoicePage() {
                 Informasi Penting:
               </h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li>
-                  ✓ Invoice ini adalah bukti transaksi yang sah di Vinstore
-                </li>
-                <li>
-                  ✓ Mohon simpan invoice ini untuk keperluan retur atau klaim
-                  garansi
-                </li>
-                <li>
-                  ✓ Untuk pertanyaan, hubungi toko atau customer service
-                  Vinstore
-                </li>
-                <li>✓ Terima kasih telah berbelanja di Vinstore! 🛍️</li>
+                {[
+                  'Invoice ini adalah bukti transaksi yang sah di Vinstore',
+                  'Mohon simpan invoice ini untuk keperluan retur atau klaim garansi',
+                  'Untuk pertanyaan, hubungi toko atau customer service Vinstore',
+                  'Terima kasih telah berbelanja di Vinstore!',
+                ].map((note) => (
+                  <li key={note} className="flex items-start gap-2">
+                    <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#53685B]" />
+                    <span>{note}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 

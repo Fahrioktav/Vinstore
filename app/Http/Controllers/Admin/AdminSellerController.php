@@ -11,7 +11,7 @@ class AdminSellerController extends Controller
 {
     public function index()
     {
-        $sellers = User::where('role', 'seller')->with('store')->get();
+        $sellers = User::where('role', 'seller')->with('store')->latest()->get();
 
         return Inertia::render('admin/sellers/index', compact('sellers'));
     }
@@ -41,20 +41,38 @@ class AdminSellerController extends Controller
         return redirect()->route('admin.sellers.index')->with('success', 'Seller berhasil diperbarui.');
     }
 
-    public function destroy($id)
+    /**
+     * Nonaktifkan akun — TIDAK menghapusnya.
+     *
+     * Menghapus seller berarti menghapus seluruh riwayat pesanannya
+     * (`orders.seller_id` memakai ON DELETE CASCADE), termasuk pesanan yang sudah
+     * lunas dan dananya sudah dicairkan ke seller. Pembukuan marketplace jadi
+     * berlubang tanpa jejak. Lihat temuan V4-12.
+     *
+     * Akun nonaktif tidak bisa masuk lagi dan sesinya yang sedang berjalan
+     * langsung diputus oleh EnsureAccountIsActive.
+     */
+    public function destroy(Request $request, $id)
     {
         $seller = User::where('role', 'seller')->where('public_id', $id)->firstOrFail();
 
-        // Pesanan yang pernah masuk ke toko ini tetap tersimpan sebagai riwayat
-        // pembelian: orders.store_id dan orders.product_id sudah nullOnDelete,
-        // dan setiap pesanan menyimpan snapshot nama toko/produknya sendiri.
-        if ($seller->store) {
-            $seller->store->products()->delete();
-            $seller->store->delete();
+        if ($seller->isDeactivated()) {
+            $seller->reactivate();
+
+            return back()->with(
+                'success',
+                'Akun '.$seller->username.' diaktifkan kembali. Produk tokonya tampil lagi di etalase.'
+            );
         }
 
-        $seller->delete();
+        $seller->deactivate($request->input('reason'));
 
-        return redirect()->back()->with('success', 'Seller berhasil dihapus. Riwayat pesanan pembeli tetap tersimpan.');
+        // Produknya ikut berhenti tampil — lihat Product::scopeApproved().
+        // Produk TIDAK dihapus: pesanan lama masih merujuk padanya.
+        return back()->with(
+            'success',
+            'Akun '.$seller->username.' dinonaktifkan. Produk tokonya berhenti tampil, '
+            .'tetapi riwayat pesanan pembeli tetap tersimpan.'
+        );
     }
 }

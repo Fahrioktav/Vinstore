@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { EditIcon, SaveIcon } from '@/components/icons';
 
 export default function EditUser() {
   const { editedUser, errors: serverErrors } = usePage().props;
@@ -25,7 +26,8 @@ export default function EditUser() {
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-3xl font-bold text-[#53685B]">
-            ✏️ Edit User
+            <EditIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Edit User
           </h2>
 
           <form onSubmit={handleSubmit}>
@@ -45,7 +47,7 @@ export default function EditUser() {
               )}
             </div>
 
-            <div className="mb-4 grid grid-cols-2 gap-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-semibold">
                   Nama Depan
@@ -129,7 +131,8 @@ export default function EditUser() {
                 disabled={processing}
                 className="flex-1 rounded-lg bg-[#53685B] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#3c4a3e] hover:shadow-lg disabled:opacity-50"
               >
-                💾 Simpan Perubahan
+                <SaveIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                Simpan Perubahan
               </button>
               <Link
                 href="/admin/users"

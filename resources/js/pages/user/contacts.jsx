@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
+import { MailIcon } from '@/components/icons';
 
 export default function UserContacts({ contacts }) {
   const getStatusBadge = (status) => {
@@ -28,9 +29,10 @@ export default function UserContacts({ contacts }) {
         <h1 className="text-3xl font-bold text-white">Riwayat Pesan</h1>
         <Link
           href="/contact"
-          className="rounded-lg bg-[#5A6E5A] px-5 py-2 text-white transition hover:bg-[#6d7f6d]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#5A6E5A] px-5 py-2 text-white transition hover:bg-[#6d7f6d]"
         >
-          ✉️ Kirim Pesan Baru
+          <MailIcon className="h-5 w-5" />
+          Kirim Pesan Baru
         </Link>
       </div>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BarterRequest;
 use App\Models\Order;
+use App\Models\PlatformRevenue;
 use App\Models\Product;
 use App\Models\RefundRequest;
 use Illuminate\Http\Request;
@@ -215,6 +216,12 @@ class RefundRequestController extends Controller
                     $order->update([
                         'payment_status' => 'refunded',
                     ]);
+
+                    // Uangnya dikembalikan ke pembeli, jadi biaya layanan atas
+                    // pesanan ini tidak lagi menjadi pendapatan marketplace.
+                    // Dicatat sebagai baris pembalikan, bukan dengan menghapus
+                    // baris pendapatannya, agar riwayatnya tetap utuh.
+                    PlatformRevenue::reverseServiceFee($order);
                 }
 
                 $refund->update([

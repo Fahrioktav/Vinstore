@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\PlatformRevenue;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 
@@ -54,6 +55,29 @@ class MidtransNotificationController extends Controller
             }
 
             $order->update($updates);
+
+            // Biaya layanan baru menjadi pendapatan setelah uangnya benar-benar
+            // diterima. Pencatatannya idempoten, jadi notifikasi ganda dari
+            // Midtrans tidak menggandakan saldo dompet admin.
+            if ($applyStatus && $paymentStatus === 'paid') {
+                // Reservasi menjadi pengurangan stok yang sesungguhnya. Sampai
+                // titik ini barangnya masih tercatat di stok seller dan tetap
+                // tampil di etalase.
+                $order->commitReservedStock();
+
+                PlatformRevenue::recordServiceFee($order);
+            }
+
+            // Midtrans juga bisa mengabarkan refund yang diproses di luar
+            // aplikasi (langsung dari dashboard Midtrans). Tanpa cabang ini,
+            // biaya layanan atas uang yang sudah dikembalikan tetap terhitung
+            // sebagai pendapatan marketplace.
+            if ($applyStatus && $paymentStatus === 'refunded') {
+                PlatformRevenue::reverseServiceFee(
+                    $order,
+                    'Pembalikan biaya layanan atas refund Midtrans pesanan '.$order->public_id
+                );
+            }
 
             if ($applyStatus && $isFailure) {
                 $order->restoreReservedStock();

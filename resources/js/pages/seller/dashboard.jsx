@@ -3,7 +3,21 @@ import React, { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductCertificate, getProductImage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { BadgeIcon } from '@/components/icons';
+import {
+  BadgeIcon,
+  DeleteIcon,
+  EditIcon,
+  EmptyStateIcon,
+  ImageIcon,
+  LocationIcon,
+  MoneyIcon,
+  OrderIcon,
+  ProductIcon,
+  RefreshIcon,
+  ShippingIcon,
+  StatsIcon,
+  ViewIcon,
+} from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
 import {
   AreaChart,
@@ -17,6 +31,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { toast } from 'sonner';
+import { confirmDestructive, confirmDialog } from '@/lib/dialog';
 
 // Harus sama dengan Auction::EDITABLE_APPROVAL_STATUSES di backend.
 // Nilai 'pending' TIDAK pernah ada di kolom approval_status — memakainya di
@@ -55,14 +71,15 @@ export default function SellerDashboard() {
   const [selectedProducts, setSelectedProducts] = React.useState([]);
 
   // Tarik kembali pengajuan lelang dari antrean validator agar bisa diperbaiki.
-  const withdrawSubmission = (publicId) => {
-    if (
-      !confirm(
-        'Tarik kembali pengajuan lelang ini? Lelang akan keluar dari antrean validator dan dapat Anda perbaiki sebelum diajukan ulang.'
-      )
-    ) {
-      return;
-    }
+  const withdrawSubmission = async (publicId) => {
+    const ok = await confirmDialog({
+      title: 'Tarik kembali pengajuan lelang?',
+      description:
+        'Lelang keluar dari antrean validator dan dapat Anda perbaiki sebelum diajukan ulang.',
+      confirmLabel: 'Ya, tarik kembali',
+    });
+
+    if (!ok) return;
 
     router.post(
       `/seller/auctions/${publicId}/withdraw`,
@@ -89,30 +106,32 @@ export default function SellerDashboard() {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Header Stats */}
         <div className="mb-8 grid gap-6 md:grid-cols-4">
           <div className="rounded-2xl bg-gradient-to-br from-[#53685B] to-[#3c4a3e] p-6 text-white shadow-lg">
             <h3 className="mb-2 text-sm font-semibold opacity-90">
               Total Produk
             </h3>
-            <p className="text-4xl font-bold">{productCount}</p>
+            <p className="text-2xl font-bold sm:text-4xl">{productCount}</p>
           </div>
           <div className="rounded-2xl bg-gradient-to-br from-[#B77C4C] to-[#8d5e39] p-6 text-white shadow-lg">
             <h3 className="mb-2 text-sm font-semibold opacity-90">
               Total Order
             </h3>
-            <p className="text-4xl font-bold">{orderCount}</p>
+            <p className="text-2xl font-bold sm:text-4xl">{orderCount}</p>
           </div>
           <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg">
             <h3 className="mb-2 text-sm font-semibold opacity-90">
-              💰 Total Pendapatan
+              <MoneyIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+              Total Pendapatan
             </h3>
             <p className="text-2xl font-bold">{formatIDR(totalIncome || 0)}</p>
           </div>
           <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-6 text-white shadow-lg">
             <h3 className="mb-2 text-sm font-semibold opacity-90">
-              📊 Pendapatan Bulan Ini
+              <StatsIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+              Pendapatan Bulan Ini
             </h3>
             <p className="text-2xl font-bold">
               {formatIDR(monthlyIncome || 0)}
@@ -291,7 +310,8 @@ export default function SellerDashboard() {
         {/* Customer Orders */}
         <div className="mb-8 rounded-2xl bg-white p-6 shadow-md">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            📦 Customer Orders
+            <OrderIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Customer Orders
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -320,7 +340,8 @@ export default function SellerDashboard() {
                 ) : (
                   <tr>
                     <td colSpan="9" className="py-8 text-center text-gray-500">
-                      📭 Belum ada pesanan
+                      <EmptyStateIcon className="mx-auto mb-2 h-10 w-10 text-gray-300" />
+                      Belum ada pesanan
                     </td>
                   </tr>
                 )}
@@ -333,7 +354,8 @@ export default function SellerDashboard() {
         <div className="mb-8 rounded-2xl bg-white p-6 shadow-md">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-[#53685B]">
-              🛍️ Daftar Barang
+              <ProductIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+              Daftar Barang
             </h2>
             <button>
               <Link
@@ -382,7 +404,8 @@ export default function SellerDashboard() {
                 ) : (
                   <tr>
                     <td colSpan="9" className="py-8 text-center text-gray-500">
-                      📦 Belum ada produk
+                      <EmptyStateIcon className="mx-auto mb-2 h-10 w-10 text-gray-300" />
+                      Belum ada produk
                     </td>
                   </tr>
                 )}
@@ -448,7 +471,7 @@ export default function SellerDashboard() {
                             items={[
                               {
                                 label: 'Detail',
-                                icon: '🔍',
+                                icon: <ViewIcon />,
                                 href: `/auctions/${auction.public_id}`,
                               },
                               auction.bids_count === 0 &&
@@ -459,7 +482,7 @@ export default function SellerDashboard() {
                                   auction.approval_status
                                 ) && {
                                   label: 'Edit',
-                                  icon: '✏️',
+                                  icon: <EditIcon />,
                                   href: `/seller/auctions/${auction.public_id}/edit`,
                                 },
                               auction.bids_count === 0 &&
@@ -474,7 +497,7 @@ export default function SellerDashboard() {
                               auction.bids_count === 0 &&
                                 auction.status === 'ended' && {
                                   label: 'Ajukan Ulang',
-                                  icon: '🔁',
+                                  icon: <RefreshIcon />,
                                   href: `/seller/auctions/${auction.public_id}/relist`,
                                 },
                             ]}
@@ -546,8 +569,13 @@ function ProductRow({ product, isSelected, onSelect }) {
     });
   };
 
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus produk ini?')) {
+  const handleDelete = async () => {
+    const ok = await confirmDestructive({
+      title: 'Hapus produk ini?',
+      description: 'Produk yang dihapus tidak dapat dikembalikan.',
+    });
+
+    if (ok) {
       destroy(`/seller/products/${product.public_id}`, {
         preserveScroll: true,
       });
@@ -588,7 +616,7 @@ function ProductRow({ product, isSelected, onSelect }) {
           />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200 text-gray-400">
-            📷
+            <ImageIcon className="h-7 w-7" />
           </div>
         )}
       </td>
@@ -647,12 +675,12 @@ function ProductRow({ product, isSelected, onSelect }) {
             items={[
               {
                 label: 'Edit',
-                icon: '✏️',
+                icon: <EditIcon />,
                 href: `/seller/products/${product.public_id}/edit`,
               },
               {
                 label: 'Hapus',
-                icon: '🗑️',
+                icon: <DeleteIcon />,
                 variant: 'destructive',
                 onClick: processing ? undefined : handleDelete,
               },
@@ -711,7 +739,7 @@ function OrderRow({ order, bankPrefill }) {
   const handleTrackingSubmit = (e) => {
     e.preventDefault();
     if (!trackingNumber.trim()) {
-      alert('Nomor resi harus diisi!');
+      toast.error('Nomor resi harus diisi.');
       return;
     }
     updateStatus(pendingStatus, trackingNumber);
@@ -721,7 +749,7 @@ function OrderRow({ order, bankPrefill }) {
   const handleEditTrackingSubmit = (e) => {
     e.preventDefault();
     if (!trackingNumber.trim()) {
-      alert('Nomor resi harus diisi!');
+      toast.error('Nomor resi harus diisi.');
       return;
     }
     updateStatus(currentStatus, trackingNumber);
@@ -752,17 +780,23 @@ function OrderRow({ order, bankPrefill }) {
           // Revert jika error
           setCurrentStatus(order.status);
           setIsUpdating(false);
-          alert(
+          toast.error(
             'Gagal mengupdate status: ' +
-              (errors.tracking_number || 'Terjadi kesalahan')
+              (errors.tracking_number || 'Terjadi kesalahan.')
           );
         },
       }
     );
   };
 
-  const handleDelete = () => {
-    if (confirm('Yakin ingin menghapus order ini?')) {
+  const handleDelete = async () => {
+    const ok = await confirmDestructive({
+      title: 'Hapus order ini?',
+      description:
+        'Order adalah bukti transaksi pembeli. Pesanan yang sudah dibayar tidak dapat dihapus.',
+    });
+
+    if (ok) {
       router.delete(`/seller/orders/${order.public_id}`, {
         preserveScroll: true,
       });
@@ -793,10 +827,10 @@ function OrderRow({ order, bankPrefill }) {
       {/* Modal Input Nomor Resi untuk Status Baru */}
       {showTrackingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
+          <div className="animate-in fade-in zoom-in-95 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl duration-200 sm:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B] text-2xl">
-                📦
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B]">
+                <ShippingIcon className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
@@ -853,10 +887,10 @@ function OrderRow({ order, bankPrefill }) {
       {/* Modal Pengajuan Pencairan Dana */}
       {showPayoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
+          <div className="animate-in fade-in zoom-in-95 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl duration-200 sm:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B] text-2xl">
-                💰
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B]">
+                <MoneyIcon className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
@@ -931,10 +965,10 @@ function OrderRow({ order, bankPrefill }) {
       {/* Modal Edit Nomor Resi */}
       {showEditTrackingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl duration-200">
+          <div className="animate-in fade-in zoom-in-95 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl duration-200 sm:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-2xl">
-                ✏️
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500">
+                <EditIcon className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
@@ -994,13 +1028,33 @@ function OrderRow({ order, bankPrefill }) {
         <td className="max-w-xs px-4 py-3 align-top">
           {order.shipping_address ? (
             <>
-              <p className="text-xs whitespace-pre-line text-gray-700">
+              {/* Wilayah hasil pembacaan titik peta didahulukan: inilah tujuan
+                  yang dipakai menghitung ongkir. Teks di bawahnya adalah detail
+                  yang diketik pembeli (temuan V4-01). */}
+              {order.shipping_area && (
+                <p className="flex items-start gap-1 text-xs font-semibold text-[#53685B]">
+                  <LocationIcon className="mt-0.5 h-3 w-3 shrink-0" />
+                  {order.shipping_area}
+                </p>
+              )}
+              <p className="mt-1 text-xs whitespace-pre-line text-gray-700">
                 {order.shipping_address}
               </p>
               {order.shipping_method && (
                 <p className="mt-1 text-xs text-gray-500 capitalize">
                   {order.shipping_method} ·{' '}
                   {formatIDR(order.shipping_cost || 0)}
+                  {order.shipping_distance_km != null && (
+                    <span className="normal-case">
+                      {' '}
+                      ·{' '}
+                      {Number(order.shipping_distance_km).toLocaleString(
+                        'id-ID',
+                        { maximumFractionDigits: 1 }
+                      )}{' '}
+                      km
+                    </span>
+                  )}
                 </p>
               )}
               {order.notes && (
@@ -1021,6 +1075,12 @@ function OrderRow({ order, bankPrefill }) {
         </td>
         <td className="px-4 py-3 font-bold text-[#53685B]">
           {formatIDR(order.price)}
+          {/* Total di atas adalah tagihan pembeli. Yang menjadi hak seller
+              lebih kecil: ongkir, biaya berat, dan biaya layanan bukan
+              haknya. */}
+          <span className="block text-xs font-normal text-gray-500">
+            Anda terima: {formatIDR(order.seller_payout_amount ?? order.price)}
+          </span>
         </td>
         <td className="px-4 py-3">
           <span
@@ -1036,11 +1096,11 @@ function OrderRow({ order, bankPrefill }) {
             disabled={isUpdating}
             className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'} ${isUpdating ? 'opacity-50' : ''}`}
           >
-            <option value="Waiting">⏳ Waiting</option>
-            <option value="Processing">🔄 Processing</option>
-            <option value="On The Way">🚚 On The Way</option>
-            <option value="Delivered">✅ Delivered</option>
-            <option value="Cancelled">❌ Cancelled</option>
+            <option value="Waiting">Waiting</option>
+            <option value="Processing">Processing</option>
+            <option value="On The Way">On The Way</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
           {order.tracking_number && (
             <div className="mt-2 flex items-center gap-2">
@@ -1052,10 +1112,11 @@ function OrderRow({ order, bankPrefill }) {
               </p>
               <button
                 onClick={openEditTracking}
-                className="text-xs text-blue-600 hover:text-blue-800"
+                className="text-blue-600 hover:text-blue-800"
                 title="Edit nomor resi"
+                aria-label="Edit nomor resi"
               >
-                ✏️
+                <EditIcon className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -1077,14 +1138,14 @@ function OrderRow({ order, bankPrefill }) {
                   ? [
                       {
                         label: 'Ajukan Pencairan',
-                        icon: '💰',
+                        icon: <MoneyIcon />,
                         onClick: () => setShowPayoutModal(true),
                       },
                     ]
                   : []),
                 {
                   label: 'Hapus',
-                  icon: '🗑️',
+                  icon: <DeleteIcon />,
                   variant: 'destructive',
                   onClick: isUpdating ? undefined : handleDelete,
                 },

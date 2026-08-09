@@ -1,6 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
+import { EditIcon, ProductIcon, SaveIcon } from '@/components/icons';
 
 export default function EditOrder() {
   const { order } = usePage().props;
@@ -18,17 +19,19 @@ export default function EditOrder() {
   return (
     <>
       <Head title="Edit Status Order" />
-      <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="rounded-2xl bg-white p-8 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            ✏️ Edit Order {order.public_id}
+            <EditIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Edit Order {order.public_id}
           </h2>
 
           <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
             <h3 className="mb-4 text-lg font-semibold text-[#53685B]">
-              📦 Detail Order
+              <ProductIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+              Detail Order
             </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-gray-600">Customer</p>
                 <p className="font-semibold">
@@ -85,9 +88,9 @@ export default function EditOrder() {
                 required
               >
                 <option value="Waiting">⏳ Waiting (Menunggu)</option>
-                <option value="Processing">🔄 Processing (Diproses)</option>
-                <option value="Completed">✅ Completed (Selesai)</option>
-                <option value="Cancelled">❌ Cancelled (Dibatalkan)</option>
+                <option value="Processing">Processing (Diproses)</option>
+                <option value="Completed">Completed (Selesai)</option>
+                <option value="Cancelled">Cancelled (Dibatalkan)</option>
               </select>
               {errors.status && (
                 <p className="mt-1 text-xs text-red-500">{errors.status}</p>
@@ -100,7 +103,8 @@ export default function EditOrder() {
                 disabled={processing}
                 className="flex-1 rounded-lg bg-[#53685B] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#3c4a3e] hover:shadow-lg disabled:opacity-50"
               >
-                💾 Simpan Perubahan
+                <SaveIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                Simpan Perubahan
               </button>
               <Link
                 href="/admin/orders"

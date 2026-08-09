@@ -76,7 +76,7 @@ export default function SupportChat() {
   };
 
   return (
-    <section className="px-6 py-10 md:px-16">
+    <section className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <div className="mx-auto flex min-h-[640px] max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="border-b border-gray-200 p-5">
           <h1 className="text-2xl font-bold text-[#53685B]">Bantuan</h1>

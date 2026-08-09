@@ -3,10 +3,12 @@ import {
   MapContainer,
   TileLayer,
   Marker,
+  Tooltip,
   useMap,
   useMapEvents,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { LocationIcon, SpinnerIcon } from '@/components/icons';
 import { setupLeafletIcons, INDONESIA_CENTER } from '@/lib/leaflet-setup';
 
 setupLeafletIcons();
@@ -42,12 +44,16 @@ function ClickHandler({ onPick }) {
  * @param {number|null} longitude
  * @param {(lat: number, lng: number) => void} onChange
  * @param {number} height - tinggi peta dalam px
+ * @param {string} hint - kalimat petunjuk di atas peta
+ * @param {Array} markers - titik lain yang ikut ditampilkan (mis. lokasi toko)
  */
 export default function LocationPicker({
   latitude,
   longitude,
   onChange,
   height = 320,
+  hint = 'Klik pada peta atau geser penanda untuk menentukan titik lokasi toko.',
+  markers = [],
 }) {
   const hasPosition =
     latitude !== null &&
@@ -92,16 +98,24 @@ export default function LocationPicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-gray-500">
-          Klik pada peta atau geser penanda untuk menentukan titik lokasi toko.
-        </p>
+        <p className="text-xs text-gray-500">{hint}</p>
         <button
           type="button"
           onClick={handleUseMyLocation}
           disabled={locating}
-          className="rounded-lg bg-[#4a5b4d] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3c4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#4a5b4d] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3c4a3e] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {locating ? 'Mencari lokasi...' : '📍 Gunakan Lokasi Saya'}
+          {locating ? (
+            <>
+              <SpinnerIcon className="h-3.5 w-3.5" />
+              Mencari lokasi...
+            </>
+          ) : (
+            <>
+              <LocationIcon className="h-3.5 w-3.5" />
+              Gunakan Lokasi Saya
+            </>
+          )}
         </button>
       </div>
 
@@ -120,6 +134,29 @@ export default function LocationPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickHandler onPick={handlePick} />
+
+          {/* Titik acuan lain, mis. lokasi toko asal barang. Sengaja tidak
+              draggable: hanya pembeli yang boleh memindahkan titiknya. */}
+          {markers
+            .filter(
+              (marker) => marker.latitude != null && marker.longitude != null
+            )
+            .map((marker, index) => (
+              <Marker
+                key={marker.key ?? index}
+                position={[Number(marker.latitude), Number(marker.longitude)]}
+                opacity={0.7}
+              >
+                {marker.label && (
+                  <Tooltip permanent direction="top" offset={[0, -40]}>
+                    <span className="text-xs font-semibold">
+                      {marker.label}
+                    </span>
+                  </Tooltip>
+                )}
+              </Marker>
+            ))}
+
           {position && (
             <>
               <RecenterMap position={position} />

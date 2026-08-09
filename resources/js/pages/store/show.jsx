@@ -6,7 +6,7 @@ export default function StoreShowPage() {
   const { store } = usePage().props;
 
   return (
-    <div className="px-6 py-10 md:px-16">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <div className="mb-6">
         <h2 className="text-2xl font-bold">
           <span className="text-[#E9E19E]">Toko: </span>
@@ -39,7 +39,7 @@ StoreShowPage.layout = (page) => {
   return (
     <MainLayout
       title="Detail Toko"
-      heroText={`🛍️ Toko: ${store.user.first_name} ${store.user.last_name}`}
+      heroText={`Toko: ${store.user.first_name} ${store.user.last_name}`}
     >
       {page}
     </MainLayout>

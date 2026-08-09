@@ -2,16 +2,27 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
+import {
+  DeleteIcon,
+  EditIcon,
+  EmptyStateIcon,
+  ProductIcon,
+  SuccessIcon,
+} from '@/components/icons';
+import { confirmDestructive } from '@/lib/dialog';
 
 export default function AdminOrders() {
   const { orders, success } = usePage().props;
 
-  const handleDelete = (publicId) => {
-    if (confirm('Yakin ingin menghapus order ini?')) {
-      router.delete(`/admin/orders/${publicId}`, {
-        preserveScroll: true,
-      });
-    }
+  const handleDelete = async (publicId) => {
+    const ok = await confirmDestructive({
+      title: 'Hapus order ini?',
+      description:
+        'Order adalah bukti transaksi pembeli. Hapus hanya bila memang keliru dibuat.',
+    });
+
+    if (ok)
+      router.delete(`/admin/orders/${publicId}`, { preserveScroll: true });
   };
 
   const statusColors = {
@@ -34,16 +45,20 @@ export default function AdminOrders() {
   return (
     <>
       <Head title="Kelola Order" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700 shadow-sm">
-            <p className="font-semibold">✓ {success}</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <SuccessIcon className="h-5 w-5 shrink-0" />
+              {success}
+            </p>
           </div>
         )}
 
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            📦 Kelola Data Order
+            <ProductIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Kelola Data Order
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -117,12 +132,12 @@ export default function AdminOrders() {
                             items={[
                               {
                                 label: 'Edit',
-                                icon: '✏️',
+                                icon: <EditIcon />,
                                 href: `/admin/orders/${order.public_id}/edit`,
                               },
                               {
                                 label: 'Hapus',
-                                icon: '🗑️',
+                                icon: <DeleteIcon />,
                                 variant: 'destructive',
                                 onClick: () => handleDelete(order.public_id),
                               },
@@ -138,7 +153,10 @@ export default function AdminOrders() {
                       colSpan="10"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">📦 Belum ada order</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <EmptyStateIcon className="h-10 w-10 text-gray-300" />
+                        <p className="text-lg">Belum ada order</p>
+                      </div>
                     </td>
                   </tr>
                 )}

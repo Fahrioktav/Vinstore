@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminContactController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminRevenueController;
 use App\Http\Controllers\Admin\AdminSellerController;
 use App\Http\Controllers\Admin\AdminStoreController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -304,6 +305,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('refunds', [RefundRequestController::class, 'adminIndex'])->name('refunds.index');
     Route::post('refunds/{refund}/approve', [RefundRequestController::class, 'approve'])->name('refunds.approve');
     Route::post('refunds/{refund}/reject', [RefundRequestController::class, 'reject'])->name('refunds.reject');
+
+    // Dompet admin: pendapatan marketplace dari biaya layanan
+    Route::get('pendapatan', [AdminRevenueController::class, 'index'])->name('revenues.index');
 
     // Kelola Pencairan Dana per Pesanan
     Route::get('payouts', [PayoutRequestController::class, 'adminIndex'])->name('payouts.index');

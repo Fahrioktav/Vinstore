@@ -2,6 +2,8 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getAuctionImage } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
+import { BlockedIcon, SuccessIcon, ViewIcon } from '@/components/icons';
+import { promptDialog } from '@/lib/dialog';
 
 export default function AdminAuctions() {
   const { auctions, success, error } = usePage().props;
@@ -14,8 +16,19 @@ export default function AdminAuctions() {
     );
   };
 
-  const reject = (publicId) => {
-    const rejectionReason = prompt('Alasan penolakan lelang (opsional):') || '';
+  const reject = async (publicId) => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak lelang ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder:
+        'Contoh: harga awal tidak wajar, deskripsi kurang lengkap...',
+      confirmLabel: 'Tolak lelang',
+      variant: 'destructive',
+    });
+
+    if (rejectionReason === null) return;
     router.post(
       `/admin/auctions/${publicId}/reject`,
       { rejection_reason: rejectionReason },
@@ -48,7 +61,7 @@ export default function AdminAuctions() {
   return (
     <>
       <Head title="Kelola Lelang" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700">
             {success}
@@ -153,17 +166,17 @@ export default function AdminAuctions() {
                             items={[
                               {
                                 label: 'Detail',
-                                icon: '🔍',
+                                icon: <ViewIcon />,
                                 href: `/auctions/${auction.public_id}`,
                               },
                               auction.approval_status === 'pending_admin' && {
                                 label: 'Setujui',
-                                icon: '✅',
+                                icon: <SuccessIcon />,
                                 onClick: () => approve(auction.public_id),
                               },
                               auction.approval_status === 'pending_admin' && {
                                 label: 'Tolak',
-                                icon: '🚫',
+                                icon: <BlockedIcon />,
                                 variant: 'destructive',
                                 onClick: () => reject(auction.public_id),
                               },

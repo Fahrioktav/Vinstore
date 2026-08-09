@@ -65,7 +65,16 @@ class Product extends Model
         'store_id',
         'name',
         'stock',
+        // Jumlah yang sedang ditahan pesanan yang belum lunas. Lihat
+        // migrasi 2026_08_09_000007_add_stock_reservation.
+        'reserved_stock',
         'price',
+        // Berat satuan dalam gram; dipakai menghitung biaya berat di checkout.
+        'weight',
+        // Dimensi paket dalam cm, untuk menghitung berat volumetrik.
+        'length',
+        'width',
+        'height',
         'category',
         'description',
         'image',
@@ -88,16 +97,41 @@ class Product extends Model
         'guess_winner_id',
         'guess_winning_amount',
         'guess_finished_at',
+        'guess_finished_reason',
         'winner_priority_until',
     ];
+
+    /**
+     * Alasan sesi tebak harga berakhir.
+     */
+    public const FINISH_EXACT_GUESS = 'exact_guess';
+
+    public const FINISH_PERIOD_ENDED = 'period_ended';
+
+    public const FINISH_NO_WINNER = 'no_winner';
 
     protected $hidden = [
         'id',
     ];
 
+    /**
+     * Sisa yang benar-benar bisa dibeli selalu ikut diserialisasi: frontend
+     * tidak boleh menghitungnya sendiri dari stock - reserved_stock, karena
+     * aturannya bisa berubah.
+     */
+    protected $appends = [
+        'available_stock',
+        'is_fully_reserved',
+    ];
+
     protected $casts = [
         'stock' => 'integer',
+        'reserved_stock' => 'integer',
         'price' => 'decimal:2',
+        'weight' => 'integer',
+        'length' => 'integer',
+        'width' => 'integer',
+        'height' => 'integer',
         'images' => 'array',
         'is_barterable' => 'boolean',
         'approved_at' => 'datetime',
@@ -144,10 +178,28 @@ class Product extends Model
 
     /**
      * Produk yang sudah lolos kedua tahap dan tampil ke buyer.
+     *
+     * Produk milik seller yang akunnya dinonaktifkan ikut disaring keluar.
+     * Tanpa ini, penonaktifan tidak berarti apa-apa bagi pembeli: barang seller
+     * yang diblokir tetap terpajang dan tetap bisa dibeli (temuan V4-12).
+     *
+     * Produknya tidak dihapus — pesanan lama masih merujuk padanya, dan seller
+     * yang diaktifkan kembali langsung mendapatkan etalasenya utuh.
      */
     public function scopeApproved($query)
     {
-        return $query->where('approval_status', self::STATUS_APPROVED);
+        return $query->where('approval_status', self::STATUS_APPROVED)
+            ->whereHas('store.user', fn ($q) => $q->whereNull('deactivated_at'));
+    }
+
+    /**
+     * Apakah produk ini sedang tidak dapat dibeli karena akun sellernya
+     * dinonaktifkan. Dipakai controller untuk menolak pembelian dengan alasan
+     * yang benar, bukan sekadar "produk tidak ditemukan".
+     */
+    public function isSellerDeactivated(): bool
+    {
+        return $this->store?->user?->isDeactivated() ?? false;
     }
 
     /**
@@ -193,6 +245,35 @@ class Product extends Model
     public function setStockAttribute($value)
     {
         $this->attributes['stock'] = max(0, (int) $value);
+    }
+
+    public function setReservedStockAttribute($value)
+    {
+        $this->attributes['reserved_stock'] = max(0, (int) $value);
+    }
+
+    /**
+     * Jumlah yang benar-benar masih bisa dibeli sekarang.
+     *
+     * `stock` adalah barang yang dimiliki seller; sebagiannya bisa sedang
+     * ditahan pesanan orang lain yang belum lunas. Yang boleh dijual adalah
+     * selisihnya.
+     */
+    public function getAvailableStockAttribute(): int
+    {
+        return max(0, (int) $this->stock - (int) $this->reserved_stock);
+    }
+
+    /**
+     * Apakah seluruh sisa stok sedang ditahan pesanan yang belum dibayar.
+     *
+     * Dipakai halaman produk untuk menjelaskan kenapa barangnya terlihat tapi
+     * tidak bisa dibeli — tanpa keterangan ini pembeli hanya melihat tombol
+     * yang mati tanpa alasan.
+     */
+    public function getIsFullyReservedAttribute(): bool
+    {
+        return $this->stock > 0 && $this->available_stock <= 0;
     }
 
     public function store()
@@ -296,6 +377,36 @@ class Product extends Model
         }
 
         return abs($amount - (float) $this->guess_discount_price) <= $tolerance;
+    }
+
+    /**
+     * Seberapa jauh sebuah tebakan meleset dari harga diskon, dalam rupiah.
+     * null bila harga diskonnya belum ditetapkan.
+     */
+    public function guessDistance(float $amount): ?float
+    {
+        if ($this->guess_discount_price === null) {
+            return null;
+        }
+
+        return abs($amount - (float) $this->guess_discount_price);
+    }
+
+    /**
+     * Tebakan PERSIS pada harga diskonnya.
+     *
+     * Tebakan seperti ini tidak mungkin dikalahkan siapa pun, jadi menunggu
+     * periode habis tidak ada gunanya — sesinya ditutup seketika dan
+     * pemenangnya diumumkan. Lihat PriceGuessController::store().
+     *
+     * Perbandingannya memakai ambang satu rupiah, bukan `==`: kedua nilainya
+     * berasal dari kolom decimal dan dibandingkan sebagai float.
+     */
+    public function isExactGuess(float $amount): bool
+    {
+        $distance = $this->guessDistance($amount);
+
+        return $distance !== null && $distance < 1.0;
     }
 
     /**

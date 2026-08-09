@@ -27,6 +27,30 @@ nav {
     top: 0 !important;
 }
 
+/*
+ * Peta Leaflet menutupi navbar saat halaman digulir.
+ *
+ * leaflet.css memasang z-index besar pada bagian dalamnya — pane sampai 700,
+ * dan kontrol zoom/atribusi sampai 1000 — sementara navbar memakai z-50.
+ * Karena keduanya berada di stacking context yang sama (akar halaman), angka
+ * Leaflet-lah yang menang dan petanya melayang di atas navbar.
+ *
+ * Perbaikannya bukan menaikkan z-index navbar sampai mengalahkan 1000; itu
+ * hanya memindahkan perlombaan angka ke tempat lain dan akan terulang pada
+ * elemen berikutnya (dropdown, modal, toast).
+ *
+ * Yang dilakukan di sini: menjadikan peta sebagai stacking context tersendiri
+ * lewat `isolation: isolate`. Seluruh z-index internal Leaflet menjadi relatif
+ * terhadap konteks itu dan tidak bisa keluar darinya, sedangkan petanya secara
+ * utuh duduk di z-index 0 — di bawah navbar. Berlaku untuk semua peta
+ * (sebaran toko, pemilih titik antar) tanpa perlu disetel satu per satu.
+ */
+.leaflet-container {
+    position: relative;
+    isolation: isolate;
+    z-index: 0;
+}
+
 main {
     margin-top: 0 !important;
     padding-top: 0 !important;

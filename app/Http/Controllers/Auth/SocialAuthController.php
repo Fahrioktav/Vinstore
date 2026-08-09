@@ -67,6 +67,14 @@ class SocialAuthController extends Controller
                 ]);
             }
 
+            // Akun nonaktif tidak boleh masuk lewat jalur mana pun. Tanpa
+            // pemeriksaan ini, penonaktifan bisa dilewati cukup dengan menekan
+            // "Login dengan Google".
+            if ($user->isDeactivated()) {
+                return redirect()->route('login.form')
+                    ->withErrors(['google' => LoginController::deactivatedMessage($user)]);
+            }
+
             // Login user
             Auth::login($user);
 

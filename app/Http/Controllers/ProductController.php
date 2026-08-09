@@ -98,15 +98,26 @@ class ProductController extends Controller
         // Data tebak harga (jika produk adalah tebak harga)
         $tebakHarga = null;
         if ($product->isTebakHarga()) {
+            $guessService = app(PriceGuessService::class);
+
             $tebakHarga = [
                 'guess_status' => $product->guess_status,
                 'guess_starts_at' => $product->guess_starts_at,
                 'guess_ends_at' => $product->guess_ends_at,
+                'guess_finished_at' => $product->guess_finished_at,
+                'guess_finished_reason' => $product->guess_finished_reason,
                 'winner_priority_until' => $product->winner_priority_until,
                 'guesses_count' => $product->priceGuesses()->count(),
                 'my_guess' => $viewer ? $product->priceGuesses()->where('user_id', $viewer->id)->first() : null,
                 'is_winner' => $viewer && $product->guessWinner?->id === $viewer->id,
+                'winner_username' => $product->guessWinner?->username,
                 'can_buy' => $product->isPurchasableBy($viewer),
+                // Papan tebakan. Selama periode berjalan hanya berisi urutan
+                // waktu tanpa peringkat; peringkat baru muncul setelah selesai.
+                // Lihat PriceGuessService::leaderboard().
+                'leaderboard' => $guessService->leaderboard($product, $viewer),
+                'tolerance_percent' => Product::GUESS_TOLERANCE_PERCENT,
+                'winner_priority_hours' => Product::WINNER_PRIORITY_HOURS,
             ];
         }
 
@@ -125,6 +136,16 @@ class ProductController extends Controller
             'name' => 'required',
             'stock' => 'required|integer',
             'price' => 'required|numeric',
+            // Berat dalam gram; dipakai menghitung biaya berat di checkout.
+            // Opsional agar produk lama tetap bisa disunting; yang kosong
+            // memakai berat default dari config/marketplace.php.
+            'weight' => 'nullable|integer|min:1|max:500000',
+            // Dimensi paket dalam cm, untuk menghitung berat volumetrik.
+            // Boleh kosong: yang kosong berarti biaya beratnya murni dari
+            // berat asli, bukan mendadak ditagih lebih mahal.
+            'length' => 'nullable|integer|min:1|max:500',
+            'width' => 'nullable|integer|min:1|max:500',
+            'height' => 'nullable|integer|min:1|max:500',
             'category' => ['required', Rule::exists('categories', 'name')],
             'description' => 'required',
             'image' => 'nullable|image|max:2048',
@@ -178,6 +199,10 @@ class ProductController extends Controller
             'name' => $request->name,
             'stock' => $request->stock,
             'price' => $request->price,
+            'weight' => $request->weight ?: config('marketplace.weight.default_gram'),
+            'length' => $request->length ?: null,
+            'width' => $request->width ?: null,
+            'height' => $request->height ?: null,
             'category' => $request->category,
             'description' => $request->description,
             'image' => $imagePath,
@@ -212,6 +237,16 @@ class ProductController extends Controller
             'name' => 'required',
             'stock' => 'required|integer',
             'price' => 'required|numeric',
+            // Berat dalam gram; dipakai menghitung biaya berat di checkout.
+            // Opsional agar produk lama tetap bisa disunting; yang kosong
+            // memakai berat default dari config/marketplace.php.
+            'weight' => 'nullable|integer|min:1|max:500000',
+            // Dimensi paket dalam cm, untuk menghitung berat volumetrik.
+            // Boleh kosong: yang kosong berarti biaya beratnya murni dari
+            // berat asli, bukan mendadak ditagih lebih mahal.
+            'length' => 'nullable|integer|min:1|max:500',
+            'width' => 'nullable|integer|min:1|max:500',
+            'height' => 'nullable|integer|min:1|max:500',
             'category' => ['required', Rule::exists('categories', 'name')],
             'description' => 'required',
             'image' => 'nullable|image|max:2048',
@@ -305,6 +340,10 @@ class ProductController extends Controller
         $product->name = $request->name;
         $product->stock = $request->stock;
         $product->price = $request->price;
+        $product->weight = $request->weight ?: config('marketplace.weight.default_gram');
+        $product->length = $request->length ?: null;
+        $product->width = $request->width ?: null;
+        $product->height = $request->height ?: null;
         $product->category = $request->category;
         $product->description = $request->description;
         $product->is_barterable = $isTebakHarga ? false : $request->boolean('is_barterable');

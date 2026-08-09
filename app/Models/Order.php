@@ -22,8 +22,20 @@ class Order extends Model
         'status',
         'tracking_number',
         'shipping_address',
+        // Nama wilayah hasil pembacaan koordinat. Inilah tujuan sebenarnya
+        // yang dilihat seller — lihat temuan V4-01.
+        'shipping_area',
         'shipping_method',
         'shipping_cost',
+        'packaging_fee',
+        'packaging_type',
+        'weight_fee',
+        'service_fee',
+        'weight_gram',
+        'volumetric_weight_gram',
+        'shipping_distance_km',
+        'shipping_latitude',
+        'shipping_longitude',
         'notes',
         'payment_reference',
         'payment_status',
@@ -33,6 +45,7 @@ class Order extends Model
         'snap_redirect_url',
         'paid_at',
         'stock_restored_at',
+        'stock_committed_at',
         'seller_released_at',
         'delivered_at',
         'completed_at',
@@ -43,11 +56,20 @@ class Order extends Model
     protected $casts = [
         'paid_at' => 'datetime',
         'stock_restored_at' => 'datetime',
+        'stock_committed_at' => 'datetime',
         'seller_released_at' => 'datetime',
         'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
         'product_price' => 'decimal:2',
         'shipping_cost' => 'integer',
+        'packaging_fee' => 'integer',
+        'weight_fee' => 'integer',
+        'service_fee' => 'integer',
+        'weight_gram' => 'integer',
+        'volumetric_weight_gram' => 'integer',
+        'shipping_distance_km' => 'float',
+        'shipping_latitude' => 'float',
+        'shipping_longitude' => 'float',
     ];
 
     protected $hidden = [
@@ -61,6 +83,9 @@ class Order extends Model
     protected $appends = [
         'display_item_name',
         'display_store_name',
+        // Dashboard seller menampilkan total tagihan pembeli; tanpa angka ini
+        // seller mengira seluruhnya menjadi haknya.
+        'seller_payout_amount',
     ];
 
     /**
@@ -141,6 +166,15 @@ class Order extends Model
     public const BUYER_CONFIRMATION_WINDOW_DAYS = 3;
 
     /**
+     * Berapa lama sebuah pesanan boleh menahan stok sambil menunggu dibayar.
+     *
+     * Disamakan dengan masa berlaku transaksi Midtrans. Lewat dari ini,
+     * command orders:release-abandoned melepaskan reservasinya agar barangnya
+     * bisa dibeli orang lain.
+     */
+    public const PAYMENT_WINDOW_HOURS = 24;
+
+    /**
      * Pesanan yang masih berjalan atau pernah melibatkan uang.
      */
     public function scopeActive($query)
@@ -215,32 +249,136 @@ class Order extends Model
         $this->refresh();
     }
 
+    /**
+     * Lepaskan reservasi stok tanpa jadi dibeli — pesanan batal, kedaluwarsa,
+     * atau ditolak.
+     *
+     * Sejak stok ditahan (reserved_stock) alih-alih langsung dipotong, yang
+     * dikembalikan adalah reservasinya, bukan stoknya. Pesanan yang sudah
+     * telanjur lunas dan stoknya dipotong tidak boleh lewat jalur ini.
+     *
+     * `stock_restored_at` menjaga agar pelepasan hanya terjadi sekali walau
+     * webhook Midtrans datang berkali-kali.
+     */
     public function restoreReservedStock(): void
     {
-        if ($this->stock_restored_at !== null) {
+        if ($this->stock_restored_at !== null || $this->stock_committed_at !== null) {
             return;
         }
 
         DB::transaction(function () {
             $order = self::whereKey($this->getKey())->lockForUpdate()->first();
 
-            if (! $order || $order->stock_restored_at !== null) {
+            if (! $order || $order->stock_restored_at !== null || $order->stock_committed_at !== null) {
                 return;
             }
 
             if ($order->product_id !== null) {
-                Product::whereKey($order->product_id)->increment('stock', $order->quantity);
+                Product::whereKey($order->product_id)->decrement('reserved_stock', $order->quantity);
             }
 
             $order->forceFill([
                 'stock_restored_at' => now(),
             ])->save();
         });
+
+        $this->refresh();
+    }
+
+    /**
+     * Ubah reservasi menjadi pengurangan stok yang sesungguhnya.
+     *
+     * Dipanggil ketika pembayaran benar-benar lunas. Sampai titik ini barangnya
+     * masih tercatat sebagai milik seller dan tetap tampil di etalase; barulah
+     * di sini ia berpindah tangan.
+     *
+     * Idempoten lewat `stock_committed_at`: notifikasi Midtrans tidak menjamin
+     * hanya datang sekali.
+     */
+    public function commitReservedStock(): void
+    {
+        if ($this->stock_committed_at !== null || $this->stock_restored_at !== null) {
+            return;
+        }
+
+        DB::transaction(function () {
+            $order = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $order || $order->stock_committed_at !== null || $order->stock_restored_at !== null) {
+                return;
+            }
+
+            if ($order->product_id !== null) {
+                $product = Product::whereKey($order->product_id)->lockForUpdate()->first();
+
+                if ($product) {
+                    // Keduanya turun bersamaan: barangnya keluar dari stok, dan
+                    // penahanannya tidak lagi diperlukan. Memotong stok tanpa
+                    // melepas reservasi akan menahan unit yang sudah terjual.
+                    $product->forceFill([
+                        'stock' => max(0, (int) $product->stock - (int) $order->quantity),
+                        'reserved_stock' => max(0, (int) $product->reserved_stock - (int) $order->quantity),
+                    ])->save();
+                }
+            }
+
+            $order->forceFill([
+                'stock_committed_at' => now(),
+            ])->save();
+        });
+
+        $this->refresh();
     }
 
     public function payoutRequests()
     {
         return $this->hasMany(PayoutRequest::class);
+    }
+
+    public function platformRevenues()
+    {
+        return $this->hasMany(PlatformRevenue::class);
+    }
+
+    /**
+     * Nilai barang murni, tanpa ongkir dan biaya-biaya lain.
+     *
+     * `price` menyimpan total tagihan, jadi tanpa pengurangan ini seller
+     * seolah-olah berhak atas ongkir dan biaya layanan juga.
+     */
+    public function getItemSubtotalAttribute(): int
+    {
+        return max(0, (int) round($this->price)
+            - (int) $this->shipping_cost
+            - (int) $this->packaging_fee
+            - (int) $this->weight_fee
+            - (int) $this->service_fee);
+    }
+
+    /**
+     * Nominal yang menjadi hak seller atas pesanan ini.
+     *
+     * Pembagian tagihan:
+     *  - nilai barang + biaya pengemasan -> seller (sellerlah yang mengemas)
+     *  - ongkir + biaya berat            -> biaya pengiriman, bukan hak seller
+     *  - biaya layanan                   -> pendapatan marketplace (dompet admin)
+     *
+     * Sebelumnya pencairan memakai `price` (total tagihan) apa adanya, sehingga
+     * seller ikut menerima ongkir DAN biaya layanan — biaya layanan yang sama
+     * yang dicatat sebagai pendapatan platform. Uang yang sama dibayarkan dua
+     * kali.
+     *
+     * Pesanan lelang tidak punya komponen biaya (semuanya 0), jadi nilainya
+     * tetap sama dengan harga menang.
+     */
+    public function sellerPayoutAmount(): int
+    {
+        return $this->item_subtotal + (int) $this->packaging_fee;
+    }
+
+    public function getSellerPayoutAmountAttribute(): int
+    {
+        return $this->sellerPayoutAmount();
     }
 
     /**

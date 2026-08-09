@@ -30,6 +30,9 @@ class PayoutRequest extends Model
         'order_id',
         'barter_request_id',
         'store_id',
+        // Snapshot nama toko: catatan pencairan adalah bukti uang keluar dan
+        // harus tetap terbaca meski tokonya dihapus (temuan V3-04).
+        'store_name',
         'amount',
         'bank_name',
         'account_number',
@@ -52,7 +55,19 @@ class PayoutRequest extends Model
 
     protected $appends = [
         'source_type',
+        'display_store_name',
     ];
+
+    /**
+     * Snapshot didahulukan: catatan pencairan harus tetap menyebut toko mana
+     * yang menerima uang, walau tokonya sudah tidak ada lagi.
+     */
+    public function getDisplayStoreNameAttribute(): string
+    {
+        return $this->store_name
+            ?? $this->store?->store_name
+            ?? 'Toko tidak tersedia';
+    }
 
     /**
      * 'order' atau 'barter' — dipakai UI admin untuk memberi label sumber dana
@@ -75,6 +90,8 @@ class PayoutRequest extends Model
             if (empty($payout->public_id)) {
                 $payout->public_id = self::generatePublicId();
             }
+
+            $payout->store_name ??= Store::whereKey($payout->store_id)->value('store_name');
         });
     }
 

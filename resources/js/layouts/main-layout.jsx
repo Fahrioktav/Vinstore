@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from 'next-themes';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { DialogHost } from '@/lib/dialog';
 
 export default function MainLayout({ children, title, heroText }) {
   const { flash } = usePage().props;
@@ -25,6 +26,9 @@ export default function MainLayout({ children, title, heroText }) {
         <Head title={title} />
         <Navbar />
         <Toaster position="top-center" richColors />
+        {/* Pengganti confirm()/prompt() bawaan browser. Dipasang di layout
+            supaya bisa dipanggil dari halaman mana pun tanpa provider. */}
+        <DialogHost />
 
         {/* {-- Hero Section --} */}
         {/* {heroText && (

@@ -17,7 +17,7 @@ export default function RegisterPage() {
       <AuthLayoutCard type="register">
         <AuthLayoutHeader
           title="Buat akun baru"
-          subtitle="Daftar dan mulailah menjelajahi koleksi barang antik eksklusif ✨"
+          subtitle="Daftar dan mulailah menjelajahi koleksi barang antik eksklusif"
         />
 
         {/* {-- FORM REGISTER --} */}

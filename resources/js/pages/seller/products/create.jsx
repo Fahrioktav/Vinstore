@@ -9,6 +9,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import { CertificateIcon, VideoIcon } from '@/components/icons';
 
 export default function SellerCreateProductPage() {
   const { categories = [] } = usePage().props;
@@ -63,7 +64,7 @@ export default function SellerCreateProductPage() {
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
                   >
                     <option value="normal">Penjualan Biasa</option>
-                    <option value="tebak_harga">🎯 Tebak Harga</option>
+                    <option value="tebak_harga">Tebak Harga</option>
                   </select>
                   {isTebakHarga && (
                     <p className="mt-1 text-xs text-gray-500">
@@ -101,6 +102,68 @@ export default function SellerCreateProductPage() {
                       defaultValue="0"
                     />
                   </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm font-semibold text-[#2F3E46]">
+                    Berat & Dimensi Paket
+                  </p>
+                  <p className="mt-1 mb-4 text-xs text-gray-500">
+                    Dipakai menghitung biaya pengiriman. Yang ditagih adalah
+                    berat yang lebih besar antara berat asli dan berat
+                    volumetrik (P × L × T ÷ 6000), sama seperti cara kurir
+                    menghitung — barang besar tapi ringan tetap memakan ruang.
+                  </p>
+
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <div>
+                      <AuthLabel htmlFor="weight">Berat (gram)</AuthLabel>
+                      <AuthInput
+                        id="weight"
+                        type="number"
+                        name="weight"
+                        required
+                        min="1"
+                        defaultValue="1000"
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="length">Panjang (cm)</AuthLabel>
+                      <AuthInput
+                        id="length"
+                        type="number"
+                        name="length"
+                        min="1"
+                        placeholder="opsional"
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="width">Lebar (cm)</AuthLabel>
+                      <AuthInput
+                        id="width"
+                        type="number"
+                        name="width"
+                        min="1"
+                        placeholder="opsional"
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="height">Tinggi (cm)</AuthLabel>
+                      <AuthInput
+                        id="height"
+                        type="number"
+                        name="height"
+                        min="1"
+                        placeholder="opsional"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-xs text-gray-400">
+                    Berat dibulatkan ke atas ke kilogram penuh — 1.200 gram
+                    ditagih 2 kg. Dimensi boleh dikosongkan; bila kosong,
+                    biayanya murni dari berat asli.
+                  </p>
                 </div>
 
                 {isTebakHarga && (
@@ -220,7 +283,8 @@ export default function SellerCreateProductPage() {
                 </div>
                 <div>
                   <AuthLabel htmlFor="video">
-                    🎥 Video Produk (Opsional)
+                    <VideoIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                    Video Produk (Opsional)
                   </AuthLabel>
                   <AuthInput
                     id="video"
@@ -255,7 +319,8 @@ export default function SellerCreateProductPage() {
                 )}
                 <div>
                   <AuthLabel htmlFor="certificate">
-                    📜 Sertifikat Keaslian (Opsional)
+                    <CertificateIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                    Sertifikat Keaslian (Opsional)
                   </AuthLabel>
                   <AuthInput
                     id="certificate"

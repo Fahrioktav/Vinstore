@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
+import { BarterIcon, MoneyIcon, SuccessIcon } from '@/components/icons';
+import { toast } from 'sonner';
 
 export default function BarterPaymentPage() {
   const { barter, snapToken, viewerRole } = usePage().props;
@@ -51,7 +53,7 @@ export default function BarterPaymentPage() {
         if (data.is_paid) {
           setPollingStatus(false);
           setProcessing(false);
-          alert(
+          toast.success(
             'Pembayaran berhasil! Silakan saling mengirim barang dan isi nomor resinya.'
           );
           router.visit('/seller/barter');
@@ -65,7 +67,7 @@ export default function BarterPaymentPage() {
     const timeout = setTimeout(() => {
       setPollingStatus(false);
       setProcessing(false);
-      alert(
+      toast.info(
         'Pembayaran sedang diproses. Silakan cek halaman barter dalam beberapa menit.'
       );
       router.visit('/seller/barter');
@@ -79,7 +81,7 @@ export default function BarterPaymentPage() {
 
   const handlePay = () => {
     if (!snapToken) {
-      alert('Sistem pembayaran belum siap. Silakan refresh halaman.');
+      toast.error('Sistem pembayaran belum siap. Silakan refresh halaman.');
       return;
     }
 
@@ -92,13 +94,13 @@ export default function BarterPaymentPage() {
       },
       onPending: () => {
         setProcessing(false);
-        alert(
+        toast.info(
           'Pembayaran tertunda. Silakan selesaikan pembayaran Anda terlebih dahulu.'
         );
       },
       onError: () => {
         setProcessing(false);
-        alert('Pembayaran gagal. Silakan coba lagi.');
+        toast.error('Pembayaran gagal. Silakan coba lagi.');
       },
       onClose: () => {
         if (!paymentCompleted) {
@@ -107,12 +109,12 @@ export default function BarterPaymentPage() {
       },
     }).catch((error) => {
       setProcessing(false);
-      alert(error.message);
+      toast.error(error.message);
     });
   };
 
   return (
-    <div className="px-6 py-10 md:px-16">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <div className="mx-auto max-w-3xl">
         <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">
           Pembayaran Selisih Barter
@@ -140,7 +142,9 @@ export default function BarterPaymentPage() {
                 label="Produk Anda"
                 store={myStore}
               />
-              <div className="text-center text-3xl text-[#B77C4C]">⇄</div>
+              <div className="flex justify-center text-[#B77C4C]">
+                <BarterIcon className="h-9 w-9" />
+              </div>
               <ProductCard
                 product={theirProduct}
                 label="Produk Mereka"
@@ -152,7 +156,7 @@ export default function BarterPaymentPage() {
           {/* Payment Info */}
           <div className="rounded-lg border-2 border-yellow-300 bg-yellow-50 p-5">
             <div className="mb-3 flex items-center gap-2">
-              <span className="text-3xl">💰</span>
+              <MoneyIcon className="h-8 w-8 text-[#B77C4C]" />
               <h3 className="text-lg font-bold text-gray-900">
                 Pembayaran Tambahan Diperlukan
               </h3>
@@ -178,15 +182,15 @@ export default function BarterPaymentPage() {
             </div>
 
             <p className="mb-4 text-xs text-gray-600">
-              ⚠️ Karena produk Anda lebih murah, Anda perlu membayar selisih
-              harga untuk melanjutkan barter. Setelah pembayaran berhasil, kedua
+              Karena produk Anda lebih murah, Anda perlu membayar selisih harga
+              untuk melanjutkan barter. Setelah pembayaran berhasil, kedua
               seller saling mengirim barang dan mengisi nomor resi. Kepemilikan
               baru berpindah setelah keduanya mengonfirmasi barang diterima.
             </p>
 
             {paymentCompleted ? (
               <div className="rounded-lg bg-green-100 p-4 text-center">
-                <div className="mb-2 animate-bounce text-3xl">✅</div>
+                <SuccessIcon className="mx-auto mb-2 h-9 w-9 animate-bounce text-green-600" />
                 <p className="font-bold text-green-800">Pembayaran Berhasil!</p>
                 <p className="mb-2 text-sm text-green-700">
                   Sedang menyiapkan tahap pengiriman...
@@ -206,7 +210,7 @@ export default function BarterPaymentPage() {
               >
                 {processing
                   ? '⏳ Memproses...'
-                  : `💳 Bayar ${formatIDR(barter.additional_cash)}`}
+                  : `Bayar ${formatIDR(barter.additional_cash)}`}
               </button>
             )}
 

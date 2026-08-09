@@ -7,7 +7,16 @@ import {
   getProductImage,
   storageMedia,
 } from '@/lib/utils';
-import { BadgeIcon } from '@/components/icons';
+import {
+  BadgeIcon,
+  CheckIcon,
+  CloseIcon,
+  GuessIcon,
+  LocationIcon,
+  PendingIcon,
+  WarningIcon,
+} from '@/components/icons';
+import { confirmDialog, promptDialog } from '@/lib/dialog';
 
 export default function AdminPendingProducts() {
   const { products = [] } = usePage().props;
@@ -33,7 +42,8 @@ export default function AdminPendingProducts() {
 
         <div className="mb-6 rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h1 className="text-2xl font-bold text-[#53685B]">
-            🕒 Produk Menunggu Persetujuan
+            <PendingIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Produk Menunggu Persetujuan
           </h1>
           <p className="mt-1 text-sm text-gray-600">
             {products.length > 0
@@ -62,8 +72,14 @@ function PendingProductCard({ product }) {
   ].filter(Boolean);
   const [activeImage, setActiveImage] = useState(gallery[0] ?? null);
 
-  const handleApprove = () => {
-    if (confirm('Setujui produk ini agar tampil ke pembeli?')) {
+  const handleApprove = async () => {
+    if (
+      await confirmDialog({
+        title: 'Setujui produk ini?',
+        description: 'Produk akan langsung tampil dan bisa dibeli pembeli.',
+        confirmLabel: 'Ya, setujui',
+      })
+    ) {
       router.post(
         `/admin/products/${product.public_id}/approve`,
         {},
@@ -72,8 +88,18 @@ function PendingProductCard({ product }) {
     }
   };
 
-  const handleReject = () => {
-    const rejectionReason = prompt('Alasan penolakan produk (opsional):') || '';
+  const handleReject = async () => {
+    const rejectionReason = await promptDialog({
+      title: 'Tolak produk ini?',
+      description:
+        'Alasannya akan ditampilkan kepada seller agar bisa diperbaiki.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: foto kurang jelas, sertifikat tidak terbaca...',
+      confirmLabel: 'Tolak produk',
+      variant: 'destructive',
+    });
+
+    if (rejectionReason === null) return;
     router.post(
       `/admin/products/${product.public_id}/reject`,
       { rejection_reason: rejectionReason },
@@ -136,7 +162,8 @@ function PendingProductCard({ product }) {
             </a>
           ) : (
             <p className="rounded-lg bg-red-50 px-4 py-2.5 text-center text-sm font-medium text-red-600">
-              ⚠️ Produk tidak menyertakan sertifikat
+              <WarningIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+              Produk tidak menyertakan sertifikat
             </p>
           )}
         </div>
@@ -152,7 +179,8 @@ function PendingProductCard({ product }) {
         </div>
         {product.sale_type === 'tebak_harga' && (
           <span className="mt-2 inline-block rounded-md bg-[#53685B] px-2 py-1 text-xs font-semibold text-white">
-            🎯 Tebak Harga
+            <GuessIcon className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
+            Tebak Harga
           </span>
         )}
         <p className="mt-2 text-3xl font-bold text-[#B77C4C]">
@@ -165,7 +193,7 @@ function PendingProductCard({ product }) {
         </p>
 
         {product.sale_type === 'tebak_harga' && (
-          <div className="mt-4 grid grid-cols-2 gap-4 rounded-lg bg-[#53685B]/5 p-4 text-sm">
+          <div className="mt-4 grid grid-cols-1 gap-4 rounded-lg bg-[#53685B]/5 p-4 text-sm sm:grid-cols-2">
             <Info
               label="Periode Mulai"
               value={formatTebakDate(product.guess_starts_at)}
@@ -177,7 +205,7 @@ function PendingProductCard({ product }) {
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
+        <div className="mt-5 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
           <Info label="Kategori" value={product.category} />
           <Info label="Stok" value={product.stock} />
           <Info label="ID Produk" value={product.public_id} />
@@ -230,7 +258,10 @@ function PendingProductCard({ product }) {
             {seller.username ? ` (@${seller.username})` : ''}
           </p>
           {store.location && (
-            <p className="text-sm text-gray-500">📍 {store.location}</p>
+            <p className="flex items-center gap-1 text-sm text-gray-500">
+              <LocationIcon className="h-4 w-4 shrink-0" />
+              {store.location}
+            </p>
           )}
         </div>
 
@@ -239,13 +270,15 @@ function PendingProductCard({ product }) {
             onClick={handleApprove}
             className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
           >
-            ✓ Setujui Produk
+            <CheckIcon className="mr-1 inline h-5 w-5 align-text-bottom" />
+            Setujui Produk
           </button>
           <button
             onClick={handleReject}
             className="flex-1 rounded-lg bg-red-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
           >
-            ✕ Tolak Produk
+            <CloseIcon className="mr-1 inline h-5 w-5 align-text-bottom" />
+            Tolak Produk
           </button>
         </div>
       </div>

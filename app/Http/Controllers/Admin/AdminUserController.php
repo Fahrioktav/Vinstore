@@ -11,7 +11,7 @@ class AdminUserController extends Controller
 {
     public function index()
     {
-        $users = User::where('role', 'user')->get();
+        $users = User::where('role', 'user')->latest()->get();
 
         return Inertia::render('admin/users/index', compact('users'));
     }
@@ -41,15 +41,36 @@ class AdminUserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui.');
     }
 
-    public function destroy($id)
+    /**
+     * Nonaktifkan akun — TIDAK menghapusnya.
+     *
+     * Menghapus user berarti menghapus seluruh riwayat pesanannya
+     * (`orders.user_id` memakai ON DELETE CASCADE), termasuk pesanan yang sudah
+     * lunas dan dananya sudah dicairkan ke seller. Pembukuan marketplace jadi
+     * berlubang tanpa jejak. Lihat temuan V4-12.
+     *
+     * Akun nonaktif tidak bisa masuk lagi dan sesinya yang sedang berjalan
+     * langsung diputus oleh EnsureAccountIsActive.
+     */
+    public function destroy(Request $request, $id)
     {
         $user = User::where('role', 'user')->where('public_id', $id)->firstOrFail();
 
-        // Hapus orders yang terkait
-        $user->orders()->delete();
+        if ($user->isDeactivated()) {
+            $user->reactivate();
 
-        $user->delete();
+            return back()->with('success', 'Akun '.$user->username.' diaktifkan kembali.');
+        }
 
-        return redirect()->back()->with('success', 'User berhasil dihapus.');
+        if (! $user->canBeDeactivated()) {
+            return back()->with('error', 'Akun ini tidak dapat dinonaktifkan.');
+        }
+
+        $user->deactivate($request->input('reason'));
+
+        return back()->with(
+            'success',
+            'Akun '.$user->username.' dinonaktifkan. Riwayat pesanannya tetap tersimpan.'
+        );
     }
 }

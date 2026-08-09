@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,9 +25,22 @@ class LoginController extends Controller
 
         // Coba otentikasi
         if (Auth::attempt([$fieldType => $login, 'password' => $password])) {
-            $request->session()->regenerate(); // regenerasi session untuk keamanan
-
             $user = Auth::user();
+
+            // Akun nonaktif tidak boleh masuk. Diperiksa SETELAH kredensialnya
+            // benar, bukan sebelumnya: menolak lebih awal akan memberi tahu
+            // penebak password bahwa akun itu ada.
+            if ($user->isDeactivated()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'login' => self::deactivatedMessage($user),
+                ])->withInput();
+            }
+
+            $request->session()->regenerate(); // regenerasi session untuk keamanan
 
             // Cek role user untuk redirect ke dashboard yang sesuai
             if ($user->role === 'admin') {
@@ -44,5 +58,16 @@ class LoginController extends Controller
         return back()->withErrors([
             'login' => 'Username/Email atau password salah.',
         ])->withInput();
+    }
+
+    /**
+     * Pesan untuk akun yang dinonaktifkan. Dipakai jalur password maupun Google
+     * supaya keduanya menjelaskan hal yang sama.
+     */
+    public static function deactivatedMessage(User $user): string
+    {
+        return 'Akun Anda dinonaktifkan oleh admin.'
+            .($user->deactivation_reason ? ' Alasan: '.$user->deactivation_reason : '')
+            .' Hubungi admin bila menurut Anda ini keliru.';
     }
 }

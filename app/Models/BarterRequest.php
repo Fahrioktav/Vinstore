@@ -51,6 +51,12 @@ class BarterRequest extends Model
         'responder_store_id',
         'offered_product_id',
         'requested_product_id',
+        // Snapshot identitas: riwayat barter harus tetap terbaca meski produk
+        // atau tokonya dihapus di kemudian hari (temuan V3-01).
+        'offered_product_name',
+        'requested_product_name',
+        'requester_store_name',
+        'responder_store_name',
         'additional_cash',
         'payer_role',
         'note',
@@ -93,13 +99,70 @@ class BarterRequest extends Model
         'payout_released_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'display_offered_product_name',
+        'display_requested_product_name',
+        'display_requester_store_name',
+        'display_responder_store_name',
+    ];
+
     protected static function booted(): void
     {
         static::creating(function (BarterRequest $barter) {
             if (empty($barter->public_id)) {
                 $barter->public_id = self::generatePublicId();
             }
+
+            $barter->fillMissingSnapshots();
         });
+    }
+
+    /**
+     * Salin nama produk dan toko ke baris barter ini.
+     *
+     * Dilakukan otomatis saat pembuatan agar tidak ada satu pun jalur pembuatan
+     * barter yang bisa lupa mengisinya.
+     */
+    public function fillMissingSnapshots(): void
+    {
+        $this->offered_product_name ??= Product::whereKey($this->offered_product_id)->value('name');
+        $this->requested_product_name ??= Product::whereKey($this->requested_product_id)->value('name');
+        $this->requester_store_name ??= Store::whereKey($this->requester_store_id)->value('store_name');
+        $this->responder_store_name ??= Store::whereKey($this->responder_store_id)->value('store_name');
+    }
+
+    /**
+     * Nama-nama untuk ditampilkan.
+     *
+     * Snapshot didahulukan karena itulah identitas PADA SAAT barter disepakati;
+     * relasi hidup hanya dipakai bila snapshot-nya belum ada (data lama).
+     */
+    public function getDisplayOfferedProductNameAttribute(): string
+    {
+        return $this->offered_product_name
+            ?? $this->offeredProduct?->name
+            ?? 'Produk tidak tersedia';
+    }
+
+    public function getDisplayRequestedProductNameAttribute(): string
+    {
+        return $this->requested_product_name
+            ?? $this->requestedProduct?->name
+            ?? 'Produk tidak tersedia';
+    }
+
+    public function getDisplayRequesterStoreNameAttribute(): string
+    {
+        return $this->requester_store_name
+            ?? $this->requesterStore?->store_name
+            ?? 'Toko tidak tersedia';
+    }
+
+    public function getDisplayResponderStoreNameAttribute(): string
+    {
+        return $this->responder_store_name
+            ?? $this->responderStore?->store_name
+            ?? 'Toko tidak tersedia';
     }
 
     public static function generatePublicId(): string
@@ -216,8 +279,8 @@ class BarterRequest extends Model
     public function getPayerStoreNameAttribute(): ?string
     {
         return match ($this->payerRole()) {
-            self::PAYER_REQUESTER => $this->requesterStore?->store_name,
-            self::PAYER_RESPONDER => $this->responderStore?->store_name,
+            self::PAYER_REQUESTER => $this->display_requester_store_name,
+            self::PAYER_RESPONDER => $this->display_responder_store_name,
             default => null,
         };
     }

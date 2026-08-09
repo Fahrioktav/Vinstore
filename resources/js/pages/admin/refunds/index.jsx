@@ -2,6 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
+import { BarterIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
+import { promptDialog } from '@/lib/dialog';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -12,8 +14,17 @@ const statusColors = {
 export default function AdminRefunds() {
   const { refunds, success, error } = usePage().props;
 
-  const approve = (publicId) => {
-    const adminNote = prompt('Catatan admin (opsional):') || '';
+  const approve = async (publicId) => {
+    const adminNote = await promptDialog({
+      title: 'Setujui pengajuan refund?',
+      description:
+        'Dana dikembalikan ke pembeli dan biaya layanan atas pesanan ini ikut dibatalkan.',
+      label: 'Catatan admin',
+      placeholder: 'Catatan untuk arsip, mis. nomor referensi transfer...',
+      confirmLabel: 'Setujui refund',
+    });
+
+    if (adminNote === null) return;
 
     router.post(
       `/admin/refunds/${publicId}/approve`,
@@ -22,8 +33,17 @@ export default function AdminRefunds() {
     );
   };
 
-  const reject = (publicId) => {
-    const adminNote = prompt('Alasan penolakan refund (opsional):') || '';
+  const reject = async (publicId) => {
+    const adminNote = await promptDialog({
+      title: 'Tolak pengajuan refund?',
+      description: 'Alasannya akan terlihat oleh pembeli yang mengajukan.',
+      label: 'Alasan penolakan',
+      placeholder: 'Contoh: bukti tidak cukup, barang sudah diterima utuh...',
+      confirmLabel: 'Tolak refund',
+      variant: 'destructive',
+    });
+
+    if (adminNote === null) return;
 
     router.post(
       `/admin/refunds/${publicId}/reject`,
@@ -35,7 +55,7 @@ export default function AdminRefunds() {
   return (
     <>
       <Head title="Kelola Refund" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700">
             {success}
@@ -77,15 +97,26 @@ export default function AdminRefunds() {
 
                     // Sanggahan barter menyangkut selisih uangnya, bukan harga
                     // pesanan — nominal dan pihak terkaitnya berbeda sumber.
-                    const itemLabel = isBarter
-                      ? `${barter?.offered_product?.name || '?'} ⇄ ${barter?.requested_product?.name || '?'}`
-                      : item?.name || '-';
+                    // Nama diambil dari snapshot pada baris barter/pesanan,
+                    // bukan dari relasinya: produk atau tokonya bisa saja sudah
+                    // dihapus dan relasinya null (temuan V3-01).
+                    // Barter menyangkut dua produk sekaligus, jadi labelnya
+                    // berupa elemen agar panah penukarnya bisa memakai ikon.
+                    const itemLabel = isBarter ? (
+                      <span className="inline-flex items-center gap-1">
+                        {barter?.display_offered_product_name || '?'}
+                        <BarterIcon className="h-3.5 w-3.5 shrink-0" />
+                        {barter?.display_requested_product_name || '?'}
+                      </span>
+                    ) : (
+                      order?.display_item_name || item?.name || '-'
+                    );
                     const referenceLabel = isBarter
                       ? `Barter: ${barter?.public_id || '-'}`
                       : `Order: ${order?.public_id || '-'}`;
                     const storeLabel = isBarter
-                      ? barter?.responder_store?.store_name || '-'
-                      : order?.store?.store_name || '-';
+                      ? barter?.display_responder_store_name || '-'
+                      : order?.display_store_name || '-';
                     const amount = isBarter
                       ? barter?.additional_cash || 0
                       : order?.price || 0;
@@ -193,12 +224,12 @@ export default function AdminRefunds() {
                                 items={[
                                   {
                                     label: 'Setujui',
-                                    icon: '✅',
+                                    icon: <SuccessIcon />,
                                     onClick: () => approve(refund.public_id),
                                   },
                                   {
                                     label: 'Tolak',
-                                    icon: '🚫',
+                                    icon: <BlockedIcon />,
                                     variant: 'destructive',
                                     onClick: () => reject(refund.public_id),
                                   },

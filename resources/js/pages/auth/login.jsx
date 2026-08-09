@@ -20,7 +20,7 @@ export default function LoginPage() {
       <AuthLayoutCard type="login">
         <AuthLayoutHeader
           title="Selamat Datang Kembali!"
-          subtitle="Masuk untuk melanjutkan ke dunia barang antik eksklusif ✨"
+          subtitle="Masuk untuk melanjutkan ke dunia barang antik eksklusif"
         />
 
         {/* {-- FORM LOGIN --} */}

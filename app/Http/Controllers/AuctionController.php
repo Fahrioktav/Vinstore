@@ -368,7 +368,10 @@ class AuctionController extends Controller
                     'id' => $auction->public_id,
                     'price' => (int) round((float) $order->price),
                     'quantity' => 1,
-                    'name' => substr('Lelang - '.$auction->name, 0, 50),
+                    // mb_substr lewat MidtransService::truncate(): substr()
+                    // memotong per byte dan bisa membelah karakter multibyte,
+                    // membuat payload gagal di-encode ke JSON.
+                    'name' => MidtransService::truncate('Lelang - '.$auction->name, 50),
                 ]]
             );
 

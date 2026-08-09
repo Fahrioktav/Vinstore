@@ -1,6 +1,7 @@
 import { useForm, usePage, Link } from '@inertiajs/react';
 import FormLayout from '@/layouts/form-layout';
 import { cn } from '@/lib/utils';
+import { ListIcon } from '@/components/icons';
 
 const contacts = [
   {
@@ -53,7 +54,9 @@ export default function ContactPage() {
       <div className="my-auto grid max-w-6xl items-start gap-12 rounded-2xl bg-gray-50 p-16 shadow-xl md:grid-cols-2">
         {/* {-- Kontak Kiri --} */}
         <div className="space-y-6">
-          <h3 className="text-4xl font-bold text-[#4a5b4d]">Hubungi Kami</h3>
+          <h3 className="text-2xl font-bold text-[#4a5b4d] sm:text-4xl">
+            Hubungi Kami
+          </h3>
           <p className="text-lg text-gray-600">
             Punya pertanyaan, saran, atau kendala? Tim VINSTORE siap membantu
             kamu! Hubungi kami melalui media sosial atau kirim pesan melalui
@@ -63,9 +66,10 @@ export default function ContactPage() {
           {user && (
             <Link
               href="/my-contacts"
-              className="inline-block rounded-lg bg-[#5A6E5A] px-5 py-2 text-white transition hover:bg-[#6d7f6d]"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#5A6E5A] px-5 py-2 text-white transition hover:bg-[#6d7f6d]"
             >
-              📋 Lihat Riwayat Pesan Saya
+              <ListIcon className="h-5 w-5" />
+              Lihat Riwayat Pesan Saya
             </Link>
           )}
 

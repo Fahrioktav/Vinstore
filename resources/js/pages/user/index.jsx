@@ -47,8 +47,8 @@ export default function UserIndex() {
       </section>
 
       {/* KATEGORI SECTION */}
-      <section className="mt-20 px-6 md:px-16">
-        <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
+      <section className="mt-12 px-4 sm:mt-20 sm:px-6 md:px-16">
+        <h2 className="mb-6 text-xl font-bold text-[#3E2723] sm:text-3xl">
           Kategori Populer
         </h2>
         <div className="flex flex-wrap justify-center gap-8">
@@ -83,9 +83,9 @@ export default function UserIndex() {
       </section>
 
       {/* PRODUK POPULER */}
-      <section id="products" className="mt-20 px-6 md:px-16">
+      <section id="products" className="mt-12 px-4 sm:mt-20 sm:px-6 md:px-16">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-[#3E2723]">
+          <h2 className="text-xl font-bold text-[#3E2723] sm:text-3xl">
             Barang Paling Populer
           </h2>
           <Link
@@ -145,7 +145,7 @@ export default function UserIndex() {
       {/* REKOMENDASI SECTION */}
       <section className="mt-20 bg-[#fdf8f3] py-12">
         <div className="mx-auto max-w-6xl px-6 text-center md:px-16">
-          <h2 className="mb-6 text-3xl font-bold text-[#3E2723]">
+          <h2 className="mb-6 text-xl font-bold text-[#3E2723] sm:text-3xl">
             Rekomendasi Untukmu
           </h2>
           <p className="mb-10 text-gray-700">

@@ -1,7 +1,14 @@
 import { useForm, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
-import { EditPhotoIcon } from '@/components/icons';
+import {
+  CategoryFolderIcon,
+  EditIcon,
+  EditPhotoIcon,
+  LocationIcon,
+  ProfileIcon,
+  StoreIcon,
+} from '@/components/icons';
 import { getStoreImage, getUserImage } from '@/lib/utils';
 
 export default function EditProfilePage() {
@@ -45,7 +52,8 @@ export default function EditProfilePage() {
     <section className="relative my-auto flex w-full items-center justify-center overflow-hidden px-6 py-12">
       <div className="my-auto w-full max-w-5xl rounded-2xl bg-gray-50 p-8 shadow-xl">
         <h2 className="font-poppins mb-6 text-2xl font-bold text-[#2F3E46]">
-          👤 Edit Profile
+          <ProfileIcon className="mr-2 inline h-7 w-7 align-text-bottom" />
+          Edit Profile
         </h2>
 
         <div className="grid items-start gap-6 md:grid-cols-3">
@@ -80,7 +88,8 @@ export default function EditProfilePage() {
             {user.role === 'seller' && user.store && (
               <div className="mt-6 border-t pt-6">
                 <h3 className="mb-3 text-sm font-bold text-[#2F3E46]">
-                  🏪 Informasi Toko
+                  <StoreIcon className="mr-1 inline h-5 w-5 align-text-bottom" />
+                  Informasi Toko
                 </h3>
                 <div className="space-y-3">
                   <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -95,10 +104,12 @@ export default function EditProfilePage() {
                       {user.store.store_name}
                     </p>
                     <p className="text-xs text-gray-600">
-                      📂 {user.store.category}
+                      <CategoryFolderIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                      {user.store.category}
                     </p>
                     <p className="text-xs text-gray-600">
-                      📍 {user.store.location}
+                      <LocationIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                      {user.store.location}
                     </p>
                   </div>
                 </div>
@@ -111,7 +122,8 @@ export default function EditProfilePage() {
                   href="/seller/store/edit"
                   className="block rounded-md bg-[#B77C4C] px-6 py-2 text-center font-semibold text-white hover:bg-[#a0683d]"
                 >
-                  ✏️ Edit Toko
+                  <EditIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                  Edit Toko
                 </Link>
               )}
               {user.role !== 'seller' && user.role !== 'admin' && (
@@ -119,7 +131,8 @@ export default function EditProfilePage() {
                   href="/store/register"
                   className="block rounded-md bg-[#53685B] px-6 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
                 >
-                  🏪 Buka Toko
+                  <StoreIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                  Buka Toko
                 </Link>
               )}
             </div>

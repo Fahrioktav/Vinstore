@@ -61,7 +61,9 @@ class PayoutRequestController extends Controller
                 PayoutRequest::create([
                     'order_id' => $locked->id,
                     'store_id' => $store->id,
-                    'amount' => $locked->price,
+                    // Bukan `price`: total tagihan mengandung ongkir dan biaya
+                    // layanan yang bukan hak seller. Lihat Order::sellerPayoutAmount().
+                    'amount' => $locked->sellerPayoutAmount(),
                     'bank_name' => $validated['bank_name'],
                     'account_number' => $validated['account_number'],
                     'account_holder' => $validated['account_holder'],

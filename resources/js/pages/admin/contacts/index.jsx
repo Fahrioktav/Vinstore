@@ -2,6 +2,15 @@ import { Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { useState } from 'react';
 import ActionMenu from '@/components/ui/action-menu';
+import {
+  DeleteIcon,
+  LockIcon,
+  PendingIcon,
+  SuccessIcon,
+  ViewIcon,
+} from '@/components/icons';
+import { toast } from 'sonner';
+import { confirmDestructive } from '@/lib/dialog';
 
 export default function AdminContacts({ contacts }) {
   const { flash } = usePage().props;
@@ -31,7 +40,7 @@ export default function AdminContacts({ contacts }) {
 
   const handleReply = (contactId) => {
     if (!replyText.trim()) {
-      alert('Balasan tidak boleh kosong!');
+      toast.error('Balasan tidak boleh kosong.');
       return;
     }
 
@@ -58,14 +67,17 @@ export default function AdminContacts({ contacts }) {
     );
   };
 
-  const handleDelete = (contactId) => {
-    if (confirm('Yakin ingin menghapus pesan ini?')) {
-      router.delete(`/admin/contacts/${contactId}`);
-    }
+  const handleDelete = async (contactId) => {
+    const ok = await confirmDestructive({
+      title: 'Hapus pesan ini?',
+      description: 'Isi pesan dan balasannya akan hilang permanen.',
+    });
+
+    if (ok) router.delete(`/admin/contacts/${contactId}`);
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Kelola Pesan Kontak</h1>
         <p className="mt-2 text-white">
@@ -78,7 +90,7 @@ export default function AdminContacts({ contacts }) {
           <p className="text-gray-500">Belum ada pesan masuk</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg bg-white shadow">
+        <div className="overflow-x-auto rounded-lg bg-white shadow">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#2F3E46]">
               <tr>
@@ -146,7 +158,7 @@ export default function AdminContacts({ contacts }) {
                                 selectedContact === contact.public_id
                                   ? 'Tutup Detail'
                                   : 'Lihat Detail',
-                              icon: '👁️',
+                              icon: <ViewIcon />,
                               onClick: () =>
                                 setSelectedContact(
                                   selectedContact === contact.public_id
@@ -157,7 +169,7 @@ export default function AdminContacts({ contacts }) {
                             { separator: true },
                             contact.status !== 'pending' && {
                               label: 'Tandai Menunggu',
-                              icon: '🕒',
+                              icon: <PendingIcon />,
                               onClick: () =>
                                 handleStatusChange(
                                   contact.public_id,
@@ -166,7 +178,7 @@ export default function AdminContacts({ contacts }) {
                             },
                             contact.status !== 'replied' && {
                               label: 'Tandai Dibalas',
-                              icon: '✅',
+                              icon: <SuccessIcon />,
                               onClick: () =>
                                 handleStatusChange(
                                   contact.public_id,
@@ -175,14 +187,14 @@ export default function AdminContacts({ contacts }) {
                             },
                             contact.status !== 'closed' && {
                               label: 'Tandai Ditutup',
-                              icon: '🔒',
+                              icon: <LockIcon />,
                               onClick: () =>
                                 handleStatusChange(contact.public_id, 'closed'),
                             },
                             { separator: true },
                             {
                               label: 'Hapus',
-                              icon: '🗑️',
+                              icon: <DeleteIcon />,
                               variant: 'destructive',
                               onClick: () => handleDelete(contact.public_id),
                             },

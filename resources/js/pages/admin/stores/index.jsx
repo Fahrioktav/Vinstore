@@ -1,16 +1,26 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import ActionMenu from '@/components/ui/action-menu';
+import {
+  DeleteIcon,
+  EditIcon,
+  EmptyStateIcon,
+  StoreIcon,
+  SuccessIcon,
+} from '@/components/icons';
+import { confirmDestructive } from '@/lib/dialog';
 
 export default function AdminStores() {
   const { stores, success } = usePage().props;
 
-  const handleDelete = (publicId) => {
-    if (
-      confirm(
-        'Yakin ingin menghapus toko ini? Semua produknya juga akan terhapus.'
-      )
-    ) {
+  const handleDelete = async (publicId) => {
+    const ok = await confirmDestructive({
+      title: 'Hapus toko ini?',
+      description:
+        'Semua produk milik toko ini ikut terhapus dan tidak dapat dikembalikan.',
+    });
+
+    if (ok) {
       router.delete(`/admin/stores/${publicId}`, {
         preserveScroll: true,
       });
@@ -20,16 +30,20 @@ export default function AdminStores() {
   return (
     <>
       <Head title="Kelola Toko" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {success && (
           <div className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-50 px-4 py-3 text-green-700 shadow-sm">
-            <p className="font-semibold">✓ {success}</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <SuccessIcon className="h-5 w-5 shrink-0" />
+              {success}
+            </p>
           </div>
         )}
 
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <h2 className="mb-6 text-2xl font-bold text-[#53685B]">
-            🏪 Kelola Data Toko
+            <StoreIcon className="mr-2 inline h-6 w-6 align-text-bottom" />
+            Kelola Data Toko
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border border-gray-200 text-sm">
@@ -67,12 +81,12 @@ export default function AdminStores() {
                             items={[
                               {
                                 label: 'Edit',
-                                icon: '✏️',
+                                icon: <EditIcon />,
                                 href: `/admin/stores/${store.public_id}/edit`,
                               },
                               {
                                 label: 'Hapus',
-                                icon: '🗑️',
+                                icon: <DeleteIcon />,
                                 variant: 'destructive',
                                 onClick: () => handleDelete(store.public_id),
                               },
@@ -88,7 +102,10 @@ export default function AdminStores() {
                       colSpan="5"
                       className="px-4 py-8 text-center text-gray-500"
                     >
-                      <p className="text-lg">🏪 Belum ada toko</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <EmptyStateIcon className="h-10 w-10 text-gray-300" />
+                        <p className="text-lg">Belum ada toko</p>
+                      </div>
                     </td>
                   </tr>
                 )}

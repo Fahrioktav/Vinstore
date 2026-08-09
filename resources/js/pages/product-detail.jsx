@@ -7,7 +7,20 @@ import {
   getProductImage,
   storageMedia,
 } from '@/lib/utils';
-import { BadgeIcon, CertificateIcon } from '@/components/icons';
+import {
+  BadgeIcon,
+  BarterIcon,
+  CategoryIcon,
+  CelebrateIcon,
+  CertificateIcon,
+  FailIcon,
+  GuessIcon,
+  LocationIcon,
+  PendingIcon,
+  SuccessIcon,
+  VideoIcon,
+} from '@/components/icons';
+import GuessLeaderboard from '@/components/guess-leaderboard';
 
 const guessStatusLabel = {
   scheduled: 'Akan Dimulai',
@@ -43,7 +56,7 @@ export default function ProductDetailPage() {
     ['scheduled', 'active', 'ended'].includes(product.guess_status);
 
   return (
-    <div className="mx-auto mt-10 max-w-5xl rounded-md border bg-white p-6 shadow-md">
+    <div className="mx-auto mt-6 max-w-5xl rounded-md border bg-white p-4 shadow-md sm:mt-10 sm:p-6">
       <h2 className="mb-6 text-2xl font-bold">Detail Produk</h2>
 
       {flash?.success && (
@@ -74,7 +87,7 @@ export default function ProductDetailPage() {
 
           {/* Thumbnail Gallery */}
           {gallery.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {gallery.map((img, i) => (
                 <button
                   key={i}
@@ -100,7 +113,8 @@ export default function ProductDetailPage() {
           {product.video && (
             <div className="rounded-lg border border-gray-200 p-4">
               <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
-                🎥 Video Produk
+                <VideoIcon className="h-4 w-4" />
+                Video Produk
               </p>
               <video
                 src={storageMedia(product.video)}
@@ -122,18 +136,21 @@ export default function ProductDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {isTebakHarga && (
-                <span className="rounded-full bg-[#53685B] px-3 py-1 text-xs font-semibold text-white">
-                  🎯 Tebak Harga
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#53685B] px-3 py-1 text-xs font-semibold text-white">
+                  <GuessIcon className="h-3.5 w-3.5" />
+                  Tebak Harga
                 </span>
               )}
               {product.is_barterable && (
-                <span className="rounded-full bg-[#B77C4C] px-3 py-1 text-xs font-semibold text-white">
-                  ⇄ Bisa Dibarter
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#B77C4C] px-3 py-1 text-xs font-semibold text-white">
+                  <BarterIcon className="h-3.5 w-3.5" />
+                  Bisa Dibarter
                 </span>
               )}
               {product.category && (
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                  📦 {product.category}
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                  <CategoryIcon className="h-3.5 w-3.5" />
+                  {product.category}
                 </span>
               )}
             </div>
@@ -154,8 +171,9 @@ export default function ProductDetailPage() {
                     {product.store.store_name || 'Toko'}
                   </p>
                   {product.store.address && (
-                    <p className="text-xs text-gray-500">
-                      📍 {product.store.address}
+                    <p className="flex items-center gap-1 text-xs text-gray-500">
+                      <LocationIcon className="h-3 w-3 shrink-0" />
+                      {product.store.address}
                     </p>
                   )}
                 </div>
@@ -185,7 +203,7 @@ export default function ProductDetailPage() {
                     <p className="mb-1 text-xs font-semibold text-gray-500 uppercase">
                       Harga Diskon
                     </p>
-                    <p className="text-3xl font-bold text-[#B77C4C]">
+                    <p className="text-xl font-bold text-[#B77C4C] sm:text-3xl">
                       {discountHidden ? (
                         <span>??? (Tebak Harga)</span>
                       ) : (
@@ -207,12 +225,28 @@ export default function ProductDetailPage() {
                   Stok Tersedia
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  {product.stock > 0 ? (
-                    <span className="text-green-600">
-                      ✓ {product.stock} unit
+                  {product.available_stock > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-green-600">
+                      <SuccessIcon className="h-5 w-5" />
+                      {product.available_stock} unit
+                    </span>
+                  ) : product.is_fully_reserved ? (
+                    <span className="inline-flex items-center gap-1 text-amber-600">
+                      <PendingIcon className="h-5 w-5" />
+                      Sedang dipesan
                     </span>
                   ) : (
-                    <span className="text-red-600">✗ Habis</span>
+                    <span className="inline-flex items-center gap-1 text-red-600">
+                      <FailIcon className="h-5 w-5" />
+                      Habis
+                    </span>
+                  )}
+                  {product.is_fully_reserved && (
+                    <span className="mt-1 block text-xs font-normal text-gray-500">
+                      Seluruh sisa stok sedang ditahan pesanan yang belum
+                      dibayar. Barang ini bisa dibeli lagi bila pembayaran itu
+                      batal atau kedaluwarsa.
+                    </span>
                   )}
                 </p>
               </div>
@@ -294,12 +328,19 @@ function TebakHargaSection({ product, tebakHarga }) {
     guess_status: status,
     guess_starts_at,
     guess_ends_at,
+    guess_finished_reason,
     winner_priority_until,
     guesses_count,
     my_guess,
     is_winner,
+    winner_username,
     can_buy,
+    leaderboard = [],
+    tolerance_percent,
+    winner_priority_hours,
   } = tebakHarga;
+
+  const endedByExactGuess = guess_finished_reason === 'exact_guess';
 
   return (
     <div className="rounded-lg border border-[#53685B]/30 bg-[#53685B]/5 p-5">
@@ -312,10 +353,49 @@ function TebakHargaSection({ product, tebakHarga }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm">
+      <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <Info label="Mulai" value={formatDateTime(guess_starts_at)} />
         <Info label="Berakhir" value={formatDateTime(guess_ends_at)} />
       </div>
+
+      {/* Aturan main. Ditampilkan terus-menerus supaya tidak ada yang merasa
+          dicurangi setelah hasilnya keluar. */}
+      <details className="mt-4 rounded-md bg-white p-3 text-sm text-gray-600">
+        <summary className="cursor-pointer font-semibold text-[#53685B]">
+          Bagaimana pemenangnya ditentukan?
+        </summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs">
+          <li>
+            Setiap orang hanya boleh mengirim <strong>satu tebakan</strong>, dan
+            tebakan itu final.
+          </li>
+          <li>
+            Tebakan yang meleset lebih dari{' '}
+            <strong>{tolerance_percent}%</strong> dari harga diskon tidak ikut
+            dinilai. Kalau tidak ada satu pun yang cukup dekat,{' '}
+            <strong>tidak ada pemenang</strong> dan produk dijual di harga
+            normal.
+          </li>
+          <li>
+            Pemenangnya adalah tebakan dengan{' '}
+            <strong>selisih paling kecil</strong> terhadap harga diskon.
+          </li>
+          <li>
+            Bila dua orang sama-sama dekat — termasuk saat menebak angka yang
+            persis sama — <strong>yang menebak lebih dulu yang menang</strong>.
+          </li>
+          <li>
+            Begitu ada yang menebak <strong>persis tepat</strong>, sesi langsung
+            ditutup saat itu juga dan pemenangnya diumumkan tanpa menunggu waktu
+            berakhir.
+          </li>
+          <li>
+            Pemenang berhak membeli di harga diskon selama{' '}
+            <strong>{winner_priority_hours} jam</strong>. Lewat dari itu produk
+            dijual biasa kepada siapa saja.
+          </li>
+        </ol>
+      </details>
 
       {/* SCHEDULED */}
       {status === 'scheduled' && (
@@ -369,8 +449,9 @@ function TebakHargaSection({ product, tebakHarga }) {
                     Kirim Tebakan
                   </button>
                   <p className="text-xs text-gray-500">
-                    Tebakan bersifat final dan tidak dapat diubah. Anda tidak
-                    dapat melihat tebakan pengguna lain.
+                    Tebakan bersifat final dan tidak dapat diubah. Menebak lebih
+                    dulu menguntungkan: bila nanti ada yang menebak angka yang
+                    sama, yang lebih dulu yang menang.
                   </p>
                 </>
               )}
@@ -382,10 +463,25 @@ function TebakHargaSection({ product, tebakHarga }) {
       {/* ENDED - prioritas pemenang */}
       {status === 'ended' && (
         <div className="mt-4">
+          {endedByExactGuess && (
+            <p className="mb-3 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              <GuessIcon className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Sesi ini ditutup lebih cepat karena{' '}
+                <strong>
+                  {is_winner ? 'Anda' : (winner_username ?? 'seseorang')}
+                </strong>{' '}
+                menebak persis pada harga diskonnya. Tebakan setepat itu tidak
+                mungkin dikalahkan, jadi menunggu waktu berakhir tidak ada
+                gunanya.
+              </span>
+            </p>
+          )}
           {is_winner ? (
             <div className="rounded-md border border-green-300 bg-green-50 p-4">
-              <p className="font-semibold text-green-800">
-                🎉 Selamat! Tebakan Anda paling mendekati harga diskon.
+              <p className="flex items-center gap-2 font-semibold text-green-800">
+                <CelebrateIcon className="h-5 w-5 shrink-0" />
+                Selamat! Tebakan Anda paling mendekati harga diskon.
               </p>
               <p className="mt-1 text-sm text-green-700">
                 Anda memiliki hak prioritas untuk membeli produk ini sampai{' '}
@@ -439,6 +535,11 @@ function TebakHargaSection({ product, tebakHarga }) {
           </p>
           <NormalPurchaseActions product={product} />
         </div>
+      )}
+
+      {/* Papan tebakan — versi tebak harga dari "Riwayat Bid" pada lelang. */}
+      {status !== 'scheduled' && (
+        <GuessLeaderboard entries={leaderboard} status={status} />
       )}
     </div>
   );

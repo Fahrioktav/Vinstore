@@ -28,6 +28,10 @@ class User extends Authenticatable
         'photo',
         'password',
         'role',
+        // Akun tidak pernah dihapus, hanya dinonaktifkan — lihat temuan V4-12
+        // dan migrasi 2026_08_09_000008_add_deactivation_to_users_table.
+        'deactivated_at',
+        'deactivation_reason',
     ];
 
     /**
@@ -69,6 +73,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'deactivated_at' => 'datetime',
         ];
     }
 
@@ -78,6 +83,76 @@ class User extends Authenticatable
     public function store()
     {
         return $this->hasOne(Store::class);
+    }
+
+    /* ===================== Penonaktifan akun ===================== */
+
+    /**
+     * Akun nonaktif: tidak bisa masuk, sesinya diputus, dan bila ia seorang
+     * seller produknya berhenti tampil di etalase.
+     *
+     * Riwayatnya tetap utuh — itulah sebabnya penonaktifan dipakai alih-alih
+     * penghapusan (temuan V4-12).
+     */
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
+    }
+
+    public function isActive(): bool
+    {
+        return ! $this->isDeactivated();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('deactivated_at');
+    }
+
+    public function scopeDeactivated($query)
+    {
+        return $query->whereNotNull('deactivated_at');
+    }
+
+    public function deactivate(?string $reason = null): void
+    {
+        if ($this->isDeactivated()) {
+            return;
+        }
+
+        $this->forceFill([
+            'deactivated_at' => now(),
+            'deactivation_reason' => $reason,
+        ])->save();
+    }
+
+    public function reactivate(): void
+    {
+        if ($this->isActive()) {
+            return;
+        }
+
+        $this->forceFill([
+            'deactivated_at' => null,
+            'deactivation_reason' => null,
+        ])->save();
+    }
+
+    /**
+     * Admin terakhir tidak boleh dinonaktifkan — tidak akan ada lagi yang bisa
+     * mengaktifkannya kembali, dan seluruh panel admin jadi tak terjangkau.
+     */
+    public function canBeDeactivated(): bool
+    {
+        if ($this->isDeactivated()) {
+            return false;
+        }
+
+        if ($this->role !== 'admin') {
+            return true;
+        }
+
+        return self::where('role', 'admin')->active()->count() > 1;
     }
 
     /**

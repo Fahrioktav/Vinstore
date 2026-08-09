@@ -1,6 +1,13 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { UserIcon } from '../icons';
+import {
+  CartIcon,
+  CloseIcon,
+  HelpIcon,
+  LogoutIcon,
+  MenuIcon,
+  ProfileIcon,
+} from '@/components/icons';
 import { cn, getUserImage } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -27,17 +34,20 @@ const links = {
     { label: 'Lelang', href: '/admin/auctions' },
     { label: 'Refund', href: '/admin/refunds' },
     { label: 'Pencairan', href: '/admin/payouts' },
+    { label: 'Pendapatan', href: '/admin/pendapatan' },
   ],
   validator: [{ label: 'Dashboard', href: '/validator/dashboard' }],
 };
 
-const baseMenus = [{ label: '👤 Profil', href: '/profile' }];
-const bantuanUser = { label: '❓Bantuan', href: '/bantuan' };
+// Ikon disimpan sebagai komponen, bukan string emoji, agar ukuran dan warnanya
+// mengikuti kelas Tailwind di tempat ia dirender.
+const baseMenus = [{ label: 'Profil', href: '/profile', icon: ProfileIcon }];
+const bantuanUser = { label: 'Bantuan', href: '/bantuan', icon: HelpIcon };
 const menus = {
   default: [
     ...baseMenus,
     bantuanUser,
-    { label: '🛒 Keranjang', href: '/cart' },
+    { label: 'Keranjang', href: '/cart', icon: CartIcon },
   ],
   seller: [...baseMenus, bantuanUser],
   admin: baseMenus,
@@ -78,7 +88,7 @@ export default function Navbar() {
       )}
     >
       {/* {-- WRAPPER TANPA MAX-W --}  */}
-      <div className="flex w-full items-center justify-between px-6 py-4 md:px-16">
+      <div className="flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 md:px-16">
         {/* {-- LOGO --} */}
         <Link
           href={
@@ -95,9 +105,9 @@ export default function Navbar() {
           <img
             src="/assets/Logo.png"
             alt="VINSTORE"
-            className="h-12 w-12 object-contain"
+            className="h-9 w-9 object-contain sm:h-12 sm:w-12"
           />
-          <span className="font-playfair text-2xl font-bold tracking-wide text-[#E9E19E]">
+          <span className="font-playfair text-lg font-bold tracking-wide text-[#E9E19E] sm:text-2xl">
             VINSTORE
           </span>
         </Link>
@@ -118,13 +128,13 @@ export default function Navbar() {
         </ul>
 
         {/* {-- MENU KANAN --} */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* {-- USER LOGIN --} */}
           {user ? (
             // DROPDOWN USER
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full bg-[#B77C4C]/70 px-3 py-2 font-semibold text-white transition hover:bg-[#B77C4C]">
+                <button className="flex shrink-0 items-center gap-2 rounded-full bg-[#B77C4C]/70 px-2 py-1.5 font-semibold text-white transition hover:bg-[#B77C4C] sm:px-3 sm:py-2">
                   <img
                     src={getUserImage(user)}
                     alt={user.username}
@@ -141,16 +151,20 @@ export default function Navbar() {
                     className={DropdownMenuItemStyle}
                     asChild
                   >
-                    <Link href={menu.href}>{menu.label}</Link>
+                    <Link href={menu.href} className="flex items-center gap-2">
+                      <menu.icon className="h-4 w-4" />
+                      {menu.label}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuItem className={DropdownMenuItemStyle} asChild>
                   <button
                     type="submit"
-                    className="w-full"
+                    className="flex w-full items-center gap-2"
                     onClick={handleLogout}
                   >
-                    🚪 Logout
+                    <LogoutIcon className="h-4 w-4" />
+                    Logout
                   </button>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -158,7 +172,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[#E9E19E] px-5 py-2 text-sm font-semibold text-[#2F3E46] transition hover:bg-[#dcd58c]"
+              className="rounded-full bg-[#E9E19E] px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-[#2F3E46] transition hover:bg-[#dcd58c] sm:px-5 sm:py-2 sm:text-sm"
             >
               Login / Signup
             </Link>
@@ -167,30 +181,58 @@ export default function Navbar() {
           {/* {-- TOMBOL MENU MOBILE --} */}
           <button
             onClick={() => setOpen((prev) => !prev)}
-            className="text-3xl text-white focus:outline-none md:hidden"
+            className="text-white focus:outline-none md:hidden"
+            aria-label={open ? 'Tutup menu' : 'Buka menu'}
           >
-            <span>{open ? '✕' : '☰'}</span>
+            {open ? (
+              <CloseIcon className="h-7 w-7" />
+            ) : (
+              <MenuIcon className="h-7 w-7" />
+            )}
           </button>
         </div>
       </div>
 
       {/* // {-- MENU MOBILE --} */}
       {open && (
-        <div
-          className={cn(
-            'space-y-3 py-4 text-center text-white md:hidden',
-            !scrolled ? 'bg-[#2F3E46]' : 'bg-transparent'
-          )}
-        >
+        <div className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-[#2F3E46] py-3 text-white md:hidden">
           {displayLinks.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="block hover:text-[#E9E19E]"
+              onClick={() => setOpen(false)}
+              className="block px-6 py-2.5 text-sm font-semibold hover:bg-white/10 hover:text-[#E9E19E]"
             >
               {link.label}
             </Link>
           ))}
+
+          {/* Menu pengguna ikut ditampilkan di sini. Dropdown-nya sendiri
+              terlalu sempit dan mudah terlewat di layar kecil. */}
+          {user && (
+            <>
+              <div className="my-2 border-t border-white/10" />
+              {displayMenus.map((menu) => (
+                <Link
+                  key={menu.href}
+                  href={menu.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold hover:bg-white/10 hover:text-[#E9E19E]"
+                >
+                  <menu.icon className="h-4 w-4" />
+                  {menu.label}
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2 px-6 py-2.5 text-left text-sm font-semibold text-red-300 hover:bg-white/10"
+              >
+                <LogoutIcon className="h-4 w-4" />
+                Logout
+              </button>
+            </>
+          )}
         </div>
       )}
     </nav>

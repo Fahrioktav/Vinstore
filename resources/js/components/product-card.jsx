@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
+import { BadgeIcon, GuessIcon } from '@/components/icons';
 import { Card, CardContent } from './ui/card';
 import { formatIDR, getProductImage } from '@/lib/utils';
-import { BadgeIcon } from './icons';
 
 export default function ProductCard({ product }) {
   const isTebakHarga = product.sale_type === 'tebak_harga';
@@ -34,7 +34,8 @@ export default function ProductCard({ product }) {
               </span>
               {isTebakHarga && (
                 <span className="absolute bottom-2 left-2 rounded-md bg-[#53685B] px-2 py-1 text-xs font-semibold text-white shadow">
-                  🎯 Tebak Harga
+                  <GuessIcon className="h-3 w-3" />
+                  Tebak Harga
                 </span>
               )}
               {product.certificate && (
@@ -73,9 +74,24 @@ export default function ProductCard({ product }) {
                 )}
               </span>
               <span
-                className={`text-xs font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}
+                className={`text-xs font-medium ${
+                  product.is_fully_reserved
+                    ? 'text-amber-600'
+                    : product.available_stock > 10
+                      ? 'text-green-600'
+                      : product.available_stock > 0
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                }`}
               >
-                {product.stock > 0 ? `Stok: ${product.stock}` : 'Habis'}
+                {/* Produk yang seluruh stoknya sedang ditahan pesanan yang
+                    belum dibayar tetap tampil, tetapi diberi keterangan agar
+                    tidak terlihat seperti "habis" biasa. */}
+                {product.is_fully_reserved
+                  ? 'Sedang dipesan'
+                  : product.available_stock > 0
+                    ? `Stok: ${product.available_stock}`
+                    : 'Habis'}
               </span>
             </div>
 

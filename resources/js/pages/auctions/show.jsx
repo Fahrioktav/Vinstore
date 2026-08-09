@@ -1,6 +1,7 @@
 import { Form, Link, usePage, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
+import { NotificationIcon } from '@/components/icons';
 import { formatIDR, getAuctionImage } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
 import { toast } from 'sonner';
@@ -54,7 +55,7 @@ export default function AuctionShow() {
     const channel = window.Echo.channel(`auction.${auction.id}`);
 
     channel.listen('AuctionBidPlaced', (event) => {
-      console.log('🔴 New bid received:', event);
+      console.log('New bid received:', event);
 
       // Update auction data
       setAuction((prev) => ({
@@ -85,7 +86,7 @@ export default function AuctionShow() {
   }, [auction.id]);
 
   return (
-    <section className="px-6 py-10 md:px-16">
+    <section className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
         <div className="overflow-hidden rounded-lg bg-white shadow-md">
           <img
@@ -115,8 +116,9 @@ export default function AuctionShow() {
           <div className="rounded-lg bg-white p-6 shadow-md">
             {/* Real-time notification */}
             {showNewBidNotification && (
-              <div className="mb-4 animate-pulse rounded border-l-4 border-blue-500 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                🔔 Ada bid baru masuk!
+              <div className="mb-4 flex animate-pulse items-center gap-2 rounded border-l-4 border-blue-500 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                <NotificationIcon className="h-4 w-4" />
+                Ada bid baru masuk!
               </div>
             )}
 
@@ -131,7 +133,7 @@ export default function AuctionShow() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <Info
                 label="Harga awal"
                 value={formatIDR(initialAuction.starting_price)}
@@ -220,8 +222,8 @@ export default function AuctionShow() {
             <h2 className="mb-4 text-lg font-bold text-[#53685B]">
               Riwayat Bid
             </h2>
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full min-w-[20rem] text-sm">
                 <thead className="bg-[#53685B] text-white">
                   <tr>
                     <th className="px-4 py-3 text-left">User</th>

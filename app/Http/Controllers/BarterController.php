@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BarterRequest;
 use App\Models\PayoutRequest;
 use App\Models\Product;
+use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -410,11 +411,14 @@ class BarterController extends Controller
                 throw new \RuntimeException('MIDTRANS_SERVER_KEY belum diatur di file .env.');
             }
 
+            // Payload dibersihkan lewat MidtransService: nama pembayar bisa
+            // saja mengandung byte yang bukan UTF-8 valid, dan satu byte rusak
+            // menggagalkan seluruh transaksi saat payload di-encode ke JSON.
             $response = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
                 'Authorization' => 'Basic '.base64_encode($serverKey.':'),
-            ])->post(config('services.midtrans.snap_url'), $payload)
+            ])->post(config('services.midtrans.snap_url'), MidtransService::sanitize($payload))
                 ->throw()
                 ->json();
 

@@ -3,21 +3,29 @@ import { Link, router } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { getCategoryImage } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
+import { DeleteIcon, EditIcon } from '@/components/icons';
+import { toast } from 'sonner';
+import { confirmDestructive } from '@/lib/dialog';
 
 export default function CategoriesIndex({ categories }) {
-  const handleDelete = (publicId, name) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus kategori "${name}"?`)) {
-      router.delete(`/admin/categories/${publicId}`, {
-        onSuccess: () => {
-          alert('Kategori berhasil dihapus!');
-        },
-      });
-    }
+  const handleDelete = async (publicId, name) => {
+    const ok = await confirmDestructive({
+      title: `Hapus kategori "${name}"?`,
+      description: 'Kategori yang dihapus tidak dapat dikembalikan.',
+    });
+
+    if (!ok) return;
+
+    router.delete(`/admin/categories/${publicId}`, {
+      onSuccess: () => {
+        toast.success('Kategori berhasil dihapus.');
+      },
+    });
   };
 
   return (
     <MainLayout>
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="rounded-2xl bg-white p-6 shadow-md shadow-[#53685B]/20">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-3xl font-bold text-[#53685B]">
@@ -31,7 +39,7 @@ export default function CategoriesIndex({ categories }) {
             </Link>
           </div>
 
-          <div className="overflow-hidden rounded-lg bg-white shadow-md">
+          <div className="overflow-x-auto rounded-lg bg-white shadow-md">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#53685B]">
                 <tr>
@@ -97,12 +105,12 @@ export default function CategoriesIndex({ categories }) {
                             items={[
                               {
                                 label: 'Edit',
-                                icon: '✏️',
+                                icon: <EditIcon />,
                                 href: `/admin/categories/${category.public_id}/edit`,
                               },
                               {
                                 label: 'Hapus',
-                                icon: '🗑️',
+                                icon: <DeleteIcon />,
                                 variant: 'destructive',
                                 onClick: () =>
                                   handleDelete(

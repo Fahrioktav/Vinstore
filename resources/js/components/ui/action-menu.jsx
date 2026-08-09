@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
  *     { label, href }                       -> link (Inertia)
  *     { label, onClick }                    -> tombol aksi
  *     { label, onClick, variant: 'destructive' } -> aksi merah (hapus/tolak)
- *     { label, icon }                       -> emoji/elemen ikon opsional
+ *     { label, icon }                       -> elemen ikon opsional dari
+ *                                              components/icons.jsx
  *     { separator: true }                   -> garis pemisah
  * - align: posisi dropdown ('end' default)
  */
@@ -51,7 +52,11 @@ export default function ActionMenu({ items = [], align = 'end' }) {
 
           const content = (
             <span className="flex items-center gap-2">
-              {item.icon ? <span className="text-sm">{item.icon}</span> : null}
+              {item.icon ? (
+                <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">
+                  {item.icon}
+                </span>
+              ) : null}
               <span>{item.label}</span>
             </span>
           );

@@ -4,12 +4,32 @@ import MainLayout from '@/layouts/main-layout';
 import { getStoreImage, useParams } from '@/lib/utils';
 import SearchInput from '@/components/search-input';
 import StoresMap from '@/components/stores-map';
+import {
+  DistanceIcon,
+  EmptyStateIcon,
+  LocationIcon,
+  MapViewIcon,
+  SuccessIcon,
+  WarningIcon,
+} from '@/components/icons';
 
 export default function TokoPage() {
   const { showSearch, stores, hasCoordinates, searchRadius } = usePage().props;
-  const q = useParams().get('q');
+  const params = useParams();
+  const q = params.get('q');
 
-  const [userLocation, setUserLocation] = useState(null);
+  // Koordinat diambil dari URL, bukan dari state: pencarian toko terdekat
+  // memuat ulang halaman dengan preserveState: false, sehingga state komponen
+  // hilang dan pin lokasi ikut hilang bersamanya.
+  const locationFromUrl =
+    params.get('latitude') && params.get('longitude')
+      ? {
+          latitude: Number(params.get('latitude')),
+          longitude: Number(params.get('longitude')),
+        }
+      : null;
+
+  const [userLocation, setUserLocation] = useState(locationFromUrl);
   const [locationError, setLocationError] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [showNearby, setShowNearby] = useState(hasCoordinates || false);
@@ -78,7 +98,7 @@ export default function TokoPage() {
         />
       )}
 
-      <section className="relative w-full overflow-hidden px-6 py-12 md:px-12">
+      <section className="relative w-full overflow-hidden px-4 py-10 sm:px-6 sm:py-12 md:px-12">
         {/* Judul */}
         <h2 className="mb-6 pt-10 text-center text-3xl font-bold tracking-wide text-[#E9E19E] md:text-4xl">
           {showNearby ? 'Toko Terdekat' : 'Semua Toko'}
@@ -98,7 +118,10 @@ export default function TokoPage() {
                   Mencari lokasi...
                 </>
               ) : (
-                <>📍 Cari Toko Terdekat (10 km)</>
+                <>
+                  <LocationIcon className="h-5 w-5" />
+                  Cari Toko Terdekat (10 km)
+                </>
               )}
             </button>
           ) : (
@@ -106,22 +129,27 @@ export default function TokoPage() {
               onClick={showAllStores}
               className="flex items-center gap-2 rounded-lg bg-gray-600 px-6 py-3 font-semibold text-white transition-all duration-200 hover:bg-gray-700"
             >
-              🗺️ Lihat Semua Toko
+              <MapViewIcon className="h-5 w-5" />
+              Lihat Semua Toko
             </button>
           )}
         </div>
 
         {/* Location Error Alert */}
         {locationError && (
-          <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-yellow-500 bg-yellow-50 p-4 text-sm text-yellow-800">
-            ⚠️ {locationError}
+          <div className="mx-auto mb-6 flex max-w-3xl items-start gap-2 rounded-lg border border-yellow-500 bg-yellow-50 p-4 text-sm text-yellow-800">
+            <WarningIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{locationError}</span>
           </div>
         )}
 
         {/* Info Badge jika mode nearby */}
         {showNearby && stores.length > 0 && (
           <div className="mx-auto mb-8 max-w-3xl rounded-lg bg-green-50 p-4 text-center text-sm text-green-800">
-            ✓ Ditemukan <span className="font-semibold">{stores.length}</span>{' '}
+            <SuccessIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+            Ditemukan <span className="font-semibold">
+              {stores.length}
+            </span>{' '}
             toko dalam radius{' '}
             <span className="font-semibold">{searchRadius} km</span> dari lokasi
             Anda
@@ -137,10 +165,15 @@ export default function TokoPage() {
 
         {/* PETA SEBARAN TOKO */}
         <div className="mx-auto mb-12 max-w-7xl">
-          <h3 className="mb-4 text-center text-xl font-semibold text-[#E9E19E]">
-            🗺️ Peta Lokasi Toko
+          <h3 className="mb-4 flex items-center justify-center gap-2 text-center text-xl font-semibold text-[#E9E19E]">
+            <MapViewIcon className="h-6 w-6" />
+            Peta Lokasi Toko
           </h3>
-          <StoresMap stores={stores} />
+          <StoresMap
+            stores={stores}
+            userLocation={userLocation}
+            radiusKm={showNearby ? searchRadius : null}
+          />
         </div>
 
         {/* GRID TOKO */}
@@ -163,13 +196,15 @@ export default function TokoPage() {
                   {store.store_name}
                 </h3>
                 <p className="mb-2 flex items-center gap-2 text-sm text-gray-600">
-                  📍 {store.location}
+                  <LocationIcon className="h-4 w-4 shrink-0" />
+                  {store.location}
                 </p>
 
                 {/* Tampilkan jarak jika mode nearby */}
                 {showNearby && store.distance_text && (
                   <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#B77C4C]">
-                    📏 {store.distance_text}
+                    <DistanceIcon className="h-4 w-4 shrink-0" />
+                    {store.distance_text}
                   </p>
                 )}
 
@@ -184,8 +219,9 @@ export default function TokoPage() {
           ))}
 
           {stores.length === 0 && !showNearby && (
-            <div className="col-span-full text-center text-lg text-white italic">
-              Tidak ada toko yang ditemukan 🕯️
+            <div className="col-span-full flex flex-col items-center gap-3 text-center text-lg text-white italic">
+              <EmptyStateIcon className="h-12 w-12 text-white/50" />
+              Tidak ada toko yang ditemukan
             </div>
           )}
         </div>

@@ -2,6 +2,16 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
+import {
+  BarterIcon,
+  DocumentIcon,
+  MoneyIcon,
+  PaymentIcon,
+  PendingIcon,
+  SuccessIcon,
+  WarningIcon,
+} from '@/components/icons';
+import { confirmDialog } from '@/lib/dialog';
 
 const STATUS_LABEL = {
   pending: { text: 'Menunggu', className: 'bg-yellow-100 text-yellow-800' },
@@ -73,8 +83,12 @@ function ShippingCountdown({ deadlineAt, iShipped }) {
 
   return (
     <div className={`mb-3 rounded-md border px-3 py-2 text-xs ${tone}`}>
-      <p className="font-semibold">
-        {overdue ? '⚠️ ' : '⏳ '}
+      <p className="flex items-center gap-1.5 font-semibold">
+        {overdue ? (
+          <WarningIcon className="h-4 w-4 shrink-0" />
+        ) : (
+          <PendingIcon className="h-4 w-4 shrink-0" />
+        )}
         {label}
       </p>
       <p className="mt-0.5 opacity-80">{hint}</p>
@@ -109,9 +123,15 @@ function ShipmentPanel({ req, role }) {
     );
   };
 
-  const confirmReceipt = () => {
-    if (!confirm('Konfirmasi bahwa barang dari pihak lain sudah Anda terima?'))
-      return;
+  const confirmReceipt = async () => {
+    const ok = await confirmDialog({
+      title: 'Konfirmasi barang sudah diterima?',
+      description:
+        'Setelah kedua pihak sama-sama mengonfirmasi, kepemilikan produk berpindah dan barter dinyatakan selesai.',
+      confirmLabel: 'Ya, sudah diterima',
+    });
+
+    if (!ok) return;
 
     router.post(
       `/seller/barter/${req.public_id}/receive`,
@@ -148,7 +168,7 @@ function ShipmentPanel({ req, role }) {
               <br />
               <span className="text-xs text-gray-500">
                 {theyReceived
-                  ? 'Sudah diterima pihak lain ✅'
+                  ? 'Sudah diterima pihak lain'
                   : 'Menunggu konfirmasi pihak lain'}
               </span>
             </p>
@@ -183,8 +203,9 @@ function ShipmentPanel({ req, role }) {
                 <span className="font-mono font-semibold">{theirTracking}</span>
               </p>
               {iReceived ? (
-                <p className="text-xs font-semibold text-emerald-700">
-                  Anda sudah mengonfirmasi penerimaan ✅
+                <p className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                  <SuccessIcon className="h-4 w-4 shrink-0" />
+                  Anda sudah mengonfirmasi penerimaan
                 </p>
               ) : (
                 <button
@@ -261,7 +282,7 @@ export default function SellerBarterPage() {
   );
 
   return (
-    <div className="px-6 py-10 md:px-16">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">Barter Produk</h1>
       <p className="mb-6 max-w-3xl text-sm text-white/80">
         Tukar produk Anda dengan produk seller lain.{' '}
@@ -419,11 +440,13 @@ function IncomingTab({ requests, bankPrefill }) {
           key={req.public_id}
           req={req}
           counterpartLabel="Dari"
-          counterpartName={req.requester_store?.store_name}
+          counterpartName={req.display_requester_store_name}
           // produk yang mereka tawarkan ke saya
           theirProduct={req.offered_product}
+          theirProductName={req.display_offered_product_name}
           // produk saya yang mereka minta
           myProduct={req.requested_product}
+          myProductName={req.display_requested_product_name}
           theirLabel="Mereka menawarkan"
           myLabel="Untuk produk Anda"
         >
@@ -468,9 +491,10 @@ function BarterActions({ req, role, bankPrefill }) {
     return (
       <button
         onClick={() => pay(req.public_id)}
-        className="animate-pulse rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
+        className="inline-flex animate-pulse items-center gap-2 rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
       >
-        💳 Bayar Sekarang
+        <PaymentIcon className="h-5 w-5" />
+        Bayar Sekarang
       </button>
     );
   }
@@ -543,11 +567,13 @@ function OutgoingTab({ requests, bankPrefill }) {
         <RequestCard
           key={req.public_id}
           counterpartLabel="Ke"
-          counterpartName={req.responder_store?.store_name}
+          counterpartName={req.display_responder_store_name}
           // produk saya yang saya tawarkan
           theirProduct={req.offered_product}
+          theirProductName={req.display_offered_product_name}
           // produk seller lain yang saya minta
           myProduct={req.requested_product}
+          myProductName={req.display_requested_product_name}
           theirLabel="Anda menawarkan"
           myLabel="Untuk produk mereka"
           req={req}
@@ -603,14 +629,15 @@ function BarterPayoutButton({ req, bankPrefill }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md bg-[#53685B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3c4a3e]"
+        className="inline-flex items-center gap-2 rounded-md bg-[#53685B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3c4a3e]"
       >
-        💰 Ajukan Pencairan
+        <MoneyIcon className="h-4 w-4" />
+        Ajukan Pencairan
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1 text-xl font-bold text-gray-900">
               Ajukan Pencairan Selisih Barter
             </h3>
@@ -700,7 +727,7 @@ function BarterRefundButton({ req }) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1 text-xl font-bold text-gray-900">
               Minta Pengembalian Dana
             </h3>
@@ -785,14 +812,15 @@ function BarterReportButton({ req }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+        className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
       >
-        ⚠️ Laporkan Tidak Mengirim
+        <WarningIcon className="h-4 w-4" />
+        Laporkan Tidak Mengirim
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1 text-xl font-bold text-gray-900">
               Laporkan Pihak Lawan
             </h3>
@@ -925,7 +953,9 @@ function RequestCard({
   counterpartLabel,
   counterpartName,
   theirProduct,
+  theirProductName,
   myProduct,
+  myProductName,
   theirLabel,
   myLabel,
   children,
@@ -953,9 +983,19 @@ function RequestCard({
       </div>
 
       <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
-        <MiniProduct label={theirLabel} product={theirProduct} />
-        <div className="text-center text-2xl text-[#B77C4C]">⇄</div>
-        <MiniProduct label={myLabel} product={myProduct} />
+        <MiniProduct
+          label={theirLabel}
+          product={theirProduct}
+          fallbackName={theirProductName}
+        />
+        <div className="flex justify-center text-[#B77C4C]">
+          <BarterIcon className="h-7 w-7" />
+        </div>
+        <MiniProduct
+          label={myLabel}
+          product={myProduct}
+          fallbackName={myProductName}
+        />
       </div>
 
       {additionalCash > 0 && (
@@ -971,8 +1011,12 @@ function RequestCard({
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className="text-xl">
-              {paymentStatus === 'paid' ? '✅' : '💰'}
+            <span className="text-[#53685B]">
+              {paymentStatus === 'paid' ? (
+                <SuccessIcon className="h-6 w-6" />
+              ) : (
+                <MoneyIcon className="h-6 w-6" />
+              )}
             </span>
             <div>
               <p className="text-sm font-semibold text-gray-900">
@@ -980,11 +1024,11 @@ function RequestCard({
               </p>
               <p className="text-xs text-gray-600">
                 {paymentStatus === 'paid'
-                  ? '✅ Pembayaran telah selesai'
+                  ? 'Pembayaran telah selesai'
                   : req.is_payer
                     ? req.status === 'pending'
                       ? 'Anda harus membayar tambahan ini jika barter disetujui'
-                      : '⚠️ Anda harus membayar tambahan ini untuk menyelesaikan barter'
+                      : 'Anda harus membayar tambahan ini untuk menyelesaikan barter'
                     : req.status === 'pending'
                       ? `Seller ${counterpartName ?? 'lawan'} harus membayar tambahan ini jika barter disetujui`
                       : `Menunggu seller ${counterpartName ?? 'lawan'} membayar tambahan ini`}
@@ -996,8 +1040,9 @@ function RequestCard({
 
       {req.note && (
         <div className="mt-3 rounded-lg bg-gray-50 p-3">
-          <p className="mb-1 text-xs font-semibold text-gray-500">
-            📝 Catatan:
+          <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-gray-500">
+            <DocumentIcon className="h-3.5 w-3.5" />
+            Catatan:
           </p>
           <p className="text-sm text-gray-700">{req.note}</p>
         </div>
@@ -1010,7 +1055,13 @@ function RequestCard({
   );
 }
 
-function MiniProduct({ label, product }) {
+/**
+ * `product` bisa null bila produknya sudah dihapus seller. Nama tetap
+ * ditampilkan dari snapshot yang tersimpan di baris barter (temuan V3-01),
+ * supaya riwayat barternya tidak berubah menjadi "Produk dihapus" tanpa
+ * keterangan apa pun.
+ */
+function MiniProduct({ label, product, fallbackName }) {
   return (
     <div className="flex items-center gap-3">
       <img
@@ -1021,8 +1072,11 @@ function MiniProduct({ label, product }) {
       <div>
         <p className="text-xs text-gray-400">{label}</p>
         <p className="text-sm font-semibold text-[#3E2723]">
-          {product?.name ?? 'Produk dihapus'}
+          {product?.name ?? fallbackName ?? 'Produk tidak tersedia'}
         </p>
+        {!product && (
+          <p className="text-xs text-red-500 italic">Produk sudah dihapus</p>
+        )}
         {product?.price != null && (
           <p className="text-xs text-[#B77C4C]">{formatIDR(product.price)}</p>
         )}
@@ -1042,15 +1096,19 @@ function OfferModal({ target, myProducts, onClose }) {
   // Selisihnya dua arah: yang produknya lebih murah yang membayar.
   const additionalCash = Math.abs(priceDiff);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
 
-    // Konfirmasi jika ada pembayaran tambahan
+    // Konfirmasi bila pengaju harus menambah uang.
     if (priceDiff > 0) {
-      const confirmMsg = `Anda akan menambah pembayaran sebesar ${formatIDR(additionalCash)} karena produk yang Anda tawarkan lebih murah. Lanjutkan?`;
-      if (!confirm(confirmMsg)) {
-        return;
-      }
+      const ok = await confirmDialog({
+        title: `Tambah pembayaran ${formatIDR(additionalCash)}?`,
+        description:
+          'Produk yang Anda tawarkan lebih murah, jadi selisihnya perlu Anda bayar bila barter ini disetujui.',
+        confirmLabel: 'Ya, ajukan barter',
+      });
+
+      if (!ok) return;
     }
 
     setProcessing(true);
@@ -1122,7 +1180,13 @@ function OfferModal({ target, myProducts, onClose }) {
               }`}
             >
               <div className="mb-2 flex items-center gap-2">
-                <span className="text-2xl">{priceDiff > 0 ? '💰' : '✅'}</span>
+                <span className="text-[#53685B]">
+                  {priceDiff > 0 ? (
+                    <MoneyIcon className="h-6 w-6" />
+                  ) : (
+                    <SuccessIcon className="h-6 w-6" />
+                  )}
+                </span>
                 <span className="font-semibold text-gray-900">
                   {priceDiff > 0
                     ? 'Anda Membayar Selisih'
@@ -1137,8 +1201,7 @@ function OfferModal({ target, myProducts, onClose }) {
               </p>
               {priceDiff > 0 ? (
                 <p className="text-xs text-gray-600">
-                  ⚠️ Produk Anda lebih murah. Anda harus membayar tambahan
-                  sebesar{' '}
+                  Produk Anda lebih murah. Anda harus membayar tambahan sebesar{' '}
                   <span className="font-semibold">
                     {formatIDR(additionalCash)}
                   </span>{' '}
@@ -1146,8 +1209,8 @@ function OfferModal({ target, myProducts, onClose }) {
                 </p>
               ) : (
                 <p className="text-xs text-gray-600">
-                  ✨ Produk Anda lebih mahal. Seller pemilik produk harus
-                  membayar Anda{' '}
+                  Produk Anda lebih mahal. Seller pemilik produk harus membayar
+                  Anda{' '}
                   <span className="font-semibold">
                     {formatIDR(additionalCash)}
                   </span>{' '}

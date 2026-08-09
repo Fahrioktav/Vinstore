@@ -1,7 +1,10 @@
 import { Form, Link, router, usePage } from '@inertiajs/react';
 import { cn, formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
+import { ShippingIcon } from '@/components/icons';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { confirmDestructive, confirmDialog } from '@/lib/dialog';
 
 const statusStyles = {
   Waiting: 'bg-yellow-500/30 text-yellow-200',
@@ -39,10 +42,30 @@ export default function OrderPage() {
   const [customReason, setCustomReason] = useState('');
   const [refundProofImage, setRefundProofImage] = useState(null);
 
-  const onSubmit = (e) => {
-    if (!confirm('Yakin ingin membatalkan pesanan ini?')) {
-      e.preventDefault();
-    }
+  // Dialognya asinkron, jadi polanya dibalik dibanding confirm() bawaan:
+  // pengirimannya tidak lagi "dibatalkan setelah terlanjur jalan", melainkan
+  // baru dijalankan setelah pengguna menjawab.
+  const cancelOrder = async (publicId) => {
+    const ok = await confirmDestructive({
+      title: 'Batalkan pesanan ini?',
+      description:
+        'Pesanan yang dibatalkan tidak bisa dilanjutkan lagi. Stok yang ditahan akan dilepas.',
+      confirmLabel: 'Ya, batalkan',
+    });
+
+    if (ok) router.delete(`/order/${publicId}`, { preserveScroll: true });
+  };
+
+  const confirmReceived = async (publicId) => {
+    const ok = await confirmDialog({
+      title: 'Konfirmasi barang sudah diterima?',
+      description:
+        'Dana akan diteruskan ke penjual dan tindakan ini tidak dapat dibatalkan.',
+      confirmLabel: 'Ya, sudah diterima',
+    });
+
+    if (ok)
+      router.post(`/order/${publicId}/confirm`, {}, { preserveScroll: true });
   };
 
   const openRefundForm = (orderPublicId) => {
@@ -69,7 +92,7 @@ export default function OrderPage() {
           : refundReason;
 
     if (!reason || reason.length < 10) {
-      alert('Alasan refund minimal 10 karakter.');
+      toast.error('Alasan refund minimal 10 karakter.');
       return;
     }
 
@@ -90,7 +113,9 @@ export default function OrderPage() {
   return (
     <section className="w-full px-6 pt-32 pb-20 text-[#E9E19E] md:px-12">
       <div className="mx-auto max-w-6xl">
-        <h2 className="mb-10 text-center text-4xl font-bold">Pesananmu</h2>
+        <h2 className="mb-10 text-center text-2xl font-bold sm:text-4xl">
+          Pesananmu
+        </h2>
         {flash?.success && (
           <div className="mb-6 rounded-lg border border-green-300 bg-green-500/20 px-4 py-3 text-green-100">
             {flash.success}
@@ -106,8 +131,8 @@ export default function OrderPage() {
             Kamu belum memesan apapun
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/20 bg-white/10 shadow-xl backdrop-blur-md">
-            <table className="w-full table-fixed text-left text-[#E9E19E]">
+          <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 shadow-xl backdrop-blur-md">
+            <table className="w-full min-w-[48rem] table-auto text-left text-[#E9E19E]">
               <thead>
                 <tr className="bg-[#E9E19E]/10 text-xs tracking-wider uppercase">
                   <th className="w-[18%] px-3 py-4">Item</th>
@@ -171,8 +196,9 @@ export default function OrderPage() {
                           >
                             {order.tracking_number}
                           </span>
-                          <span className="text-xs text-[#E9E19E]/70">
-                            📦 Dikirim
+                          <span className="inline-flex items-center gap-1 text-xs text-[#E9E19E]/70">
+                            <ShippingIcon className="h-3.5 w-3.5" />
+                            Dikirim
                           </span>
                         </div>
                       ) : (
@@ -230,40 +256,22 @@ export default function OrderPage() {
                           ['On The Way', 'Delivered'].includes(
                             order.status
                           ) && (
-                            <Form
-                              action={`/order/${order.public_id}/confirm`}
-                              method="POST"
+                            <button
+                              type="button"
+                              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
+                              onClick={() => confirmReceived(order.public_id)}
                             >
-                              <button
-                                type="submit"
-                                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
-                                onClick={(e) => {
-                                  if (
-                                    !confirm(
-                                      'Konfirmasi bahwa barang sudah Anda terima? Dana akan diteruskan ke penjual dan tindakan ini tidak dapat dibatalkan.'
-                                    )
-                                  ) {
-                                    e.preventDefault();
-                                  }
-                                }}
-                              >
-                                Barang Diterima
-                              </button>
-                            </Form>
+                              Barang Diterima
+                            </button>
                           )}
                         {['Waiting', 'On The Way'].includes(order.status) ? (
-                          <Form
-                            action={`/order/${order.public_id}`}
-                            method="DELETE"
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-red-400 transition hover:text-red-300"
+                            onClick={() => cancelOrder(order.public_id)}
                           >
-                            <button
-                              type="submit"
-                              className="text-xs font-semibold text-red-400 transition hover:text-red-300"
-                              onClick={onSubmit}
-                            >
-                              Batalkan
-                            </button>
-                          </Form>
+                            Batalkan
+                          </button>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}

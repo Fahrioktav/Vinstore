@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Product;
+use App\Services\ShippingCostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -12,12 +13,23 @@ class CartController extends Controller
 {
     public function index()
     {
-        // Toko ikut dimuat karena ongkir dihitung per toko di halaman keranjang.
-        $cartItems = Cart::with('product.store:id,public_id,store_name')
+        // Koordinat toko ikut dimuat karena ongkir dihitung dari jarak toko ke
+        // titik pengantaran, dan ongkir ditagih sekali per toko.
+        $cartItems = Cart::with('product.store:id,public_id,store_name,latitude,longitude')
             ->where('user_id', Auth::id())
             ->get();
 
-        return Inertia::render('cart', compact('cartItems'));
+        // Produk tebak harga yang sudah publik tetap tidak boleh membocorkan
+        // harga diskonnya lewat serialisasi keranjang.
+        $viewer = Auth::user();
+        $cartItems->each(fn (Cart $item) => $item->product?->maskRealPriceFor($viewer));
+
+        return Inertia::render('cart', [
+            'cartItems' => $cartItems,
+            // Tarif dikirim agar pratinjau biaya di keranjang memakai angka
+            // yang sama dengan yang ditagihkan server.
+            'feeRates' => app(ShippingCostService::class)->publicRates(),
+        ]);
     }
 
     public function add(Request $request, Product $product)
@@ -30,6 +42,10 @@ class CartController extends Controller
 
         if ($product->approval_status !== 'approved') {
             return back()->with('error', 'Produk ini belum disetujui admin.');
+        }
+
+        if ($product->isSellerDeactivated()) {
+            return back()->with('error', 'Produk ini sedang tidak tersedia karena akun penjualnya dinonaktifkan.');
         }
 
         // Cek apakah user adalah seller dan mencoba membeli produk dari toko sendiri
