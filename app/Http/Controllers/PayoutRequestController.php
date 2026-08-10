@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BarterRequest;
 use App\Models\Order;
 use App\Models\PayoutRequest;
 use App\Models\Store;
+use App\Models\TradeInRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -78,14 +78,14 @@ class PayoutRequestController extends Controller
     }
 
     /**
-     * Responder mengajukan pencairan selisih uang (additional_cash) barter.
+     * Responder mengajukan pencairan selisih uang (additional_cash) tukar tambah.
      *
      * Uang itu dibayar requester karena produk yang ia tawarkan lebih murah,
-     * jadi haknya ada pada responder. Baru bisa diajukan setelah barter
+     * jadi haknya ada pada responder. Baru bisa diajukan setelah tukar tambah
      * berstatus completed — yaitu kedua pihak sudah mengonfirmasi barang
      * diterima.
      */
-    public function storeForBarter(Request $request, BarterRequest $barter)
+    public function storeForTradeIn(Request $request, TradeInRequest $tradeIn)
     {
         $validated = $request->validate([
             'bank_name' => 'required|string|max:100',
@@ -99,22 +99,22 @@ class PayoutRequestController extends Controller
 
         $store = Auth::user()->store;
 
-        if (! $store || $barter->payoutRecipientStoreId() !== $store->id) {
-            abort(403, 'Hanya penerima selisih uang barter ini yang dapat mengajukan pencairan.');
+        if (! $store || $tradeIn->payoutRecipientStoreId() !== $store->id) {
+            abort(403, 'Hanya penerima selisih uang tukar tambah ini yang dapat mengajukan pencairan.');
         }
 
         try {
-            DB::transaction(function () use ($barter, $store, $validated) {
-                $locked = BarterRequest::whereKey($barter->getKey())->lockForUpdate()->firstOrFail();
+            DB::transaction(function () use ($tradeIn, $store, $validated) {
+                $locked = TradeInRequest::whereKey($tradeIn->getKey())->lockForUpdate()->firstOrFail();
 
                 if (! $locked->canRequestPayout()) {
                     throw new RuntimeException(
-                        $locked->payoutBlockReason() ?? 'Barter ini belum dapat diajukan pencairannya.'
+                        $locked->payoutBlockReason() ?? 'Tukar tambah ini belum dapat diajukan pencairannya.'
                     );
                 }
 
                 PayoutRequest::create([
-                    'barter_request_id' => $locked->id,
+                    'trade_in_request_id' => $locked->id,
                     'store_id' => $store->id,
                     'amount' => $locked->additional_cash,
                     'bank_name' => $validated['bank_name'],
@@ -127,7 +127,7 @@ class PayoutRequestController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Pengajuan pencairan selisih barter dikirim dan menunggu persetujuan admin.');
+        return back()->with('success', 'Pengajuan pencairan selisih tukar tambah dikirim dan menunggu persetujuan admin.');
     }
 
     public function adminIndex()
@@ -138,15 +138,15 @@ class PayoutRequestController extends Controller
             'order.user',
             'order.product',
             'order.auction',
-            'barterRequest.offeredProduct',
-            'barterRequest.requestedProduct',
-            'barterRequest.requesterStore',
-            'barterRequest.responderStore',
+            'tradeInRequest.offeredProduct',
+            'tradeInRequest.requestedProduct',
+            'tradeInRequest.requesterStore',
+            'tradeInRequest.responderStore',
         ])->latest()->get();
 
         // Pembayar selisih bisa pengaju maupun penerima, jadi namanya dihitung
         // di server alih-alih ditebak frontend dari requester_store.
-        $payouts->each(fn ($payout) => $payout->barterRequest?->append('payer_store_name'));
+        $payouts->each(fn ($payout) => $payout->tradeInRequest?->append('payer_store_name'));
 
         return Inertia::render('admin/payouts/index', compact('payouts'));
     }
@@ -179,25 +179,25 @@ class PayoutRequestController extends Controller
                     throw new RuntimeException('Pengajuan pencairan ini sudah diproses.');
                 }
 
-                // Sumber dananya bisa pesanan atau selisih barter. Keduanya
+                // Sumber dananya bisa pesanan atau selisih tukar tambah. Keduanya
                 // dikunci dan diperiksa ulang di dalam transaksi, karena
                 // sengketa bisa muncul setelah pengajuan dibuat.
-                if ($payout->barter_request_id !== null) {
-                    $barter = BarterRequest::whereKey($payout->barter_request_id)->lockForUpdate()->firstOrFail();
+                if ($payout->trade_in_request_id !== null) {
+                    $tradeIn = TradeInRequest::whereKey($payout->trade_in_request_id)->lockForUpdate()->firstOrFail();
 
-                    if ($barter->payout_released_at !== null) {
-                        throw new RuntimeException('Selisih uang barter ini sudah pernah dicairkan.');
+                    if ($tradeIn->payout_released_at !== null) {
+                        throw new RuntimeException('Selisih uang tukar tambah ini sudah pernah dicairkan.');
                     }
 
-                    if ($barter->status !== BarterRequest::STATUS_COMPLETED) {
-                        throw new RuntimeException('Barter ini belum selesai; kedua pihak harus mengonfirmasi barang diterima.');
+                    if ($tradeIn->status !== TradeInRequest::STATUS_COMPLETED) {
+                        throw new RuntimeException('Tukar tambah ini belum selesai; kedua pihak harus mengonfirmasi barang diterima.');
                     }
 
-                    if ($barter->hasPendingRefund() || $barter->hasApprovedRefund()) {
-                        throw new RuntimeException('Ada pengajuan pengembalian dana untuk barter ini.');
+                    if ($tradeIn->hasPendingRefund() || $tradeIn->hasApprovedRefund()) {
+                        throw new RuntimeException('Ada pengajuan pengembalian dana untuk tukar tambah ini.');
                     }
 
-                    $barter->markPayoutReleased();
+                    $tradeIn->markPayoutReleased();
                 } else {
                     $order = Order::whereKey($payout->order_id)->lockForUpdate()->firstOrFail();
 

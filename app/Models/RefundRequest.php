@@ -13,7 +13,7 @@ class RefundRequest extends Model
     protected $fillable = [
         'public_id',
         'order_id',
-        'barter_request_id',
+        'trade_in_request_id',
         'user_id',
         'reason',
         'proof_image',
@@ -26,7 +26,7 @@ class RefundRequest extends Model
     protected $hidden = [
         'id',
         'order_id',
-        'barter_request_id',
+        'trade_in_request_id',
         'user_id',
         'reviewed_by',
     ];
@@ -36,12 +36,12 @@ class RefundRequest extends Model
     ];
 
     /**
-     * 'order' atau 'barter' — sanggahan bisa menunjuk pesanan jual-beli atau
-     * selisih uang barter yang gagal.
+     * 'order' atau 'trade_in' — sanggahan bisa menunjuk pesanan jual-beli atau
+     * selisih uang tukar tambah yang gagal.
      */
     public function getSourceTypeAttribute(): string
     {
-        return $this->barter_request_id !== null ? 'barter' : 'order';
+        return $this->trade_in_request_id !== null ? 'trade_in' : 'order';
     }
 
     protected $casts = [
@@ -76,9 +76,9 @@ class RefundRequest extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function barterRequest()
+    public function tradeInRequest()
     {
-        return $this->belongsTo(BarterRequest::class);
+        return $this->belongsTo(TradeInRequest::class);
     }
 
     public function user()

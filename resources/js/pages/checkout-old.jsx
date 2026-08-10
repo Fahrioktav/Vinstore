@@ -147,9 +147,9 @@ export default function CheckoutPage() {
                   🎯 Tebak Harga
                 </span>
               )}
-              {product.is_barterable && (
+              {product.is_trade_in_enabled && (
                 <span className="rounded-full bg-[#B77C4C] px-3 py-1 text-xs font-semibold text-white">
-                  ⇄ Bisa Dibarter
+                  ⇄ Bisa Ditukar Tambah
                 </span>
               )}
               {product.category && (

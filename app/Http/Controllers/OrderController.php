@@ -42,8 +42,8 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Anda tidak dapat membeli produk dari toko Anda sendiri!');
         }
 
-        if ($product->isLockedForBarter()) {
-            return back()->with('error', 'Produk ini sedang dalam proses barter dan belum tersedia untuk dibeli.');
+        if ($product->isLockedForTradeIn()) {
+            return back()->with('error', 'Produk ini sedang dalam proses tukar tambah dan belum tersedia untuk dibeli.');
         }
 
         // Sinkronkan siklus hidup tebak harga sebelum menampilkan halaman.
@@ -202,10 +202,10 @@ class OrderController extends Controller
                     throw new \RuntimeException('Produk ini belum dapat dibeli.');
                 }
 
-                // Dicek ulang di dalam lock: barter bisa saja disetujui tepat
+                // Dicek ulang di dalam lock: tukar tambah bisa saja disetujui tepat
                 // setelah pengecekan awal di luar transaksi.
-                if ($product->isLockedForBarter()) {
-                    throw new \RuntimeException('Produk ini sedang dalam proses barter dan belum tersedia untuk dibeli.');
+                if ($product->isLockedForTradeIn()) {
+                    throw new \RuntimeException('Produk ini sedang dalam proses tukar tambah dan belum tersedia untuk dibeli.');
                 }
 
                 // Yang diperiksa adalah sisa yang BISA DIBELI, bukan stok
@@ -435,8 +435,8 @@ class OrderController extends Controller
                         throw new \RuntimeException('Produk Tebak Harga "'.$product->name.'" belum dapat dibeli saat ini.');
                     }
 
-                    if ($product->isLockedForBarter()) {
-                        throw new \RuntimeException('Produk "'.$product->name.'" sedang dalam proses barter dan belum tersedia untuk dibeli.');
+                    if ($product->isLockedForTradeIn()) {
+                        throw new \RuntimeException('Produk "'.$product->name.'" sedang dalam proses tukar tambah dan belum tersedia untuk dibeli.');
                     }
 
                     if ($user->role === 'seller' && $user->store && $product->store_id === $user->store->id) {

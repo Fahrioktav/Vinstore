@@ -9,7 +9,7 @@ import {
 } from '@/lib/utils';
 import {
   BadgeIcon,
-  BarterIcon,
+  TradeInIcon,
   CategoryIcon,
   CelebrateIcon,
   CertificateIcon,
@@ -141,10 +141,10 @@ export default function ProductDetailPage() {
                   Tebak Harga
                 </span>
               )}
-              {product.is_barterable && (
+              {product.is_trade_in_enabled && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#B77C4C] px-3 py-1 text-xs font-semibold text-white">
-                  <BarterIcon className="h-3.5 w-3.5" />
-                  Bisa Dibarter
+                  <TradeInIcon className="h-3.5 w-3.5" />
+                  Bisa Ditukar Tambah
                 </span>
               )}
               {product.category && (

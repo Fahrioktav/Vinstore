@@ -166,8 +166,8 @@ Artisan::command('orders:release-abandoned', function () {
 
 Schedule::command('orders:release-abandoned')->hourly();
 
-// Test command untuk simulasi webhook Midtrans barter payment
-Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', function ($paymentReference, $status) {
+// Test command untuk simulasi webhook Midtrans tukar tambah payment
+Artisan::command('test:tukar-tambah-webhook {payment_reference} {status=settlement}', function ($paymentReference, $status) {
     $serverKey = config('services.midtrans.server_key');
 
     if (empty($serverKey)) {
@@ -186,16 +186,16 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
         default => '200',
     };
 
-    // Cari barter berdasarkan payment reference
-    $barter = \App\Models\BarterRequest::where('payment_reference', $paymentReference)->first();
+    // Cari tukar tambah berdasarkan payment reference
+    $tradeIn = \App\Models\TradeInRequest::where('payment_reference', $paymentReference)->first();
 
-    if (! $barter) {
-        $this->error("Barter with payment reference '{$paymentReference}' not found");
+    if (! $tradeIn) {
+        $this->error("Trade-in with payment reference '{$paymentReference}' not found");
 
         return 1;
     }
 
-    $grossAmount = (string) (int) $barter->additional_cash;
+    $grossAmount = (string) (int) $tradeIn->additional_cash;
     $transactionId = 'TEST-'.time();
 
     $signature = hash('sha512', $paymentReference.$statusCode.$grossAmount.$serverKey);
@@ -231,14 +231,14 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
             $this->info('✅ Webhook sent successfully!');
             $this->line('Response: '.$response->body());
 
-            // Refresh barter status
-            $barter->refresh();
+            // Refresh tukar tambah status
+            $tradeIn->refresh();
             $this->line('');
-            $this->info('Updated Barter Status:');
-            $this->line("  Payment Status: {$barter->payment_status}");
-            $this->line("  Barter Status: {$barter->status}");
+            $this->info('Updated Trade-in Status:');
+            $this->line("  Payment Status: {$tradeIn->payment_status}");
+            $this->line("  Trade-in Status: {$tradeIn->status}");
 
-            if ($barter->payment_status === 'paid') {
+            if ($tradeIn->payment_status === 'paid') {
                 $this->info('  ✅ Payment completed and products exchanged!');
             }
         } else {
@@ -253,4 +253,4 @@ Artisan::command('test:barter-webhook {payment_reference} {status=settlement}', 
     }
 
     return 0;
-})->purpose('Test webhook Midtrans untuk barter payment (local development only)');
+})->purpose('Test webhook Midtrans untuk tukar tambah payment (local development only)');

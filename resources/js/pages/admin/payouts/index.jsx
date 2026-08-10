@@ -2,7 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
-import { BarterIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
+import { TradeInIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
 import { promptDialog } from '@/lib/dialog';
 
 const statusColors = {
@@ -115,24 +115,24 @@ export default function AdminPayouts() {
                         {payout.public_id}
                       </td>
                       <td className="px-4 py-3">
-                        {payout.source_type === 'barter' ? (
+                        {payout.source_type === 'trade_in' ? (
                           <>
                             <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
-                              Barter
+                              Tukar Tambah
                             </span>
                             <p className="mt-1 font-semibold">
-                              {payout.barter_request?.public_id || '-'}
+                              {payout.trade_in_request?.public_id || '-'}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {payout.barter_request
+                              {payout.trade_in_request
                                 ?.display_offered_product_name || '?'}{' '}
-                              <BarterIcon className="mx-1 inline h-3 w-3 align-text-bottom" />
-                              {payout.barter_request
+                              <TradeInIcon className="mx-1 inline h-3 w-3 align-text-bottom" />
+                              {payout.trade_in_request
                                 ?.display_requested_product_name || '?'}
                             </p>
                             <p className="text-xs text-gray-400">
                               Selisih dibayar{' '}
-                              {payout.barter_request?.payer_store_name ||
+                              {payout.trade_in_request?.payer_store_name ||
                                 'pihak yang produknya lebih murah'}
                             </p>
                           </>

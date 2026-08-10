@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
  * Pengajuan pencairan dana. Sumbernya dua macam, dan tepat satu yang terisi:
  *
  * - order_id: hasil penjualan satu pesanan (jual beli / lelang)
- * - barter_request_id: selisih uang (additional_cash) pada satu barter
+ * - trade_in_request_id: selisih uang (additional_cash) pada satu tukar tambah
  *
  * Dana tidak pernah cair sendiri. Seller mengajukan, lalu admin menyetujui
  * sambil mengunggah bukti transfer ke rekening yang diajukan.
@@ -28,7 +28,7 @@ class PayoutRequest extends Model
     protected $fillable = [
         'public_id',
         'order_id',
-        'barter_request_id',
+        'trade_in_request_id',
         'store_id',
         // Snapshot nama toko: catatan pencairan adalah bukti uang keluar dan
         // harus tetap terbaca meski tokonya dihapus (temuan V3-04).
@@ -48,7 +48,7 @@ class PayoutRequest extends Model
     protected $hidden = [
         'id',
         'order_id',
-        'barter_request_id',
+        'trade_in_request_id',
         'store_id',
         'reviewed_by',
     ];
@@ -70,12 +70,12 @@ class PayoutRequest extends Model
     }
 
     /**
-     * 'order' atau 'barter' — dipakai UI admin untuk memberi label sumber dana
+     * 'order' atau 'trade_in' — dipakai UI admin untuk memberi label sumber dana
      * tanpa perlu menebak dari relasi mana yang terisi.
      */
     public function getSourceTypeAttribute(): string
     {
-        return $this->barter_request_id !== null ? 'barter' : 'order';
+        return $this->trade_in_request_id !== null ? 'trade_in' : 'order';
     }
 
     protected $casts = [
@@ -114,9 +114,9 @@ class PayoutRequest extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function barterRequest()
+    public function tradeInRequest()
     {
-        return $this->belongsTo(BarterRequest::class);
+        return $this->belongsTo(TradeInRequest::class);
     }
 
     public function store()

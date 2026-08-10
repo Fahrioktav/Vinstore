@@ -2,7 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR } from '@/lib/utils';
 import ActionMenu from '@/components/ui/action-menu';
-import { BarterIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
+import { TradeInIcon, BlockedIcon, SuccessIcon } from '@/components/icons';
 import { promptDialog } from '@/lib/dialog';
 
 const statusColors = {
@@ -91,34 +91,34 @@ export default function AdminRefunds() {
                 {refunds.length > 0 ? (
                   refunds.map((refund) => {
                     const order = refund.order;
-                    const barter = refund.barter_request;
-                    const isBarter = refund.source_type === 'barter';
+                    const tradeIn = refund.trade_in_request;
+                    const isTradeIn = refund.source_type === 'trade_in';
                     const item = order?.product || order?.auction;
 
-                    // Sanggahan barter menyangkut selisih uangnya, bukan harga
+                    // Sanggahan tukar tambah menyangkut selisih uangnya, bukan harga
                     // pesanan — nominal dan pihak terkaitnya berbeda sumber.
-                    // Nama diambil dari snapshot pada baris barter/pesanan,
+                    // Nama diambil dari snapshot pada baris tukar tambah/pesanan,
                     // bukan dari relasinya: produk atau tokonya bisa saja sudah
                     // dihapus dan relasinya null (temuan V3-01).
-                    // Barter menyangkut dua produk sekaligus, jadi labelnya
+                    // Tukar tambah menyangkut dua produk sekaligus, jadi labelnya
                     // berupa elemen agar panah penukarnya bisa memakai ikon.
-                    const itemLabel = isBarter ? (
+                    const itemLabel = isTradeIn ? (
                       <span className="inline-flex items-center gap-1">
-                        {barter?.display_offered_product_name || '?'}
-                        <BarterIcon className="h-3.5 w-3.5 shrink-0" />
-                        {barter?.display_requested_product_name || '?'}
+                        {tradeIn?.display_offered_product_name || '?'}
+                        <TradeInIcon className="h-3.5 w-3.5 shrink-0" />
+                        {tradeIn?.display_requested_product_name || '?'}
                       </span>
                     ) : (
                       order?.display_item_name || item?.name || '-'
                     );
-                    const referenceLabel = isBarter
-                      ? `Barter: ${barter?.public_id || '-'}`
+                    const referenceLabel = isTradeIn
+                      ? `Tukar Tambah: ${tradeIn?.public_id || '-'}`
                       : `Order: ${order?.public_id || '-'}`;
-                    const storeLabel = isBarter
-                      ? barter?.display_responder_store_name || '-'
+                    const storeLabel = isTradeIn
+                      ? tradeIn?.display_responder_store_name || '-'
                       : order?.display_store_name || '-';
-                    const amount = isBarter
-                      ? barter?.additional_cash || 0
+                    const amount = isTradeIn
+                      ? tradeIn?.additional_cash || 0
                       : order?.price || 0;
 
                     return (
@@ -139,9 +139,9 @@ export default function AdminRefunds() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isBarter ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`}
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isTradeIn ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`}
                           >
-                            {isBarter ? 'Barter' : 'Pesanan'}
+                            {isTradeIn ? 'Tukar Tambah' : 'Pesanan'}
                           </span>
                           <p className="mt-1 font-semibold">{itemLabel}</p>
                           <p className="text-xs text-gray-500">
@@ -153,32 +153,32 @@ export default function AdminRefunds() {
                           {formatIDR(amount)}
                         </td>
                         <td className="px-4 py-3">
-                          {/* Bukti objektif untuk memutuskan sengketa barter:
+                          {/* Bukti objektif untuk memutuskan sengketa tukar tambah:
                               siapa yang sudah mengisi resi dan siapa belum. */}
-                          {isBarter && (
+                          {isTradeIn && (
                             <div className="mb-2 rounded-md bg-gray-50 p-2 text-xs">
                               <p
                                 className={
-                                  barter?.requester_shipped_at
+                                  tradeIn?.requester_shipped_at
                                     ? 'text-green-700'
                                     : 'font-semibold text-red-700'
                                 }
                               >
                                 Pengaju:{' '}
-                                {barter?.requester_shipped_at
-                                  ? `kirim (${barter.requester_tracking_number || '-'})`
+                                {tradeIn?.requester_shipped_at
+                                  ? `kirim (${tradeIn.requester_tracking_number || '-'})`
                                   : 'belum kirim'}
                               </p>
                               <p
                                 className={
-                                  barter?.responder_shipped_at
+                                  tradeIn?.responder_shipped_at
                                     ? 'text-green-700'
                                     : 'font-semibold text-red-700'
                                 }
                               >
                                 Penerima:{' '}
-                                {barter?.responder_shipped_at
-                                  ? `kirim (${barter.responder_tracking_number || '-'})`
+                                {tradeIn?.responder_shipped_at
+                                  ? `kirim (${tradeIn.responder_tracking_number || '-'})`
                                   : 'belum kirim'}
                               </p>
                             </div>

@@ -102,8 +102,8 @@ model Store {
     orders               Order[]
     withdrawalRequests   WithdrawalRequest[]
     conversations        Conversation[]
-    requesterBarters     BarterRequest[] @relation("BarterRequesterStore")
-    responderBarters     BarterRequest[] @relation("BarterResponderStore")
+    requesterTradeIns     TradeInRequest[] @relation("TradeInRequesterStore")
+    responderTradeIns     TradeInRequest[] @relation("TradeInResponderStore")
 
     @@map("stores")
 }
@@ -132,7 +132,7 @@ model Product {
     images              Json?
     video               String?
     certificate         String?
-    isBarterable        Boolean   @default(false) @map("is_barterable")
+    isTradeInEnabled        Boolean   @default(false) @map("is_trade_in_enabled")
     approvalStatus      String    @default("pending") @map("approval_status")
     approvedAt          DateTime? @map("approved_at")
     approvedBy          BigInt?   @map("approved_by")
@@ -156,8 +156,8 @@ model Product {
     guessWinner         User?     @relation("ProductGuessWinner", fields: [guessWinnerId], references: [id], onDelete: SetNull)
     carts               Cart[]
     orders              Order[]
-    barterOffered       BarterRequest[] @relation("BarterOfferedProduct")
-    barterRequested     BarterRequest[] @relation("BarterRequestedProduct")
+    tradeInOffered       TradeInRequest[] @relation("TradeInOfferedProduct")
+    tradeInRequested     TradeInRequest[] @relation("TradeInRequestedProduct")
     priceGuesses        PriceGuess[]
 
     @@map("products")
@@ -260,7 +260,7 @@ model AuctionBid {
     @@map("auction_bids")
 }
 
-model BarterRequest {
+model TradeInRequest {
     id                   BigInt    @id @default(autoincrement())
     publicId             String    @unique @map("public_id")
     requesterStoreId     BigInt    @map("requester_store_id")
@@ -279,12 +279,12 @@ model BarterRequest {
     createdAt            DateTime? @map("created_at")
     updatedAt            DateTime? @map("updated_at")
 
-    requesterStore       Store     @relation("BarterRequesterStore", fields: [requesterStoreId], references: [id], onDelete: Cascade)
-    responderStore       Store     @relation("BarterResponderStore", fields: [responderStoreId], references: [id], onDelete: Cascade)
-    offeredProduct       Product   @relation("BarterOfferedProduct", fields: [offeredProductId], references: [id], onDelete: Cascade)
-    requestedProduct     Product   @relation("BarterRequestedProduct", fields: [requestedProductId], references: [id], onDelete: Cascade)
+    requesterStore       Store     @relation("TradeInRequesterStore", fields: [requesterStoreId], references: [id], onDelete: Cascade)
+    responderStore       Store     @relation("TradeInResponderStore", fields: [responderStoreId], references: [id], onDelete: Cascade)
+    offeredProduct       Product   @relation("TradeInOfferedProduct", fields: [offeredProductId], references: [id], onDelete: Cascade)
+    requestedProduct     Product   @relation("TradeInRequestedProduct", fields: [requestedProductId], references: [id], onDelete: Cascade)
 
-    @@map("barter_requests")
+    @@map("trade_in_requests")
 }
 
 model PriceGuess {

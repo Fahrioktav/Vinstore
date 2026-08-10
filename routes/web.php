@@ -15,8 +15,6 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\SocialAuthController;
-use App\Http\Controllers\BarterController;
-use App\Http\Controllers\BarterPaymentNotificationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MidtransNotificationController;
@@ -29,6 +27,8 @@ use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\TradeInController;
+use App\Http\Controllers\TradeInPaymentNotificationController;
 use App\Http\Controllers\ValidatorController;
 use App\Http\Controllers\WithdrawalRequestController;
 use App\Models\Category;
@@ -90,7 +90,10 @@ Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.ind
 Route::get('/auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');
 
 Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
-Route::post('/midtrans/barter/notification', BarterPaymentNotificationController::class)->name('midtrans.barter.notification');
+// URI-nya sengaja tetap "barter" walau fiturnya sudah berganti nama menjadi
+// tukar tambah — alamat inilah yang terdaftar di dashboard Midtrans. Nama
+// route-nya boleh ikut berubah karena tidak pernah keluar dari aplikasi.
+Route::post('/midtrans/barter/notification', TradeInPaymentNotificationController::class)->name('midtrans.trade-in.notification');
 
 /*
 |--------------------------------------------------------------------------
@@ -216,24 +219,24 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::patch('/products/{id}', [ProductController::class, 'updateStock'])->name('products.updateStock');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
-    // Barter antar seller (seller-to-seller)
-    Route::get('/barter', [BarterController::class, 'index'])->name('barter.index');
-    Route::post('/barter/{product}', [BarterController::class, 'store'])->name('barter.store');
-    Route::post('/barter/{barter}/accept', [BarterController::class, 'accept'])->name('barter.accept');
-    Route::post('/barter/{barter}/reject', [BarterController::class, 'reject'])->name('barter.reject');
-    Route::post('/barter/{barter}/cancel', [BarterController::class, 'cancel'])->name('barter.cancel');
-    Route::get('/barter/{barter}/pay', [BarterController::class, 'pay'])->name('barter.pay');
-    Route::get('/barter/{barter}/payment-status', [BarterController::class, 'checkPaymentStatus'])->name('barter.payment.status');
+    // Tukar tambah antar seller (seller-to-seller)
+    Route::get('/tukar-tambah', [TradeInController::class, 'index'])->name('trade-in.index');
+    Route::post('/tukar-tambah/{product}', [TradeInController::class, 'store'])->name('trade-in.store');
+    Route::post('/tukar-tambah/{tradeIn}/accept', [TradeInController::class, 'accept'])->name('trade-in.accept');
+    Route::post('/tukar-tambah/{tradeIn}/reject', [TradeInController::class, 'reject'])->name('trade-in.reject');
+    Route::post('/tukar-tambah/{tradeIn}/cancel', [TradeInController::class, 'cancel'])->name('trade-in.cancel');
+    Route::get('/tukar-tambah/{tradeIn}/pay', [TradeInController::class, 'pay'])->name('trade-in.pay');
+    Route::get('/tukar-tambah/{tradeIn}/payment-status', [TradeInController::class, 'checkPaymentStatus'])->name('trade-in.payment.status');
     // Pengiriman dua arah: masing-masing seller mengisi resi lalu mengonfirmasi
     // penerimaan. Kepemilikan berpindah setelah keduanya saling menerima.
-    Route::post('/barter/{barter}/ship', [BarterController::class, 'ship'])->name('barter.ship');
-    Route::post('/barter/{barter}/receive', [BarterController::class, 'confirmReceipt'])->name('barter.receive');
+    Route::post('/tukar-tambah/{tradeIn}/ship', [TradeInController::class, 'ship'])->name('trade-in.ship');
+    Route::post('/tukar-tambah/{tradeIn}/receive', [TradeInController::class, 'confirmReceipt'])->name('trade-in.receive');
 
-    // Selisih uang barter: responder mencairkan setelah barter selesai,
-    // requester meminta kembali bila barternya gagal.
-    Route::post('/barter/{barter}/payout', [PayoutRequestController::class, 'storeForBarter'])->name('barter.payout');
-    Route::post('/barter/{barter}/refund', [RefundRequestController::class, 'storeForBarter'])->name('barter.refund');
-    Route::post('/barter/{barter}/report', [RefundRequestController::class, 'reportStalledBarter'])->name('barter.report');
+    // Selisih uang tukar tambah: responder mencairkan setelah tukar tambah selesai,
+    // requester meminta kembali bila tukar tambahnya gagal.
+    Route::post('/tukar-tambah/{tradeIn}/payout', [PayoutRequestController::class, 'storeForTradeIn'])->name('trade-in.payout');
+    Route::post('/tukar-tambah/{tradeIn}/refund', [RefundRequestController::class, 'storeForTradeIn'])->name('trade-in.refund');
+    Route::post('/tukar-tambah/{tradeIn}/report', [RefundRequestController::class, 'reportStalledTradeIn'])->name('trade-in.report');
 
     // Lelang seller
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\BarterRequest;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\TradeInRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,12 +13,12 @@ use Tests\TestCase;
  * Regression test untuk temuan T-08.
  *
  * Dua masalah yang diperbaiki:
- *  1. Produk yang terikat barter berjalan masih bisa dibeli pembeli biasa.
+ *  1. Produk yang terikat tukar tambah berjalan masih bisa dibeli pembeli biasa.
  *  2. Kepemilikan berpindah begitu pembayaran lunas, padahal barangnya sendiri
  *     belum tentu pernah dikirim. Sekarang kepemilikan baru berpindah setelah
  *     kedua seller saling mengirim dan saling mengonfirmasi penerimaan.
  */
-class BarterShipmentTest extends TestCase
+class TradeInShipmentTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -83,38 +83,38 @@ class BarterShipmentTest extends TestCase
             'category' => 'Antik',
             'description' => 'Barang antik',
             'approval_status' => Product::STATUS_APPROVED,
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
         ]);
     }
 
-    /** Ajukan barter tanpa selisih uang, lalu setujui. */
-    private function acceptedBarter(): BarterRequest
+    /** Ajukan tukar tambah tanpa selisih uang, lalu setujui. */
+    private function acceptedTradeIn(): TradeInRequest
     {
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$this->requestedProduct->public_id,
+            '/seller/tukar-tambah/'.$this->requestedProduct->public_id,
             ['offered_product_id' => $this->offeredProduct->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
+        $tradeIn = TradeInRequest::firstOrFail();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
-    public function test_barter_disetujui_mengunci_kedua_produk(): void
+    public function test_tukar_tambah_disetujui_mengunci_kedua_produk(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
-        $this->assertSame(BarterRequest::STATUS_SHIPPING, $barter->status);
-        $this->assertSame($barter->id, $this->offeredProduct->fresh()->locked_for_barter_id);
-        $this->assertSame($barter->id, $this->requestedProduct->fresh()->locked_for_barter_id);
+        $this->assertSame(TradeInRequest::STATUS_SHIPPING, $tradeIn->status);
+        $this->assertSame($tradeIn->id, $this->offeredProduct->fresh()->locked_for_trade_in_id);
+        $this->assertSame($tradeIn->id, $this->requestedProduct->fresh()->locked_for_trade_in_id);
     }
 
     public function test_produk_terkunci_tidak_bisa_dimasukkan_keranjang(): void
     {
-        $this->acceptedBarter();
+        $this->acceptedTradeIn();
 
         $pembeli = User::create([
             'username' => 'pembeli',
@@ -136,22 +136,22 @@ class BarterShipmentTest extends TestCase
 
     public function test_kepemilikan_belum_berpindah_sebelum_kedua_pihak_konfirmasi(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
         // Keduanya mengirim.
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A1']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A1']);
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B1']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B1']);
 
         // Baru satu pihak yang konfirmasi terima.
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive')
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive')
             ->assertSessionHas('success');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $this->assertSame(BarterRequest::STATUS_SHIPPING, $barter->status);
+        $this->assertSame(TradeInRequest::STATUS_SHIPPING, $tradeIn->status);
         // Kepemilikan masih di tangan masing-masing pemilik lama.
         $this->assertSame($this->requesterStore->id, $this->offeredProduct->fresh()->store_id);
         $this->assertSame($this->responderStore->id, $this->requestedProduct->fresh()->store_id);
@@ -159,52 +159,52 @@ class BarterShipmentTest extends TestCase
 
     public function test_kepemilikan_berpindah_penuh_setelah_kedua_pihak_konfirmasi(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A1']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A1']);
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B1']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B1']);
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive');
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $this->assertSame(BarterRequest::STATUS_COMPLETED, $barter->status);
-        $this->assertNotNull($barter->completed_at);
+        $this->assertSame(TradeInRequest::STATUS_COMPLETED, $tradeIn->status);
+        $this->assertNotNull($tradeIn->completed_at);
 
         // Kepemilikan bertukar...
         $this->assertSame($this->responderStore->id, $this->offeredProduct->fresh()->store_id);
         $this->assertSame($this->requesterStore->id, $this->requestedProduct->fresh()->store_id);
 
         // ...dan kuncinya dilepas.
-        $this->assertNull($this->offeredProduct->fresh()->locked_for_barter_id);
-        $this->assertNull($this->requestedProduct->fresh()->locked_for_barter_id);
+        $this->assertNull($this->offeredProduct->fresh()->locked_for_trade_in_id);
+        $this->assertNull($this->requestedProduct->fresh()->locked_for_trade_in_id);
     }
 
     public function test_tidak_bisa_konfirmasi_terima_sebelum_pihak_lain_mengirim(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive')
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive')
             ->assertSessionHas('error');
 
-        $this->assertNull($barter->fresh()->requester_received_at);
+        $this->assertNull($tradeIn->fresh()->requester_received_at);
     }
 
     public function test_seller_luar_tidak_bisa_ikut_campur_pengiriman(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
         $orangLuar = $this->makeSeller('c');
         $this->makeStore($orangLuar, 'Toko C');
 
         $this->actingAs($orangLuar)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'PALSU'])
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'PALSU'])
             ->assertForbidden();
     }
 }

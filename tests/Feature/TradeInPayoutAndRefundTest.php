@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\BarterRequest;
 use App\Models\PayoutRequest;
 use App\Models\Product;
 use App\Models\RefundRequest;
 use App\Models\Store;
+use App\Models\TradeInRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -14,17 +14,17 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Nasib selisih uang (additional_cash) pada barter.
+ * Nasib selisih uang (additional_cash) pada tukar tambah.
  *
  * Uang itu dibayar requester karena produk yang ia tawarkan lebih murah, dan
  * merupakan hak responder. Sebelumnya uang tersebut ditagih lalu berhenti di
  * akun merchant tanpa pernah tercatat sebagai hak siapa pun.
  *
  * Sekarang:
- *  - Barter tuntas  -> responder mengajukan pencairan, admin menyetujui.
- *  - Barter gagal   -> requester mengajukan pengembalian dana, admin menyetujui.
+ *  - Tukar tambah tuntas  -> responder mengajukan pencairan, admin menyetujui.
+ *  - Tukar tambah gagal   -> requester mengajukan pengembalian dana, admin menyetujui.
  */
-class BarterPayoutAndRefundTest extends TestCase
+class TradeInPayoutAndRefundTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -52,10 +52,10 @@ class BarterPayoutAndRefundTest extends TestCase
         $this->responderUser = $this->makeSeller('b');
 
         $this->admin = User::create([
-            'username' => 'adminbarter',
+            'username' => 'admintukartambah',
             'first_name' => 'Admin',
-            'last_name' => 'Barter',
-            'email' => 'adminbarter@vinstore.test',
+            'last_name' => 'Tukar Tambah',
+            'email' => 'admintukartambah@vinstore.test',
             'phone' => '08910009',
             'address' => 'Jl. Admin',
             'password' => 'password',
@@ -105,59 +105,59 @@ class BarterPayoutAndRefundTest extends TestCase
             'category' => 'Antik',
             'description' => 'Barang antik',
             'approval_status' => Product::STATUS_APPROVED,
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
         ]);
     }
 
-    /** Barter dengan selisih uang, disetujui responder. */
-    private function acceptedBarter(): BarterRequest
+    /** Tukar tambah dengan selisih uang, disetujui responder. */
+    private function acceptedTradeIn(): TradeInRequest
     {
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$this->requestedProduct->public_id,
+            '/seller/tukar-tambah/'.$this->requestedProduct->public_id,
             ['offered_product_id' => $this->offeredProduct->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
+        $tradeIn = TradeInRequest::firstOrFail();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
-    /** Barter yang selisihnya sudah lunas dan masuk tahap kirim. */
-    private function paidBarter(): BarterRequest
+    /** Tukar tambah yang selisihnya sudah lunas dan masuk tahap kirim. */
+    private function paidTradeIn(): TradeInRequest
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
         // Meniru apa yang dilakukan webhook Midtrans saat selisih lunas:
-        // barter masuk tahap kirim sekaligus memulai hitungan tenggat.
-        $barter->forceFill([
-            'payment_status' => BarterRequest::PAYMENT_PAID,
+        // tukar tambah masuk tahap kirim sekaligus memulai hitungan tenggat.
+        $tradeIn->forceFill([
+            'payment_status' => TradeInRequest::PAYMENT_PAID,
             'paid_at' => now(),
-            'status' => BarterRequest::STATUS_SHIPPING,
+            'status' => TradeInRequest::STATUS_SHIPPING,
             'shipping_started_at' => now(),
         ])->save();
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
-    /** Barter tuntas: keduanya saling kirim dan saling konfirmasi. */
-    private function completedBarter(): BarterRequest
+    /** Tukar tambah tuntas: keduanya saling kirim dan saling konfirmasi. */
+    private function completedTradeIn(): TradeInRequest
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A']);
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive');
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/receive');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/receive');
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
     private function bankPayload(): array
@@ -171,39 +171,39 @@ class BarterPayoutAndRefundTest extends TestCase
 
     public function test_selisih_harga_dihitung_dari_produk_yang_lebih_mahal(): void
     {
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
-        $this->assertSame('2000000.00', (string) $barter->additional_cash);
-        $this->assertSame($this->responderStore->id, $barter->payoutRecipientStoreId());
+        $this->assertSame('2000000.00', (string) $tradeIn->additional_cash);
+        $this->assertSame($this->responderStore->id, $tradeIn->payoutRecipientStoreId());
     }
 
-    public function test_responder_bisa_mencairkan_selisih_setelah_barter_selesai(): void
+    public function test_responder_bisa_mencairkan_selisih_setelah_tukar_tambah_selesai(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
-        $this->assertSame(BarterRequest::STATUS_COMPLETED, $barter->status);
-        $this->assertTrue($barter->canRequestPayout());
+        $this->assertSame(TradeInRequest::STATUS_COMPLETED, $tradeIn->status);
+        $this->assertTrue($tradeIn->canRequestPayout());
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload())
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload())
             ->assertSessionHas('success');
 
         $payout = PayoutRequest::firstOrFail();
 
-        $this->assertSame('barter', $payout->source_type);
+        $this->assertSame('trade_in', $payout->source_type);
         $this->assertSame('2000000.00', (string) $payout->amount);
         $this->assertSame($this->responderStore->id, $payout->store_id);
-        $this->assertNull($barter->fresh()->payout_released_at);
+        $this->assertNull($tradeIn->fresh()->payout_released_at);
     }
 
     public function test_belum_bisa_mencairkan_sebelum_kedua_pihak_konfirmasi(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
-        $this->assertFalse($barter->canRequestPayout());
+        $this->assertFalse($tradeIn->canRequestPayout());
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload())
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload())
             ->assertSessionHas('error');
 
         $this->assertSame(0, PayoutRequest::count());
@@ -211,21 +211,21 @@ class BarterPayoutAndRefundTest extends TestCase
 
     public function test_requester_tidak_bisa_mencairkan_selisih_yang_ia_bayar_sendiri(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload())
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload())
             ->assertForbidden();
 
         $this->assertSame(0, PayoutRequest::count());
     }
 
-    public function test_admin_menyetujui_pencairan_selisih_barter(): void
+    public function test_admin_menyetujui_pencairan_selisih_tukar_tambah(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload());
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload());
 
         $payout = PayoutRequest::firstOrFail();
 
@@ -235,10 +235,10 @@ class BarterPayoutAndRefundTest extends TestCase
             ])
             ->assertSessionHas('success');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
         $this->assertSame(PayoutRequest::STATUS_APPROVED, $payout->fresh()->status);
-        $this->assertNotNull($barter->payout_released_at);
+        $this->assertNotNull($tradeIn->payout_released_at);
         $this->assertSame('2000000.00', (string) $this->responderStore->fresh()->withdrawn_balance);
         // Requester tidak menerima apa pun dari pencairan ini.
         $this->assertSame('0.00', (string) $this->requesterStore->fresh()->withdrawn_balance);
@@ -246,10 +246,10 @@ class BarterPayoutAndRefundTest extends TestCase
 
     public function test_tidak_bisa_mencairkan_dua_kali(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload());
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload());
 
         $payout = PayoutRequest::firstOrFail();
 
@@ -259,51 +259,51 @@ class BarterPayoutAndRefundTest extends TestCase
             ]);
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload())
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload())
             ->assertSessionHas('error');
 
         $this->assertSame(1, PayoutRequest::count());
     }
 
-    public function test_barter_tanpa_selisih_tidak_punya_pencairan(): void
+    public function test_tukar_tambah_tanpa_selisih_tidak_punya_pencairan(): void
     {
         // Kedua produk berharga sama -> additional_cash 0.
         $this->requestedProduct->forceFill(['price' => 3000000])->save();
 
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
-        $this->assertSame('0.00', (string) $barter->additional_cash);
-        $this->assertFalse($barter->canRequestPayout());
-        $this->assertFalse($barter->canRequestRefund());
+        $this->assertSame('0.00', (string) $tradeIn->additional_cash);
+        $this->assertFalse($tradeIn->canRequestPayout());
+        $this->assertFalse($tradeIn->canRequestRefund());
     }
 
-    /* ===================== Barter gagal -> refund ===================== */
+    /* ===================== Tukar tambah gagal -> refund ===================== */
 
-    public function test_requester_bisa_meminta_pengembalian_dana_saat_barter_belum_tuntas(): void
+    public function test_requester_bisa_meminta_pengembalian_dana_saat_tukar_tambah_belum_tuntas(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
-        $this->assertTrue($barter->canRequestRefund());
+        $this->assertTrue($tradeIn->canRequestRefund());
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/refund', [
-                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak barter disetujui.',
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/refund', [
+                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak tukar tambah disetujui.',
             ])
             ->assertSessionHas('success');
 
         $refund = RefundRequest::firstOrFail();
 
-        $this->assertSame('barter', $refund->source_type);
-        $this->assertSame($barter->id, $refund->barter_request_id);
+        $this->assertSame('trade_in', $refund->source_type);
+        $this->assertSame($tradeIn->id, $refund->trade_in_request_id);
         $this->assertSame('pending', $refund->status);
     }
 
     public function test_responder_tidak_bisa_meminta_pengembalian_dana(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/refund', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/refund', [
                 'reason' => 'Saya ingin uangnya dikembalikan padahal bukan saya yang bayar.',
             ])
             ->assertForbidden();
@@ -311,28 +311,28 @@ class BarterPayoutAndRefundTest extends TestCase
         $this->assertSame(0, RefundRequest::count());
     }
 
-    public function test_barter_yang_sudah_selesai_tidak_bisa_dimintakan_pengembalian(): void
+    public function test_tukar_tambah_yang_sudah_selesai_tidak_bisa_dimintakan_pengembalian(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
-        $this->assertFalse($barter->canRequestRefund());
+        $this->assertFalse($tradeIn->canRequestRefund());
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/refund', [
-                'reason' => 'Saya berubah pikiran setelah barter tuntas sepenuhnya.',
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/refund', [
+                'reason' => 'Saya berubah pikiran setelah tukar tambah tuntas sepenuhnya.',
             ])
             ->assertSessionHas('error');
 
         $this->assertSame(0, RefundRequest::count());
     }
 
-    public function test_admin_menyetujui_pengembalian_membatalkan_barter_dan_membuka_kunci_produk(): void
+    public function test_admin_menyetujui_pengembalian_membatalkan_tukar_tambah_dan_membuka_kunci_produk(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/refund', [
-                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak barter disetujui.',
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/refund', [
+                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak tukar tambah disetujui.',
             ]);
 
         $refund = RefundRequest::firstOrFail();
@@ -343,15 +343,15 @@ class BarterPayoutAndRefundTest extends TestCase
             ])
             ->assertSessionHas('success');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
         $this->assertSame('approved', $refund->fresh()->status);
-        $this->assertSame(BarterRequest::STATUS_CANCELLED, $barter->status);
-        $this->assertSame(BarterRequest::PAYMENT_REFUNDED, $barter->payment_status);
+        $this->assertSame(TradeInRequest::STATUS_CANCELLED, $tradeIn->status);
+        $this->assertSame(TradeInRequest::PAYMENT_REFUNDED, $tradeIn->payment_status);
 
-        // Kunci barter dilepas agar produk bisa dijual atau dibarter lagi.
-        $this->assertNull($this->offeredProduct->fresh()->locked_for_barter_id);
-        $this->assertNull($this->requestedProduct->fresh()->locked_for_barter_id);
+        // Kunci tukar tambah dilepas agar produk bisa dijual atau ditukar tambah lagi.
+        $this->assertNull($this->offeredProduct->fresh()->locked_for_trade_in_id);
+        $this->assertNull($this->requestedProduct->fresh()->locked_for_trade_in_id);
 
         // Kepemilikan tidak boleh berpindah lewat jalur ini.
         $this->assertSame($this->requesterStore->id, $this->offeredProduct->fresh()->store_id);
@@ -360,11 +360,11 @@ class BarterPayoutAndRefundTest extends TestCase
 
     public function test_pengembalian_yang_disetujui_menutup_jalur_pencairan(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/refund', [
-                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak barter disetujui.',
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/refund', [
+                'reason' => 'Pihak lawan tidak pernah mengirimkan barangnya sejak tukar tambah disetujui.',
             ]);
 
         $refund = RefundRequest::firstOrFail();
@@ -372,61 +372,61 @@ class BarterPayoutAndRefundTest extends TestCase
         $this->actingAs($this->admin)
             ->post('/admin/refunds/'.$refund->public_id.'/approve');
 
-        $this->assertFalse($barter->fresh()->canRequestPayout());
+        $this->assertFalse($tradeIn->fresh()->canRequestPayout());
     }
 
-    /* ============ Barter macet: satu pihak tidak mengirim resi ============ */
+    /* ============ Tukar tambah macet: satu pihak tidak mengirim resi ============ */
 
-    /** Barter tahap kirim yang tenggatnya sudah lewat. */
-    private function overdueBarter(): BarterRequest
+    /** Tukar tambah tahap kirim yang tenggatnya sudah lewat. */
+    private function overdueTradeIn(): TradeInRequest
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
-        $barter->forceFill([
-            'shipping_started_at' => now()->subDays(BarterRequest::SHIPPING_DEADLINE_DAYS + 1),
+        $tradeIn->forceFill([
+            'shipping_started_at' => now()->subDays(TradeInRequest::SHIPPING_DEADLINE_DAYS + 1),
         ])->save();
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
     /**
-     * Barter tanpa selisih uang langsung masuk tahap kirim begitu disetujui,
+     * Tukar tambah tanpa selisih uang langsung masuk tahap kirim begitu disetujui,
      * jadi jalur ini menguji startShipping() yang sebenarnya.
      */
     public function test_tenggat_kirim_dimulai_saat_masuk_tahap_pengiriman(): void
     {
         $this->requestedProduct->forceFill(['price' => 3000000])->save();
 
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
-        $this->assertSame(BarterRequest::STATUS_SHIPPING, $barter->status);
-        $this->assertNotNull($barter->shipping_started_at);
-        $this->assertFalse($barter->isShippingOverdue());
+        $this->assertSame(TradeInRequest::STATUS_SHIPPING, $tradeIn->status);
+        $this->assertNotNull($tradeIn->shipping_started_at);
+        $this->assertFalse($tradeIn->isShippingOverdue());
 
         $this->assertTrue(
-            $barter->shippingDeadlineAt()->equalTo(
-                $barter->shipping_started_at->copy()->addDays(BarterRequest::SHIPPING_DEADLINE_DAYS)
+            $tradeIn->shippingDeadlineAt()->equalTo(
+                $tradeIn->shipping_started_at->copy()->addDays(TradeInRequest::SHIPPING_DEADLINE_DAYS)
             )
         );
 
-        $barter->forceFill([
-            'shipping_started_at' => now()->subDays(BarterRequest::SHIPPING_DEADLINE_DAYS + 1),
+        $tradeIn->forceFill([
+            'shipping_started_at' => now()->subDays(TradeInRequest::SHIPPING_DEADLINE_DAYS + 1),
         ])->save();
 
-        $this->assertTrue($barter->fresh()->isShippingOverdue());
+        $this->assertTrue($tradeIn->fresh()->isShippingOverdue());
     }
 
     public function test_belum_bisa_melapor_sebelum_tenggat_lewat(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A']);
 
-        $this->assertFalse($barter->fresh()->canReportStalledBy($this->requesterStore));
+        $this->assertFalse($tradeIn->fresh()->canReportStalledBy($this->requesterStore));
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Pihak lawan belum mengirimkan barangnya sampai sekarang.',
             ])
             ->assertSessionHas('error');
@@ -436,21 +436,21 @@ class BarterPayoutAndRefundTest extends TestCase
 
     public function test_pihak_yang_sudah_kirim_bisa_melapor_setelah_tenggat(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         // Requester memenuhi kewajibannya, responder tidak.
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A']);
 
-        $this->assertTrue($barter->fresh()->canReportStalledBy($this->requesterStore));
+        $this->assertTrue($tradeIn->fresh()->canReportStalledBy($this->requesterStore));
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Saya sudah mengirim sejak awal tapi pihak lawan belum mengirimkan barangnya.',
             ])
             ->assertSessionHas('success');
 
-        $this->assertSame(1, RefundRequest::where('barter_request_id', $barter->id)->count());
+        $this->assertSame(1, RefundRequest::where('trade_in_request_id', $tradeIn->id)->count());
     }
 
     /**
@@ -459,34 +459,34 @@ class BarterPayoutAndRefundTest extends TestCase
      */
     public function test_responder_bisa_melapor_saat_requester_yang_tidak_mengirim(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
-        $this->assertTrue($barter->fresh()->canReportStalledBy($this->responderStore));
+        $this->assertTrue($tradeIn->fresh()->canReportStalledBy($this->responderStore));
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Saya sudah mengirim barang saya tapi pengaju tidak pernah mengirimkan miliknya.',
             ])
             ->assertSessionHas('success');
 
-        $this->assertSame(1, RefundRequest::where('barter_request_id', $barter->id)->count());
+        $this->assertSame(1, RefundRequest::where('trade_in_request_id', $tradeIn->id)->count());
     }
 
     public function test_pihak_yang_belum_kirim_tidak_bisa_melapor(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         // Responder mengirim; requester yang lalai justru mencoba melapor.
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
-        $this->assertFalse($barter->fresh()->canReportStalledBy($this->requesterStore));
+        $this->assertFalse($tradeIn->fresh()->canReportStalledBy($this->requesterStore));
 
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Saya ingin membatalkan padahal saya sendiri yang belum mengirim.',
             ])
             ->assertSessionHas('error');
@@ -504,13 +504,13 @@ class BarterPayoutAndRefundTest extends TestCase
      */
     public function test_tidak_ada_yang_bisa_melapor_bila_keduanya_belum_kirim(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
-        $this->assertFalse($barter->canReportStalledBy($this->requesterStore));
-        $this->assertFalse($barter->canReportStalledBy($this->responderStore));
+        $this->assertFalse($tradeIn->canReportStalledBy($this->requesterStore));
+        $this->assertFalse($tradeIn->canReportStalledBy($this->responderStore));
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Pengaju belum mengirim, padahal saya juga belum mengirim.',
             ])
             ->assertSessionHas('error');
@@ -524,68 +524,68 @@ class BarterPayoutAndRefundTest extends TestCase
      */
     public function test_pihak_yang_belum_kirim_diberi_tahu_tenggatnya(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $pesanRequester = $barter->reportBlockReasonFor($this->requesterStore);
+        $pesanRequester = $tradeIn->reportBlockReasonFor($this->requesterStore);
         $this->assertStringContainsString('belum mengisi nomor resi', $pesanRequester);
         $this->assertStringContainsString('Batas waktunya', $pesanRequester);
 
-        $pesanResponder = $barter->reportBlockReasonFor($this->responderStore);
+        $pesanResponder = $tradeIn->reportBlockReasonFor($this->responderStore);
         $this->assertStringContainsString('dapat melapor ke admin setelah', $pesanResponder);
     }
 
     public function test_pihak_yang_belum_kirim_didesak_setelah_tenggat_lewat(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
-        $pesan = $barter->fresh()->reportBlockReasonFor($this->requesterStore);
+        $pesan = $tradeIn->fresh()->reportBlockReasonFor($this->requesterStore);
 
         $this->assertStringContainsString('Tenggat pengiriman sudah lewat', $pesan);
     }
 
     public function test_tenggat_dikirim_ke_frontend_sebagai_iso8601(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $this->assertSame(
-            $barter->shippingDeadlineAt()->toIso8601String(),
-            $barter->shipping_deadline_at
+            $tradeIn->shippingDeadlineAt()->toIso8601String(),
+            $tradeIn->shipping_deadline_at
         );
     }
 
     public function test_seller_luar_tidak_bisa_melapor(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         $luar = $this->makeSeller('c');
         $this->makeStore($luar, 'Toko C');
 
         $this->actingAs($luar)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
-                'reason' => 'Saya bukan pihak dalam barter ini tapi ingin ikut campur.',
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
+                'reason' => 'Saya bukan pihak dalam tukar tambah ini tapi ingin ikut campur.',
             ])
             ->assertForbidden();
 
         $this->assertSame(0, RefundRequest::count());
     }
 
-    public function test_admin_menyetujui_laporan_membatalkan_barter_dan_membuka_kunci(): void
+    public function test_admin_menyetujui_laporan_membatalkan_tukar_tambah_dan_membuka_kunci(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Saya sudah mengirim barang saya tapi pengaju tidak pernah mengirimkan miliknya.',
             ]);
 
@@ -597,36 +597,36 @@ class BarterPayoutAndRefundTest extends TestCase
             ])
             ->assertSessionHas('success');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $this->assertSame(BarterRequest::STATUS_CANCELLED, $barter->status);
-        $this->assertSame(BarterRequest::PAYMENT_REFUNDED, $barter->payment_status);
-        $this->assertNull($this->offeredProduct->fresh()->locked_for_barter_id);
-        $this->assertNull($this->requestedProduct->fresh()->locked_for_barter_id);
+        $this->assertSame(TradeInRequest::STATUS_CANCELLED, $tradeIn->status);
+        $this->assertSame(TradeInRequest::PAYMENT_REFUNDED, $tradeIn->payment_status);
+        $this->assertNull($this->offeredProduct->fresh()->locked_for_trade_in_id);
+        $this->assertNull($this->requestedProduct->fresh()->locked_for_trade_in_id);
     }
 
     /**
-     * Barter tanpa selisih uang dulu sama sekali tidak punya jalan keluar,
+     * Tukar tambah tanpa selisih uang dulu sama sekali tidak punya jalan keluar,
      * karena jalur pengembalian dana mensyaratkan adanya pembayaran.
      */
-    public function test_barter_tanpa_selisih_uang_yang_macet_tetap_bisa_dilaporkan(): void
+    public function test_tukar_tambah_tanpa_selisih_uang_yang_macet_tetap_bisa_dilaporkan(): void
     {
         $this->requestedProduct->forceFill(['price' => 3000000])->save();
 
-        $barter = $this->acceptedBarter();
+        $tradeIn = $this->acceptedTradeIn();
 
-        $this->assertSame('0.00', (string) $barter->additional_cash);
-        $this->assertSame(BarterRequest::STATUS_SHIPPING, $barter->status);
+        $this->assertSame('0.00', (string) $tradeIn->additional_cash);
+        $this->assertSame(TradeInRequest::STATUS_SHIPPING, $tradeIn->status);
 
-        $barter->forceFill([
-            'shipping_started_at' => now()->subDays(BarterRequest::SHIPPING_DEADLINE_DAYS + 1),
+        $tradeIn->forceFill([
+            'shipping_started_at' => now()->subDays(TradeInRequest::SHIPPING_DEADLINE_DAYS + 1),
         ])->save();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', [
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
                 'reason' => 'Pengaju tidak pernah mengirimkan barangnya meski tenggat sudah lewat.',
             ])
             ->assertSessionHas('success');
@@ -637,52 +637,52 @@ class BarterPayoutAndRefundTest extends TestCase
             ->post('/admin/refunds/'.$refund->public_id.'/approve')
             ->assertSessionHas('success');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $this->assertSame(BarterRequest::STATUS_CANCELLED, $barter->status);
+        $this->assertSame(TradeInRequest::STATUS_CANCELLED, $tradeIn->status);
         // Tidak ada uang yang kembali, jadi status pembayaran tidak diubah.
-        $this->assertSame(BarterRequest::PAYMENT_NOT_REQUIRED, $barter->payment_status);
-        $this->assertNull($this->offeredProduct->fresh()->locked_for_barter_id);
-        $this->assertNull($this->requestedProduct->fresh()->locked_for_barter_id);
+        $this->assertSame(TradeInRequest::PAYMENT_NOT_REQUIRED, $tradeIn->payment_status);
+        $this->assertNull($this->offeredProduct->fresh()->locked_for_trade_in_id);
+        $this->assertNull($this->requestedProduct->fresh()->locked_for_trade_in_id);
     }
 
     public function test_tidak_bisa_melapor_dua_kali(): void
     {
-        $barter = $this->overdueBarter();
+        $tradeIn = $this->overdueTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-B']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-B']);
 
         $payload = ['reason' => 'Pengaju tidak pernah mengirimkan barangnya meski tenggat sudah lewat.'];
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', $payload)
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', $payload)
             ->assertSessionHas('success');
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/report', $payload)
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', $payload)
             ->assertSessionHas('error');
 
         $this->assertSame(1, RefundRequest::count());
     }
 
-    public function test_barter_selesai_tidak_bisa_dilaporkan_macet(): void
+    public function test_tukar_tambah_selesai_tidak_bisa_dilaporkan_macet(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
-        $barter->forceFill([
-            'shipping_started_at' => now()->subDays(BarterRequest::SHIPPING_DEADLINE_DAYS + 1),
+        $tradeIn->forceFill([
+            'shipping_started_at' => now()->subDays(TradeInRequest::SHIPPING_DEADLINE_DAYS + 1),
         ])->save();
 
-        $this->assertFalse($barter->fresh()->canReportStalledBy($this->responderStore));
+        $this->assertFalse($tradeIn->fresh()->canReportStalledBy($this->responderStore));
     }
 
     public function test_pencairan_yang_sudah_cair_menghalangi_persetujuan_pengembalian(): void
     {
-        $barter = $this->completedBarter();
+        $tradeIn = $this->completedTradeIn();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/payout', $this->bankPayload());
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/payout', $this->bankPayload());
 
         $payout = PayoutRequest::firstOrFail();
 
@@ -691,9 +691,9 @@ class BarterPayoutAndRefundTest extends TestCase
                 'transfer_proof' => UploadedFile::fake()->image('bukti.jpg'),
             ]);
 
-        // Barter sudah completed sehingga refund pun tidak bisa diajukan lagi,
+        // Tukar tambah sudah completed sehingga refund pun tidak bisa diajukan lagi,
         // tapi penjagaannya diuji langsung di tingkat model.
-        $this->assertNotNull($barter->fresh()->payout_released_at);
-        $this->assertFalse($barter->fresh()->canRequestRefund());
+        $this->assertNotNull($tradeIn->fresh()->payout_released_at);
+        $this->assertFalse($tradeIn->fresh()->canRequestRefund());
     }
 }

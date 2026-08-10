@@ -201,7 +201,7 @@ try {
             'sale_type' => Product::SALE_TYPE_NORMAL,
         ]);
 
-        // Barterable product owned by Seller B (requested in barter test)
+        // TradeInEnabled product owned by Seller B (requested in tukar tambah test)
         Product::create([
             'store_id' => $storeB->id,
             'name' => 'Keris Pusaka Omyang Jimbe',
@@ -210,7 +210,7 @@ try {
             'category' => 'Senjata',
             'description' => 'Keris pusaka kuno peninggalan leluhur.',
             'image' => 'products/dummy_keris.jpg',
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
             'approval_status' => Product::STATUS_APPROVED,
             'approved_at' => now(),
             'approved_by' => $admin->id,
@@ -219,7 +219,7 @@ try {
             'sale_type' => Product::SALE_TYPE_NORMAL,
         ]);
 
-        // Barterable product owned by Seller A (offered in barter test)
+        // TradeInEnabled product owned by Seller A (offered in tukar tambah test)
         Product::create([
             'store_id' => $storeA->id,
             'name' => 'Pedang Katana Kuno',
@@ -228,7 +228,7 @@ try {
             'category' => 'Senjata',
             'description' => 'Pedang katana antik buatan pandai besi Jepang abad 18.',
             'image' => 'products/dummy_katana.jpg',
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
             'approval_status' => Product::STATUS_APPROVED,
             'approved_at' => now(),
             'approved_by' => $admin->id,

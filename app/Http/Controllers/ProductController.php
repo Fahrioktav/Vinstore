@@ -153,7 +153,7 @@ class ProductController extends Controller
             'images.*' => 'image|max:2048',
             'video' => 'nullable|file|mimes:mp4,webm,mov|max:20480',
             'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'is_barterable' => 'nullable|boolean',
+            'is_trade_in_enabled' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
             'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
             'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
@@ -209,8 +209,8 @@ class ProductController extends Controller
             'images' => $galleryPaths ?: null,
             'video' => $videoPath,
             'certificate' => $certificatePath,
-            // Produk tebak harga tidak bisa dibarter selama proses berlangsung.
-            'is_barterable' => $isTebakHarga ? false : $request->boolean('is_barterable'),
+            // Produk tebak harga tidak bisa ditukar tambah selama proses berlangsung.
+            'is_trade_in_enabled' => $isTebakHarga ? false : $request->boolean('is_trade_in_enabled'),
             'approval_status' => Product::STATUS_PENDING_VALIDATOR,
             'sale_type' => $saleType,
             'guess_discount_price' => $isTebakHarga ? $request->guess_discount_price : null,
@@ -254,7 +254,7 @@ class ProductController extends Controller
             'images.*' => 'image|max:2048',
             'video' => 'nullable|file|mimes:mp4,webm,mov|max:20480',
             'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'is_barterable' => 'nullable|boolean',
+            'is_trade_in_enabled' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
             'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
             'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
@@ -274,12 +274,12 @@ class ProductController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Produk Tebak Harga yang sedang berjalan atau sudah selesai tidak dapat diubah.');
         }
 
-        // Harga produk yang sedang terikat barter dibekukan. Selisih yang harus
-        // dibayar dikunci saat barter disetujui, jadi mengubah harga sesudahnya
-        // hanya membuat kartu barter menampilkan angka yang bertentangan dengan
+        // Harga produk yang sedang terikat tukar tambah dibekukan. Selisih yang harus
+        // dibayar dikunci saat tukar tambah disetujui, jadi mengubah harga sesudahnya
+        // hanya membuat kartu tukar tambah menampilkan angka yang bertentangan dengan
         // yang benar-benar ditagih (temuan V3-05).
-        if ($product->isLockedForBarter() && (float) $request->input('price') !== (float) $product->price) {
-            return back()->with('error', 'Harga produk ini tidak dapat diubah karena sedang terikat proses barter. Selesaikan atau batalkan barternya terlebih dahulu.');
+        if ($product->isLockedForTradeIn() && (float) $request->input('price') !== (float) $product->price) {
+            return back()->with('error', 'Harga produk ini tidak dapat diubah karena sedang terikat proses tukar tambah. Selesaikan atau batalkan tukar tambahnya terlebih dahulu.');
         }
 
         // Update gambar utama jika ada gambar baru
@@ -346,7 +346,7 @@ class ProductController extends Controller
         $product->height = $request->height ?: null;
         $product->category = $request->category;
         $product->description = $request->description;
-        $product->is_barterable = $isTebakHarga ? false : $request->boolean('is_barterable');
+        $product->is_trade_in_enabled = $isTebakHarga ? false : $request->boolean('is_trade_in_enabled');
         $product->approval_status = Product::STATUS_PENDING_VALIDATOR;
         $product->approved_at = null;
         $product->approved_by = null;

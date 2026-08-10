@@ -78,14 +78,14 @@ class Store extends Model
         return $this->hasMany(WithdrawalRequest::class);
     }
 
-    public function barterRequestsSent()
+    public function tradeInRequestsSent()
     {
-        return $this->hasMany(BarterRequest::class, 'requester_store_id');
+        return $this->hasMany(TradeInRequest::class, 'requester_store_id');
     }
 
-    public function barterRequestsReceived()
+    public function tradeInRequestsReceived()
     {
-        return $this->hasMany(BarterRequest::class, 'responder_store_id');
+        return $this->hasMany(TradeInRequest::class, 'responder_store_id');
     }
 
     /**

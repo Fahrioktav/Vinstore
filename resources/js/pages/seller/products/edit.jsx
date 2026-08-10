@@ -336,20 +336,20 @@ export default function SellerEditProductPage() {
             {!isTebakHarga && (
               <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <input
-                  id="is_barterable"
+                  id="is_trade_in_enabled"
                   type="checkbox"
-                  name="is_barterable"
+                  name="is_trade_in_enabled"
                   value="1"
-                  defaultChecked={!!product.is_barterable}
+                  defaultChecked={!!product.is_trade_in_enabled}
                   className="mt-1 h-4 w-4"
                 />
                 <span>
                   <span className="block text-sm font-semibold text-[#2F3E46]">
-                    Produk ini bisa dibarter
+                    Produk ini bisa ditukar tambah
                   </span>
                   <span className="block text-xs text-gray-500">
-                    Jika dicentang, seller lain dapat mengajukan barter untuk
-                    produk ini (selama stok masih ada).
+                    Jika dicentang, seller lain dapat mengajukan tukar tambah
+                    untuk produk ini (selama stok masih ada).
                   </span>
                 </span>
               </label>

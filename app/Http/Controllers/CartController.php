@@ -58,10 +58,10 @@ class CartController extends Controller
             return back()->with('error', 'Produk Tebak Harga ini belum dapat dibeli. Ikuti dulu proses tebak harganya.');
         }
 
-        // Produk yang sedang terikat barter berjalan tidak boleh dibeli sampai
-        // barternya tuntas atau batal (temuan T-08).
-        if ($product->isLockedForBarter()) {
-            return back()->with('error', 'Produk ini sedang dalam proses barter dan belum tersedia untuk dibeli.');
+        // Produk yang sedang terikat tukar tambah berjalan tidak boleh dibeli sampai
+        // tukar tambahnya tuntas atau batal (temuan T-08).
+        if ($product->isLockedForTradeIn()) {
+            return back()->with('error', 'Produk ini sedang dalam proses tukar tambah dan belum tersedia untuk dibeli.');
         }
 
         // Cek stok produk

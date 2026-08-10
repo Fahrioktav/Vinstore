@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BarterRequest;
 use App\Models\Order;
 use App\Models\PlatformRevenue;
 use App\Models\Product;
 use App\Models\RefundRequest;
+use App\Models\TradeInRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,13 +56,13 @@ class RefundRequestController extends Controller
     }
 
     /**
-     * Requester meminta selisih uang barternya dikembalikan karena barter tidak
+     * Requester meminta selisih uang tukar tambahnya dikembalikan karena tukar tambah tidak
      * pernah tuntas — misalnya pihak lawan tidak pernah mengirimkan barangnya.
      *
      * Keputusan ada di admin, yang bisa melihat status pengiriman kedua pihak
      * sebelum memutuskan.
      */
-    public function storeForBarter(Request $request, BarterRequest $barter)
+    public function storeForTradeIn(Request $request, TradeInRequest $tradeIn)
     {
         $validated = $request->validate([
             'reason' => 'required|string|min:10|max:1000',
@@ -72,13 +72,13 @@ class RefundRequestController extends Controller
         $store = Auth::user()->store;
 
         // Hanya pihak yang benar-benar membayar selisihnya yang berhak
-        // memintanya kembali — bisa pengaju, bisa juga penerima barter.
-        if (! $barter->isPayer($store)) {
-            abort(403, 'Hanya pembayar selisih barter yang dapat meminta pengembalian dana.');
+        // memintanya kembali — bisa pengaju, bisa juga penerima tukar tambah.
+        if (! $tradeIn->isPayer($store)) {
+            abort(403, 'Hanya pembayar selisih tukar tambah yang dapat meminta pengembalian dana.');
         }
 
-        if (! $barter->canRequestRefund()) {
-            return back()->with('error', $this->barterRefundBlockReason($barter));
+        if (! $tradeIn->canRequestRefund()) {
+            return back()->with('error', $this->tradeInRefundBlockReason($tradeIn));
         }
 
         $proofImagePath = null;
@@ -88,7 +88,7 @@ class RefundRequestController extends Controller
         }
 
         RefundRequest::create([
-            'barter_request_id' => $barter->id,
+            'trade_in_request_id' => $tradeIn->id,
             'user_id' => Auth::id(),
             'reason' => $validated['reason'],
             'proof_image' => $proofImagePath,
@@ -102,13 +102,13 @@ class RefundRequestController extends Controller
      * Pihak yang sudah mengirim melaporkan bahwa lawannya tidak kunjung
      * mengisi resi setelah tenggat terlampaui.
      *
-     * Laporannya disimpan sebagai RefundRequest atas barter tersebut, karena
-     * keputusan admin yang diinginkan sama persis: batalkan barter, lepas kunci
+     * Laporannya disimpan sebagai RefundRequest atas tukar tambah tersebut, karena
+     * keputusan admin yang diinginkan sama persis: batalkan tukar tambah, lepas kunci
      * kedua produk, dan kembalikan selisih uangnya bila ada. Berbeda dengan
-     * storeForBarter(), jalur ini terbuka untuk KEDUA peran dan tidak
-     * mensyaratkan adanya selisih uang — barter tanpa uang pun bisa macet.
+     * storeForTradeIn(), jalur ini terbuka untuk KEDUA peran dan tidak
+     * mensyaratkan adanya selisih uang — tukar tambah tanpa uang pun bisa macet.
      */
-    public function reportStalledBarter(Request $request, BarterRequest $barter)
+    public function reportStalledTradeIn(Request $request, TradeInRequest $tradeIn)
     {
         $validated = $request->validate([
             'reason' => 'required|string|min:10|max:1000',
@@ -117,14 +117,14 @@ class RefundRequestController extends Controller
 
         $store = Auth::user()->store;
 
-        if (! $store || $barter->roleOfStore($store) === null) {
-            abort(403, 'Anda bukan pihak dalam barter ini.');
+        if (! $store || $tradeIn->roleOfStore($store) === null) {
+            abort(403, 'Anda bukan pihak dalam tukar tambah ini.');
         }
 
-        if (! $barter->canReportStalledBy($store)) {
+        if (! $tradeIn->canReportStalledBy($store)) {
             return back()->with(
                 'error',
-                $barter->reportBlockReasonFor($store) ?? 'Barter ini belum dapat dilaporkan.'
+                $tradeIn->reportBlockReasonFor($store) ?? 'Tukar tambah ini belum dapat dilaporkan.'
             );
         }
 
@@ -135,7 +135,7 @@ class RefundRequestController extends Controller
         }
 
         RefundRequest::create([
-            'barter_request_id' => $barter->id,
+            'trade_in_request_id' => $tradeIn->id,
             'user_id' => Auth::id(),
             'reason' => $validated['reason'],
             'proof_image' => $proofImagePath,
@@ -145,25 +145,25 @@ class RefundRequestController extends Controller
         return back()->with('success', 'Laporan dikirim. Admin akan meninjau status pengiriman kedua pihak.');
     }
 
-    private function barterRefundBlockReason(BarterRequest $barter): string
+    private function tradeInRefundBlockReason(TradeInRequest $tradeIn): string
     {
-        if (! $barter->requiresPayment()) {
-            return 'Barter ini tidak melibatkan selisih uang.';
+        if (! $tradeIn->requiresPayment()) {
+            return 'Tukar tambah ini tidak melibatkan selisih uang.';
         }
 
-        if ($barter->payment_status !== BarterRequest::PAYMENT_PAID) {
-            return 'Belum ada dana yang dibayarkan untuk barter ini.';
+        if ($tradeIn->payment_status !== TradeInRequest::PAYMENT_PAID) {
+            return 'Belum ada dana yang dibayarkan untuk tukar tambah ini.';
         }
 
-        if ($barter->isCompleted()) {
-            return 'Barter ini sudah selesai dan tidak dapat dimintakan pengembalian dana.';
+        if ($tradeIn->isCompleted()) {
+            return 'Tukar tambah ini sudah selesai dan tidak dapat dimintakan pengembalian dana.';
         }
 
-        if ($barter->payout_released_at !== null) {
-            return 'Selisih uang barter ini sudah dicairkan ke pihak lawan.';
+        if ($tradeIn->payout_released_at !== null) {
+            return 'Selisih uang tukar tambah ini sudah dicairkan ke pihak lawan.';
         }
 
-        return 'Pengajuan pengembalian dana untuk barter ini sudah ada.';
+        return 'Pengajuan pengembalian dana untuk tukar tambah ini sudah ada.';
     }
 
     public function adminIndex()
@@ -174,10 +174,10 @@ class RefundRequestController extends Controller
             'order.product',
             'order.auction',
             'order.store',
-            'barterRequest.offeredProduct',
-            'barterRequest.requestedProduct',
-            'barterRequest.requesterStore',
-            'barterRequest.responderStore',
+            'tradeInRequest.offeredProduct',
+            'tradeInRequest.requestedProduct',
+            'tradeInRequest.requesterStore',
+            'tradeInRequest.responderStore',
         ])->latest()->get();
 
         return Inertia::render('admin/refunds/index', compact('refunds'));
@@ -197,8 +197,8 @@ class RefundRequestController extends Controller
                     throw new \RuntimeException('Pengajuan refund ini sudah diproses.');
                 }
 
-                if ($refund->barter_request_id !== null) {
-                    $this->approveBarterRefund($refund);
+                if ($refund->trade_in_request_id !== null) {
+                    $this->approveTradeInRefund($refund);
                 } else {
                     $order = Order::whereKey($refund->order_id)->lockForUpdate()->firstOrFail();
 
@@ -239,41 +239,41 @@ class RefundRequestController extends Controller
     }
 
     /**
-     * Barter gagal: selisih uang dikembalikan ke pembayarnya, barternya dibatalkan,
-     * dan kedua produk dilepas dari kunci barter agar bisa dijual/dibarter lagi.
+     * Tukar tambah gagal: selisih uang dikembalikan ke pembayarnya, tukar tambahnya dibatalkan,
+     * dan kedua produk dilepas dari kunci tukar tambah agar bisa dijual/ditukar tambah lagi.
      *
      * Kepemilikan produk tidak pernah berpindah di jalur ini — pertukaran hanya
-     * terjadi lewat BarterController::confirmReceipt() saat kedua pihak
+     * terjadi lewat TradeInController::confirmReceipt() saat kedua pihak
      * mengonfirmasi penerimaan.
      */
-    private function approveBarterRefund(RefundRequest $refund): void
+    private function approveTradeInRefund(RefundRequest $refund): void
     {
-        $barter = BarterRequest::whereKey($refund->barter_request_id)->lockForUpdate()->firstOrFail();
+        $tradeIn = TradeInRequest::whereKey($refund->trade_in_request_id)->lockForUpdate()->firstOrFail();
 
-        if ($barter->payout_released_at !== null) {
+        if ($tradeIn->payout_released_at !== null) {
             throw new \RuntimeException(
-                'Selisih uang barter ini sudah dicairkan ke pihak lawan, sehingga tidak dapat dibalik otomatis. '
+                'Selisih uang tukar tambah ini sudah dicairkan ke pihak lawan, sehingga tidak dapat dibalik otomatis. '
                 .'Selesaikan pengembalian dana secara manual lalu tolak pengajuan ini.'
             );
         }
 
-        if ($barter->isCompleted()) {
-            throw new \RuntimeException('Barter ini sudah selesai; pengembalian dana tidak dapat disetujui.');
+        if ($tradeIn->isCompleted()) {
+            throw new \RuntimeException('Tukar tambah ini sudah selesai; pengembalian dana tidak dapat disetujui.');
         }
 
-        $updates = ['status' => BarterRequest::STATUS_CANCELLED];
+        $updates = ['status' => TradeInRequest::STATUS_CANCELLED];
 
-        // Barter tanpa selisih uang tetap bisa dibatalkan lewat jalur ini
+        // Tukar tambah tanpa selisih uang tetap bisa dibatalkan lewat jalur ini
         // (laporan pihak lawan tidak mengirim). Tidak ada uang yang kembali,
         // jadi payment_status-nya jangan diubah jadi 'refunded'.
-        if ($barter->requiresPayment()) {
-            $updates['payment_status'] = BarterRequest::PAYMENT_REFUNDED;
+        if ($tradeIn->requiresPayment()) {
+            $updates['payment_status'] = TradeInRequest::PAYMENT_REFUNDED;
         }
 
-        $barter->forceFill($updates)->save();
+        $tradeIn->forceFill($updates)->save();
 
-        Product::where('locked_for_barter_id', $barter->id)
-            ->update(['locked_for_barter_id' => null]);
+        Product::where('locked_for_trade_in_id', $tradeIn->id)
+            ->update(['locked_for_trade_in_id' => null]);
     }
 
     public function reject(Request $request, RefundRequest $refund)
@@ -294,7 +294,7 @@ class RefundRequestController extends Controller
         ]);
 
         // Sanggahan ditolak berarti penahanan dicabut: seller kini bisa
-        // mengajukan pencairan atas pesanan/barter ini. Dananya sendiri tidak
+        // mengajukan pencairan atas pesanan/tukar tambah ini. Dananya sendiri tidak
         // cair di sini — pencairan selalu lewat PayoutRequest yang disetujui
         // admin.
 

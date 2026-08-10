@@ -1,32 +1,43 @@
-# Dokumentasi Sistem Pembayaran Barter
+# Dokumentasi Sistem Pembayaran Tukar Tambah
+
+> **Catatan penamaan.** Fitur ini dulu bernama "barter" dan diganti menjadi
+> "tukar tambah" karena adanya pembayaran selisih untuk barang yang harganya
+> tidak sama. Di kode namanya `TradeIn*` (`TradeInRequest`, `TradeInController`,
+> tabel `trade_in_requests`).
+>
+> **Satu-satunya yang tidak ikut diganti adalah URL webhook**
+> `/midtrans/barter/notification`. Alamat itu sudah terdaftar sebagai Payment
+> Notification URL di dashboard Midtrans; menggantinya di kode saja akan membuat
+> notifikasi pembayaran masuk ke alamat yang tidak ada dan selisih tidak pernah
+> settle. Ganti hanya bila dashboard Midtrans ikut diperbarui.
 
 ## Overview
-Sistem pembayaran untuk selisih harga pada fitur barter telah ditambahkan. Ketika dua seller melakukan barter produk dengan harga berbeda, seller yang memiliki produk dengan harga lebih murah harus membayar selisih harga melalui Midtrans sebelum kepemilikan produk ditukar.
+Sistem pembayaran untuk selisih harga pada fitur tukar tambah telah ditambahkan. Ketika dua seller melakukan tukar tambah produk dengan harga berbeda, seller yang memiliki produk dengan harga lebih murah harus membayar selisih harga melalui Midtrans sebelum kepemilikan produk ditukar.
 
 ## Alur Kerja
 
-### 1. Pengajuan Barter
-- Seller A mengajukan barter produk miliknya dengan produk Seller B
+### 1. Pengajuan Tukar Tambah
+- Seller A mengajukan tukar tambah produk miliknya dengan produk Seller B
 - Sistem otomatis menghitung selisih harga:
   - Jika harga produk Seller A < harga produk Seller B
   - Maka `additional_cash` = harga produk Seller B - harga produk Seller A
-  - Seller A harus membayar `additional_cash` jika barter disetujui
+  - Seller A harus membayar `additional_cash` jika tukar tambah disetujui
 
-### 2. Persetujuan Barter
-- Seller B menerima pengajuan barter
+### 2. Persetujuan Tukar Tambah
+- Seller B menerima pengajuan tukar tambah
 - Jika **tidak ada** `additional_cash` (harga sama atau produk Seller A lebih mahal):
   - ✅ Kepemilikan produk **langsung ditukar**
-  - Status barter: `accepted`
+  - Status tukar tambah: `accepted`
   - Payment status: `not_required`
 
 - Jika **ada** `additional_cash` (produk Seller A lebih murah):
   - ⏳ Kepemilikan produk **belum ditukar**
-  - Status barter: `accepted`
+  - Status tukar tambah: `accepted`
   - Payment status: `pending`
-  - Seller A harus melakukan pembayaran untuk menyelesaikan barter
+  - Seller A harus melakukan pembayaran untuk menyelesaikan tukar tambah
 
 ### 3. Pembayaran (jika diperlukan)
-- Seller A (requester) membuka halaman barter
+- Seller A (requester) membuka halaman tukar tambah
 - Muncul tombol **"💳 Bayar Sekarang"** dengan animasi pulse
 - Klik tombol tersebut akan membuka halaman pembayaran Midtrans
 - Midtrans Snap popup otomatis muncul
@@ -34,12 +45,12 @@ Sistem pembayaran untuk selisih harga pada fitur barter telah ditambahkan. Ketik
 
 ### 4. Callback dari Midtrans
 - Midtrans mengirim notifikasi ke endpoint: `/midtrans/barter/notification`
-- Controller `BarterPaymentNotificationController` memproses notifikasi
+- Controller `TradeInPaymentNotificationController` memproses notifikasi
 - Jika pembayaran **berhasil** (`paid`):
   - ✅ Kepemilikan kedua produk **ditukar**
   - Payment status: `paid`
   - Timestamp `paid_at` dicatat
-  - Pengajuan barter pending lain yang melibatkan kedua produk dibatalkan otomatis
+  - Pengajuan tukar tambah pending lain yang melibatkan kedua produk dibatalkan otomatis
 
 - Jika pembayaran **gagal/expired** (`failed`, `expired`):
   - ❌ Kepemilikan produk **belum ditukar**
@@ -49,17 +60,17 @@ Sistem pembayaran untuk selisih harga pada fitur barter telah ditambahkan. Ketik
 ## File yang Dimodifikasi/Dibuat
 
 ### 1. Database Migration
-**File:** `database/migrations/2026_07_27_000001_add_payment_fields_to_barter_requests_table.php`
+**File:** `database/migrations/2026_07_27_000001_add_payment_fields_to_trade_in_requests_table.php`
 
-Kolom baru di tabel `barter_requests`:
+Kolom baru di tabel `trade_in_requests`:
 - `payment_status`: enum ('not_required', 'pending', 'paid', 'failed', 'expired')
-- `payment_reference`: reference ID untuk tracking (format: `BARTER-{public_id}-{timestamp}`)
+- `payment_reference`: reference ID untuk tracking (format: `TUKARTAMBAH-{public_id}-{timestamp}`)
 - `snap_token`: token dari Midtrans untuk Snap popup
 - `midtrans_transaction_id`: transaction ID dari Midtrans
 - `paid_at`: timestamp kapan pembayaran selesai
 
 ### 2. Model
-**File:** `app/Models/BarterRequest.php`
+**File:** `app/Models/TradeInRequest.php`
 
 **Konstanta Payment Status:**
 ```php
@@ -73,27 +84,27 @@ public const PAYMENT_EXPIRED = 'expired';
 **Helper Methods:**
 - `requiresPayment()`: Cek apakah ada additional_cash
 - `isPaymentCompleted()`: Cek apakah payment sudah selesai atau tidak diperlukan
-- `isReadyToExchange()`: Cek apakah barter siap untuk tukar produk
+- `isReadyToExchange()`: Cek apakah tukar tambah siap untuk tukar produk
 
 ### 3. Controller
-**File:** `app/Http/Controllers/BarterController.php`
+**File:** `app/Http/Controllers/TradeInController.php`
 
 **Method yang Dimodifikasi:**
 - `accept()`: Cek apakah ada payment, jika ya set status pending dan tunggu payment, jika tidak langsung tukar produk
 
 **Method Baru:**
 - `pay()`: Generate Midtrans Snap Token dan render halaman pembayaran
-  - URL: `GET /seller/barter/{barter}/pay`
+  - URL: `GET /seller/tukar-tambah/{tradeIn}/pay`
   - Validasi: hanya requester yang bisa bayar
   - Generate atau reuse snap token
-  - Render view `seller/barter/payment`
+  - Render view `seller/tukar-tambah/payment`
 
 **Helper Methods Baru:**
-- `exchangeProducts()`: Tukar kepemilikan produk setelah barter selesai
+- `exchangeProducts()`: Tukar kepemilikan produk setelah tukar tambah selesai
 - `cancelOtherPendingRequests()`: Batalkan pengajuan pending lain yang melibatkan produk yang sama
 
 ### 4. Webhook Controller
-**File:** `app/Http/Controllers/BarterPaymentNotificationController.php`
+**File:** `app/Http/Controllers/TradeInPaymentNotificationController.php`
 
 Controller baru untuk handle webhook dari Midtrans:
 - Validasi signature Midtrans
@@ -108,11 +119,11 @@ Controller baru untuk handle webhook dari Midtrans:
 Routes baru:
 ```php
 // Seller routes
-Route::get('/barter/{barter}/pay', [BarterController::class, 'pay'])->name('barter.pay');
+Route::get('/tukar-tambah/{tradeIn}/pay', [TradeInController::class, 'pay'])->name('trade-in.pay');
 
 // Public webhook (no auth)
-Route::post('/midtrans/barter/notification', BarterPaymentNotificationController::class)
-    ->name('midtrans.barter.notification');
+Route::post('/midtrans/barter/notification', TradeInPaymentNotificationController::class)
+    ->name('midtrans.trade-in.notification');
 ```
 
 **File:** `bootstrap/app.php`
@@ -126,20 +137,20 @@ $middleware->validateCsrfTokens(except: [
 ```
 
 ### 6. Frontend Views
-**File:** `resources/js/pages/seller/barter/index.jsx`
+**File:** `resources/js/pages/seller/tukar-tambah/index.jsx`
 
 **Perubahan:**
 - Tambah `PaymentStatusBadge` component untuk menampilkan status payment
 - Update `RequestCard` untuk menampilkan info payment dengan warna dinamis
 - Update `OutgoingTab` untuk menampilkan tombol **"💳 Bayar Sekarang"** jika:
-  - Status barter: `accepted`
+  - Status tukar tambah: `accepted`
   - Payment status: `pending`
 - Tombol payment memiliki animasi `animate-pulse` agar menarik perhatian
 
-**File:** `resources/js/pages/seller/barter/payment.jsx` (BARU)
+**File:** `resources/js/pages/seller/tukar-tambah/payment.jsx` (BARU)
 
 Halaman pembayaran dengan Midtrans Snap:
-- Menampilkan detail barter (kedua produk yang akan ditukar)
+- Menampilkan detail tukar tambah (kedua produk yang akan ditukar)
 - Menampilkan breakdown harga dan selisih
 - Tombol pembayaran yang trigger Midtrans Snap popup
 - Auto-trigger Snap popup 500ms setelah halaman load
@@ -166,20 +177,20 @@ https://your-domain.com/midtrans/barter/notification
 
 ## Testing
 
-### Scenario 1: Barter Tanpa Pembayaran (Harga Sama/Lebih Mahal)
+### Scenario 1: Tukar Tambah Tanpa Pembayaran (Harga Sama/Lebih Mahal)
 1. Login sebagai Seller A
-2. Ajukan barter dengan produk yang harga sama atau lebih mahal dari produk target
+2. Ajukan tukar tambah dengan produk yang harga sama atau lebih mahal dari produk target
 3. Login sebagai Seller B
-4. Terima barter
+4. Terima tukar tambah
 5. ✅ Produk langsung tertukar, tidak perlu pembayaran
 
-### Scenario 2: Barter Dengan Pembayaran (Harga Lebih Murah)
+### Scenario 2: Tukar Tambah Dengan Pembayaran (Harga Lebih Murah)
 1. Login sebagai Seller A
-2. Ajukan barter dengan produk yang harganya lebih murah dari produk target
-3. Sistem menampilkan warning: "Anda perlu membayar tambahan Rp X jika barter disetujui"
+2. Ajukan tukar tambah dengan produk yang harganya lebih murah dari produk target
+3. Sistem menampilkan warning: "Anda perlu membayar tambahan Rp X jika tukar tambah disetujui"
 4. Lanjutkan pengajuan
 5. Login sebagai Seller B
-6. Terima barter
+6. Terima tukar tambah
 7. Sistem menampilkan: "Requester harus melakukan pembayaran Rp X"
 8. Login kembali sebagai Seller A
 9. Tab "Permintaan Saya" menampilkan tombol **"💳 Bayar Sekarang"**
@@ -219,11 +230,11 @@ Masalah ini terjadi ketika webhook dari Midtrans belum sampai atau lambat dipros
 Frontend sekarang sudah dilengkapi dengan mekanisme polling otomatis:
 - Setelah payment success, sistem akan mengecek status payment setiap 3 detik
 - Maksimal 30 detik (10 kali pengecekan)
-- Jika status sudah `paid`, otomatis redirect ke halaman barter
+- Jika status sudah `paid`, otomatis redirect ke halaman tukar tambah
 
 #### Solusi 2: Manual Check via Endpoint
 Jika masih stuck, user bisa refresh halaman atau klik tombol "Bayar Sekarang" lagi. Sistem akan:
-- Memanggil endpoint `/seller/barter/{barter}/payment-status`
+- Memanggil endpoint `/seller/tukar-tambah/{tradeIn}/payment-status`
 - Query status ke Midtrans API langsung
 - Update database jika payment sudah berhasil di Midtrans tapi belum ter-sync
 
@@ -233,15 +244,15 @@ Jika masih stuck, user bisa refresh halaman atau klik tombol "Bayar Sekarang" la
 ```bash
 # Cari payment_reference dari database
 php artisan tinker
->>> $barter = \App\Models\BarterRequest::where('status', 'accepted')->first();
->>> $barter->payment_reference;
-# Output: BARTER-BRT12345678-1722074400
+>>> $tradeIn = \App\Models\TradeInRequest::where('status', 'accepted')->first();
+>>> $tradeIn->payment_reference;
+# Output: TUKARTAMBAH-BRT12345678-1722074400
 
 # Simulasi webhook success
-php artisan test:barter-webhook BARTER-BRT12345678-1722074400 settlement
+php artisan test:tukar-tambah-webhook TUKARTAMBAH-BRT12345678-1722074400 settlement
 
 # Simulasi webhook failed
-php artisan test:barter-webhook BARTER-BRT12345678-1722074400 deny
+php artisan test:tukar-tambah-webhook TUKARTAMBAH-BRT12345678-1722074400 deny
 ```
 
 **B. Menggunakan ngrok (Untuk testing dengan Midtrans Sandbox):**
@@ -264,8 +275,8 @@ https://abc123.ngrok.io/midtrans/barter/notification
 # Lihat log real-time
 tail -f storage/logs/laravel.log
 
-# Cari error terkait barter payment
-grep -i "barter" storage/logs/laravel.log
+# Cari error terkait tukar tambah payment
+grep -iE "trade-in|tukar tambah" storage/logs/laravel.log
 grep -i "payment" storage/logs/laravel.log
 ```
 
@@ -308,30 +319,30 @@ grep -i "payment" storage/logs/laravel.log
 **Solusi:**
 1. Cek log error:
    ```bash
-   grep "Barter products exchanged" storage/logs/laravel.log
-   grep "Error processing barter payment" storage/logs/laravel.log
+   grep "Tukar tambah products exchanged" storage/logs/laravel.log
+   grep "Error processing tukar tambah payment" storage/logs/laravel.log
    ```
 
 2. Manual exchange via tinker (emergency):
    ```php
    php artisan tinker
    
-   >>> use App\Models\BarterRequest;
+   >>> use App\Models\TradeInRequest;
    >>> use App\Models\Product;
    >>> use Illuminate\Support\Facades\DB;
    
-   >>> $barter = BarterRequest::where('public_id', 'BRT12345678')->first();
+   >>> $tradeIn = TradeInRequest::where('public_id', 'BRT12345678')->first();
    >>> 
-   >>> DB::transaction(function() use ($barter) {
-   ...     $offered = Product::find($barter->offered_product_id);
-   ...     $requested = Product::find($barter->requested_product_id);
+   >>> DB::transaction(function() use ($tradeIn) {
+   ...     $offered = Product::find($tradeIn->offered_product_id);
+   ...     $requested = Product::find($tradeIn->requested_product_id);
    ...     
    ...     $temp = $offered->store_id;
    ...     $offered->store_id = $requested->store_id;
    ...     $requested->store_id = $temp;
    ...     
-   ...     $offered->is_barterable = false;
-   ...     $requested->is_barterable = false;
+   ...     $offered->is_trade_in_enabled = false;
+   ...     $requested->is_trade_in_enabled = false;
    ...     
    ...     $offered->save();
    ...     $requested->save();
@@ -345,16 +356,16 @@ grep -i "payment" storage/logs/laravel.log
 
 ### Produk tidak ditukar meskipun sudah bayar
 - Cek log error di `storage/logs/laravel.log`
-- Cek payment_status di database: `SELECT * FROM barter_requests WHERE public_id = 'BRT...'`
+- Cek payment_status di database: `SELECT * FROM trade_in_requests WHERE public_id = 'BRT...'`
 - Pastikan webhook berhasil diproses (status code 200)
 
 ## Future Improvements
 
-1. **Auto-cancel barter jika payment expired**: Tambah scheduled job untuk cancel barter yang payment-nya expired > 24 jam
+1. **Auto-cancel tukar tambah jika payment expired**: Tambah scheduled job untuk cancel tukar tambah yang payment-nya expired > 24 jam
 2. **Email notification**: Kirim email ke requester ketika payment diperlukan
 3. **Payment reminder**: Reminder otomatis jika payment belum diselesaikan setelah X hari
-4. **Refund mechanism**: Jika responder cancel barter setelah payment, berikan refund otomatis
-5. **Payment history**: Halaman riwayat pembayaran barter untuk seller
+4. **Refund mechanism**: Jika responder cancel tukar tambah setelah payment, berikan refund otomatis
+5. **Payment history**: Halaman riwayat pembayaran tukar tambah untuk seller
 
 ## Support
 

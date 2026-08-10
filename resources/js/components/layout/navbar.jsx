@@ -26,7 +26,7 @@ const links = {
   ],
   seller: [
     { label: 'Home', href: '/' },
-    { label: 'Barter', href: '/seller/barter' },
+    { label: 'Tukar Tambah', href: '/seller/tukar-tambah' },
     { label: 'Lelang', href: '/auctions' },
   ],
   admin: [

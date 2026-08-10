@@ -1,12 +1,12 @@
-# Fitur Pembayaran Tambahan untuk Barter
+# Fitur Pembayaran Tambahan untuk Tukar Tambah
 
 ## Overview
-Modifikasi pada fitur barter agar seller yang produknya lebih murah wajib menambah pembayaran sesuai dengan selisih harga. Perhitungan dilakukan otomatis oleh sistem.
+Modifikasi pada fitur tukar tambah agar seller yang produknya lebih murah wajib menambah pembayaran sesuai dengan selisih harga. Perhitungan dilakukan otomatis oleh sistem.
 
 ## Perubahan yang Dilakukan
 
-### 1. Backend - BarterController
-**File**: `app/Http/Controllers/BarterController.php`
+### 1. Backend - TradeInController
+**File**: `app/Http/Controllers/TradeInController.php`
 
 **Metode**: `store(Request $request, Product $product)`
 
@@ -24,21 +24,21 @@ $offeredPrice = (float) $offeredProduct->price;
 $requestedPrice = (float) $requestedProduct->price;
 $additionalCash = max(0, $requestedPrice - $offeredPrice);
 
-BarterRequest::create([
+TradeInRequest::create([
     // ... fields lain
     'additional_cash' => $additionalCash,
 ]);
 
 // Notifikasi berbeda berdasarkan apakah ada pembayaran tambahan
 if ($additionalCash > 0) {
-    return back()->with('success', 'Pengajuan barter berhasil dikirim. Anda perlu membayar tambahan ' . number_format($additionalCash, 0, ',', '.') . ' jika barter disetujui.');
+    return back()->with('success', 'Pengajuan tukar tambah berhasil dikirim. Anda perlu membayar tambahan ' . number_format($additionalCash, 0, ',', '.') . ' jika tukar tambah disetujui.');
 }
 ```
 
-### 2. Frontend - Barter Index UI
-**File**: `resources/js/Pages/seller/barter/index.jsx`
+### 2. Frontend - Tukar Tambah Index UI
+**File**: `resources/js/Pages/seller/tukar-tambah/index.jsx`
 
-#### A. OfferModal (Modal Pengajuan Barter)
+#### A. OfferModal (Modal Pengajuan Tukar Tambah)
 
 **Perubahan**:
 1. **Menghapus input manual `additional_cash`**
@@ -90,7 +90,7 @@ if (additionalCash > 0) {
 )}
 ```
 
-#### B. RequestCard (Kartu Permintaan Barter)
+#### B. RequestCard (Kartu Permintaan Tukar Tambah)
 
 **Perubahan**:
 1. **Badge Pembayaran Tambahan**
@@ -100,7 +100,7 @@ if (additionalCash > 0) {
 
 2. **Informasi Kontekstual**
    - Jika incoming request: "Seller pengaju harus membayar tambahan ini jika Anda setujui"
-   - Jika outgoing request: "Anda harus membayar tambahan ini jika barter disetujui"
+   - Jika outgoing request: "Anda harus membayar tambahan ini jika tukar tambah disetujui"
 
 **Kode**:
 ```jsx
@@ -115,7 +115,7 @@ if (additionalCash > 0) {
         <p className="text-xs text-gray-600">
           {counterpartLabel === 'Dari' 
             ? 'Seller pengaju harus membayar tambahan ini jika Anda setujui'
-            : 'Anda harus membayar tambahan ini jika barter disetujui'
+            : 'Anda harus membayar tambahan ini jika tukar tambah disetujui'
           }
         </p>
       </div>
@@ -127,9 +127,9 @@ if (additionalCash > 0) {
 ## Alur Kerja (Workflow)
 
 ### Untuk Seller Pengaju:
-1. Buka halaman Barter (`/seller/barter`)
+1. Buka halaman Tukar Tambah (`/seller/tukar-tambah`)
 2. Tab "Produk Tersedia" → pilih produk yang diinginkan
-3. Klik "Ajukan Barter"
+3. Klik "Ajukan Tukar Tambah"
 4. Pilih produk sendiri yang akan ditawarkan
 5. **Sistem otomatis menghitung selisih harga**:
    - Jika produk Anda lebih murah → Badge kuning "Pembayaran Tambahan Diperlukan"
@@ -140,8 +140,8 @@ if (additionalCash > 0) {
 9. Setelah disetujui, cek tab "Permintaan Saya" untuk melihat status
 
 ### Untuk Seller Responder (Penerima Request):
-1. Buka halaman Barter → Tab "Permintaan Masuk"
-2. Lihat detail pengajuan barter
+1. Buka halaman Tukar Tambah → Tab "Permintaan Masuk"
+2. Lihat detail pengajuan tukar tambah
 3. **Badge pembayaran tambahan** akan muncul jika seller pengaju harus bayar tambahan
 4. Klik "Setujui" atau "Tolak"
 5. Jika disetujui, kepemilikan produk akan ditukar
@@ -165,7 +165,7 @@ if (additionalCash > 0) {
 
 ## Database Schema
 
-Tabel `barter_requests` sudah memiliki kolom:
+Tabel `trade_in_requests` sudah memiliki kolom:
 ```sql
 additional_cash DECIMAL(12, 2) DEFAULT 0
 ```
@@ -176,7 +176,7 @@ Kolom ini menyimpan jumlah pembayaran tambahan yang harus dibayar seller pengaju
 
 ⚠️ **Pembayaran Actual via Midtrans**: 
 Saat ini `additional_cash` hanya dicatat di database dan ditampilkan sebagai informasi. Implementasi pembayaran aktual menggunakan Midtrans untuk `additional_cash` memerlukan:
-- Tabel payment/transaction tersendiri untuk barter
+- Tabel payment/transaction tersendiri untuk tukar tambah
 - Integrasi webhook Midtrans
 - Validasi pembayaran sebelum kepemilikan produk ditukar
 - Flow pembayaran yang kompleks
@@ -185,7 +185,7 @@ Untuk saat ini, `additional_cash` berfungsi sebagai **informasi kesepakatan** an
 
 ## Screenshots & UI Preview
 
-### Modal Pengajuan Barter
+### Modal Pengajuan Tukar Tambah
 **Skenario 1: Ada Pembayaran Tambahan**
 - Badge kuning dengan icon 💰
 - Text: "Pembayaran Tambahan Diperlukan"
@@ -203,8 +203,8 @@ Untuk saat ini, `additional_cash` berfungsi sebagai **informasi kesepakatan** an
 - Penjelasan kontekstual siapa yang harus bayar
 
 ## Files Modified
-1. `app/Http/Controllers/BarterController.php` (Backend logic)
-2. `resources/js/Pages/seller/barter/index.jsx` (Frontend UI)
+1. `app/Http/Controllers/TradeInController.php` (Backend logic)
+2. `resources/js/Pages/seller/tukar-tambah/index.jsx` (Frontend UI)
 
 ## Testing Checklist
 - [x] Perhitungan selisih harga otomatis bekerja
@@ -215,7 +215,7 @@ Untuk saat ini, `additional_cash` berfungsi sebagai **informasi kesepakatan** an
 - [ ] Integrasi pembayaran Midtrans (belum diimplementasikan)
 
 ## Notes
-1. Sistem ini mendorong barter yang "fair" dengan transparansi harga
+1. Sistem ini mendorong tukar tambah yang "fair" dengan transparansi harga
 2. Seller dengan produk lebih murah harus menambah pembayaran untuk menyeimbangkan nilai
 3. Implementasi saat ini fokus pada **informasi dan transparansi**, bukan enforcement pembayaran
 

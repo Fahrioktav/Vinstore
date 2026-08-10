@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'midtrans/notification',
+            // Tetap "barter" meski fiturnya kini bernama tukar tambah: URL ini
+            // sudah terdaftar sebagai Payment Notification URL di dashboard
+            // Midtrans. Menggantinya di sini saja akan membuat webhook masuk
+            // ke alamat yang tidak ada dan pembayaran selisih tidak pernah
+            // settle.
             'midtrans/barter/notification',
         ]);
 

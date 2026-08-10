@@ -210,8 +210,8 @@ function PendingProductCard({ product }) {
           <Info label="Stok" value={product.stock} />
           <Info label="ID Produk" value={product.public_id} />
           <Info
-            label="Bisa Dibarter"
-            value={product.is_barterable ? 'Ya' : 'Tidak'}
+            label="Bisa Ditukar Tambah"
+            value={product.is_trade_in_enabled ? 'Ya' : 'Tidak'}
           />
           <Info
             label="Tanggal Diajukan"

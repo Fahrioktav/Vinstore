@@ -211,10 +211,10 @@ test.describe('Screenshot Semua Halaman Vinstore', () => {
     await takeScreenshot(page, '20-seller-product-create');
   });
 
-  test('21 - [Seller] Halaman Barter', async ({ page }) => {
+  test('21 - [Seller] Halaman Tukar Tambah', async ({ page }) => {
     await login(page, 'seller');
-    await page.goto(`${BASE_URL}/seller/barter`);
-    await takeScreenshot(page, '21-seller-barter');
+    await page.goto(`${BASE_URL}/seller/tukar-tambah`);
+    await takeScreenshot(page, '21-seller-tukar tambah');
   });
 
   test('22 - [Seller] Halaman Buat Lelang', async ({ page }) => {

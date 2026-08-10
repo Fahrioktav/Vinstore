@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
 import {
-  BarterIcon,
+  TradeInIcon,
   DocumentIcon,
   MoneyIcon,
   PaymentIcon,
@@ -79,7 +79,7 @@ function ShippingCountdown({ deadlineAt, iShipped }) {
       : 'Segera isi resi sebelum dilaporkan ke admin.'
     : iShipped
       ? 'Jika pihak lawan tidak mengirim sampai tenggat, Anda bisa melapor ke admin.'
-      : 'Isi nomor resi sebelum tenggat agar barter tidak dibatalkan.';
+      : 'Isi nomor resi sebelum tenggat agar tukar tambah tidak dibatalkan.';
 
   return (
     <div className={`mb-3 rounded-md border px-3 py-2 text-xs ${tone}`}>
@@ -117,7 +117,7 @@ function ShipmentPanel({ req, role }) {
     if (!tracking.trim()) return;
 
     router.post(
-      `/seller/barter/${req.public_id}/ship`,
+      `/seller/tukar-tambah/${req.public_id}/ship`,
       { tracking_number: tracking.trim() },
       { preserveScroll: true, onSuccess: () => setTracking('') }
     );
@@ -127,14 +127,14 @@ function ShipmentPanel({ req, role }) {
     const ok = await confirmDialog({
       title: 'Konfirmasi barang sudah diterima?',
       description:
-        'Setelah kedua pihak sama-sama mengonfirmasi, kepemilikan produk berpindah dan barter dinyatakan selesai.',
+        'Setelah kedua pihak sama-sama mengonfirmasi, kepemilikan produk berpindah dan tukar tambah dinyatakan selesai.',
       confirmLabel: 'Ya, sudah diterima',
     });
 
     if (!ok) return;
 
     router.post(
-      `/seller/barter/${req.public_id}/receive`,
+      `/seller/tukar-tambah/${req.public_id}/receive`,
       {},
       { preserveScroll: true }
     );
@@ -265,7 +265,7 @@ function PaymentStatusBadge({ status }) {
   );
 }
 
-export default function SellerBarterPage() {
+export default function SellerTradeInPage() {
   const {
     availableProducts = [],
     myProducts = [],
@@ -275,7 +275,7 @@ export default function SellerBarterPage() {
   } = usePage().props;
 
   const [tab, setTab] = useState('available');
-  const [target, setTarget] = useState(null); // produk seller lain yang ingin dibarter
+  const [target, setTarget] = useState(null); // produk seller lain yang ingin ditukar tambah
 
   const pendingIncoming = incomingRequests.filter(
     (r) => r.status === 'pending'
@@ -283,7 +283,9 @@ export default function SellerBarterPage() {
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
-      <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">Barter Produk</h1>
+      <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">
+        Tukar Tambah Produk
+      </h1>
       <p className="mb-6 max-w-3xl text-sm text-white/80">
         Tukar produk Anda dengan produk seller lain.{' '}
       </p>
@@ -356,7 +358,7 @@ function AvailableTab({ products, canOffer, onOffer }) {
   if (products.length === 0) {
     return (
       <p className="rounded-lg bg-white/90 p-6 text-gray-600">
-        Belum ada produk untuk dibarter saat ini.
+        Belum ada produk untuk ditukar tambah saat ini.
       </p>
     );
   }
@@ -366,8 +368,9 @@ function AvailableTab({ products, canOffer, onOffer }) {
       {!canOffer && (
         <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
           Anda belum punya produk yang bisa ditawarkan. Tandai salah satu produk
-          Anda sebagai <span className="font-semibold">bisa dibarter</span> saat
-          menambah/mengedit produk agar bisa mengajukan barter.
+          Anda sebagai{' '}
+          <span className="font-semibold">bisa ditukar tambah</span> saat
+          menambah/mengedit produk agar bisa mengajukan tukar tambah.
         </div>
       )}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -400,7 +403,7 @@ function AvailableTab({ products, canOffer, onOffer }) {
                   onClick={() => onOffer(product)}
                   className="w-full rounded-md bg-[#53685B] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#3c4a3e] disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  Ajukan Barter
+                  Ajukan Tukar Tambah
                 </button>
               </div>
             </div>
@@ -415,20 +418,20 @@ function IncomingTab({ requests, bankPrefill }) {
   if (requests.length === 0) {
     return (
       <p className="rounded-lg bg-white/90 p-6 text-gray-600">
-        Belum ada permintaan barter yang masuk.
+        Belum ada permintaan tukar tambah yang masuk.
       </p>
     );
   }
 
   const accept = (publicId) =>
     router.post(
-      `/seller/barter/${publicId}/accept`,
+      `/seller/tukar-tambah/${publicId}/accept`,
       {},
       { preserveScroll: true }
     );
   const reject = (publicId) =>
     router.post(
-      `/seller/barter/${publicId}/reject`,
+      `/seller/tukar-tambah/${publicId}/reject`,
       {},
       { preserveScroll: true }
     );
@@ -466,7 +469,7 @@ function IncomingTab({ requests, bankPrefill }) {
               </button>
             </div>
           ) : (
-            <BarterActions
+            <TradeInActions
               req={req}
               role="responder"
               bankPrefill={bankPrefill}
@@ -479,13 +482,13 @@ function IncomingTab({ requests, bankPrefill }) {
 }
 
 /**
- * Aksi setelah barter disetujui. Dipakai oleh kedua tab karena sejak selisih
+ * Aksi setelah tukar tambah disetujui. Dipakai oleh kedua tab karena sejak selisih
  * harga mengalir dua arah, pembayar maupun penerima selisih bisa berada di
  * peran mana pun. Server yang menentukan lewat can_pay / can_request_payout /
  * can_request_refund.
  */
-function BarterActions({ req, role, bankPrefill }) {
-  const pay = (publicId) => router.get(`/seller/barter/${publicId}/pay`);
+function TradeInActions({ req, role, bankPrefill }) {
+  const pay = (publicId) => router.get(`/seller/tukar-tambah/${publicId}/pay`);
 
   if (req.can_pay) {
     return (
@@ -500,7 +503,7 @@ function BarterActions({ req, role, bankPrefill }) {
   }
 
   // Menunggu pihak lawan membayar: tanpa penjelasan ini kartunya terlihat
-  // seperti barter yang macet tanpa sebab.
+  // seperti tukar tambah yang macet tanpa sebab.
   if (req.status === 'accepted' && req.payment_status === 'pending') {
     return (
       <div className="max-w-xs text-right">
@@ -519,18 +522,18 @@ function BarterActions({ req, role, bankPrefill }) {
         <ShipmentPanel req={req} role={role} />
         <StalledNotice req={req} />
         {req.can_request_refund && !req.can_report_stalled && (
-          <BarterRefundButton req={req} />
+          <TradeInRefundButton req={req} />
         )}
       </div>
     );
   }
 
   if (req.can_request_payout) {
-    return <BarterPayoutButton req={req} bankPrefill={bankPrefill} />;
+    return <TradeInPayoutButton req={req} bankPrefill={bankPrefill} />;
   }
 
   if (req.can_request_refund) {
-    return <BarterRefundButton req={req} />;
+    return <TradeInRefundButton req={req} />;
   }
 
   return (
@@ -549,14 +552,14 @@ function OutgoingTab({ requests, bankPrefill }) {
   if (requests.length === 0) {
     return (
       <p className="rounded-lg bg-white/90 p-6 text-gray-600">
-        Anda belum mengajukan barter apa pun.
+        Anda belum mengajukan tukar tambah apa pun.
       </p>
     );
   }
 
   const cancel = (publicId) =>
     router.post(
-      `/seller/barter/${publicId}/cancel`,
+      `/seller/tukar-tambah/${publicId}/cancel`,
       {},
       { preserveScroll: true }
     );
@@ -586,7 +589,7 @@ function OutgoingTab({ requests, bankPrefill }) {
               Batalkan
             </button>
           ) : (
-            <BarterActions
+            <TradeInActions
               req={req}
               role="requester"
               bankPrefill={bankPrefill}
@@ -605,10 +608,10 @@ const moneyStatusColors = {
 };
 
 /**
- * Responder mencairkan selisih uang barter setelah barter selesai.
+ * Responder mencairkan selisih uang tukar tambah setelah tukar tambah selesai.
  * Data bank di-prefill dari pengajuan terakhir, tapi tetap bisa diubah.
  */
-function BarterPayoutButton({ req, bankPrefill }) {
+function TradeInPayoutButton({ req, bankPrefill }) {
   const [open, setOpen] = useState(false);
 
   const form = useForm({
@@ -619,7 +622,7 @@ function BarterPayoutButton({ req, bankPrefill }) {
 
   const submit = (e) => {
     e.preventDefault();
-    form.post(`/seller/barter/${req.public_id}/payout`, {
+    form.post(`/seller/tukar-tambah/${req.public_id}/payout`, {
       preserveScroll: true,
       onSuccess: () => setOpen(false),
     });
@@ -639,9 +642,11 @@ function BarterPayoutButton({ req, bankPrefill }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1 text-xl font-bold text-gray-900">
-              Ajukan Pencairan Selisih Barter
+              Ajukan Pencairan Selisih Tukar Tambah
             </h3>
-            <p className="mb-4 text-sm text-gray-600">Barter {req.public_id}</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Tukar Tambah {req.public_id}
+            </p>
 
             <div className="mb-5 rounded-lg bg-gray-50 p-4">
               <div className="flex items-center justify-between">
@@ -701,16 +706,16 @@ function BarterPayoutButton({ req, bankPrefill }) {
 }
 
 /**
- * Requester meminta selisih uangnya kembali ketika barter tidak pernah tuntas.
+ * Requester meminta selisih uangnya kembali ketika tukar tambah tidak pernah tuntas.
  */
-function BarterRefundButton({ req }) {
+function TradeInRefundButton({ req }) {
   const [open, setOpen] = useState(false);
 
   const form = useForm({ reason: '' });
 
   const submit = (e) => {
     e.preventDefault();
-    form.post(`/seller/barter/${req.public_id}/refund`, {
+    form.post(`/seller/tukar-tambah/${req.public_id}/refund`, {
       preserveScroll: true,
       onSuccess: () => setOpen(false),
     });
@@ -731,7 +736,9 @@ function BarterRefundButton({ req }) {
             <h3 className="mb-1 text-xl font-bold text-gray-900">
               Minta Pengembalian Dana
             </h3>
-            <p className="mb-4 text-sm text-gray-600">Barter {req.public_id}</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Tukar Tambah {req.public_id}
+            </p>
 
             <div className="mb-5 rounded-lg bg-gray-50 p-4">
               <div className="flex items-center justify-between">
@@ -742,8 +749,8 @@ function BarterRefundButton({ req }) {
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 Admin akan memeriksa status pengiriman kedua pihak sebelum
-                memutuskan. Jika disetujui, barter dibatalkan dan kedua produk
-                dilepas dari kunci barter.
+                memutuskan. Jika disetujui, tukar tambah dibatalkan dan kedua
+                produk dilepas dari kunci tukar tambah.
               </p>
             </div>
 
@@ -756,7 +763,7 @@ function BarterRefundButton({ req }) {
                   value={form.data.reason}
                   onChange={(e) => form.setData('reason', e.target.value)}
                   rows="4"
-                  placeholder="Contoh: Pihak lawan tidak pernah mengirimkan barangnya sejak barter disetujui."
+                  placeholder="Contoh: Pihak lawan tidak pernah mengirimkan barangnya sejak tukar tambah disetujui."
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-amber-500 focus:ring-2 focus:ring-amber-500"
                   required
                 />
@@ -795,14 +802,14 @@ function BarterRefundButton({ req }) {
  * Pihak yang sudah mengirim melaporkan lawannya yang tidak kunjung mengisi
  * resi setelah tenggat terlampaui. Admin yang memutuskan.
  */
-function BarterReportButton({ req }) {
+function TradeInReportButton({ req }) {
   const [open, setOpen] = useState(false);
 
   const form = useForm({ reason: '' });
 
   const submit = (e) => {
     e.preventDefault();
-    form.post(`/seller/barter/${req.public_id}/report`, {
+    form.post(`/seller/tukar-tambah/${req.public_id}/report`, {
       preserveScroll: true,
       onSuccess: () => setOpen(false),
     });
@@ -824,14 +831,16 @@ function BarterReportButton({ req }) {
             <h3 className="mb-1 text-xl font-bold text-gray-900">
               Laporkan Pihak Lawan
             </h3>
-            <p className="mb-4 text-sm text-gray-600">Barter {req.public_id}</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Tukar Tambah {req.public_id}
+            </p>
 
             <div className="mb-5 rounded-lg bg-red-50 p-4">
               <p className="text-xs text-gray-700">
                 Tenggat pengiriman sudah lewat dan pihak lawan belum mengisi
                 nomor resi. Admin akan memeriksa catatan pengiriman kedua pihak.
-                Bila laporan disetujui, barter dibatalkan, kunci kedua produk
-                dilepas
+                Bila laporan disetujui, tukar tambah dibatalkan, kunci kedua
+                produk dilepas
                 {Number(req.additional_cash) > 0
                   ? ', dan selisih uang dikembalikan ke pengaju.'
                   : '.'}
@@ -905,7 +914,7 @@ function BankField({ label, value, onChange, error }) {
  */
 function StalledNotice({ req }) {
   if (req.can_report_stalled) {
-    return <BarterReportButton req={req} />;
+    return <TradeInReportButton req={req} />;
   }
 
   if (!req.report_block_reason) {
@@ -920,7 +929,7 @@ function StalledNotice({ req }) {
 }
 
 /**
- * Ringkasan status uang barter: pencairan ke responder atau pengembalian ke
+ * Ringkasan status uang tukar tambah: pencairan ke responder atau pengembalian ke
  * requester, mana pun yang sedang berjalan.
  */
 function MoneyStatusNote({ req }) {
@@ -989,7 +998,7 @@ function RequestCard({
           fallbackName={theirProductName}
         />
         <div className="flex justify-center text-[#B77C4C]">
-          <BarterIcon className="h-7 w-7" />
+          <TradeInIcon className="h-7 w-7" />
         </div>
         <MiniProduct
           label={myLabel}
@@ -1027,10 +1036,10 @@ function RequestCard({
                   ? 'Pembayaran telah selesai'
                   : req.is_payer
                     ? req.status === 'pending'
-                      ? 'Anda harus membayar tambahan ini jika barter disetujui'
-                      : 'Anda harus membayar tambahan ini untuk menyelesaikan barter'
+                      ? 'Anda harus membayar tambahan ini jika tukar tambah disetujui'
+                      : 'Anda harus membayar tambahan ini untuk menyelesaikan tukar tambah'
                     : req.status === 'pending'
-                      ? `Seller ${counterpartName ?? 'lawan'} harus membayar tambahan ini jika barter disetujui`
+                      ? `Seller ${counterpartName ?? 'lawan'} harus membayar tambahan ini jika tukar tambah disetujui`
                       : `Menunggu seller ${counterpartName ?? 'lawan'} membayar tambahan ini`}
               </p>
             </div>
@@ -1057,8 +1066,8 @@ function RequestCard({
 
 /**
  * `product` bisa null bila produknya sudah dihapus seller. Nama tetap
- * ditampilkan dari snapshot yang tersimpan di baris barter (temuan V3-01),
- * supaya riwayat barternya tidak berubah menjadi "Produk dihapus" tanpa
+ * ditampilkan dari snapshot yang tersimpan di baris tukar tambah (temuan V3-01),
+ * supaya riwayat tukar tambahnya tidak berubah menjadi "Produk dihapus" tanpa
  * keterangan apa pun.
  */
 function MiniProduct({ label, product, fallbackName }) {
@@ -1104,8 +1113,8 @@ function OfferModal({ target, myProducts, onClose }) {
       const ok = await confirmDialog({
         title: `Tambah pembayaran ${formatIDR(additionalCash)}?`,
         description:
-          'Produk yang Anda tawarkan lebih murah, jadi selisihnya perlu Anda bayar bila barter ini disetujui.',
-        confirmLabel: 'Ya, ajukan barter',
+          'Produk yang Anda tawarkan lebih murah, jadi selisihnya perlu Anda bayar bila tukar tambah ini disetujui.',
+        confirmLabel: 'Ya, ajukan tukar tambah',
       });
 
       if (!ok) return;
@@ -1113,7 +1122,7 @@ function OfferModal({ target, myProducts, onClose }) {
 
     setProcessing(true);
     router.post(
-      `/seller/barter/${target.public_id}`,
+      `/seller/tukar-tambah/${target.public_id}`,
       {
         offered_product_id: offeredId,
         note,
@@ -1130,7 +1139,9 @@ function OfferModal({ target, myProducts, onClose }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-start justify-between">
-          <h2 className="text-xl font-bold text-[#3E2723]">Ajukan Barter</h2>
+          <h2 className="text-xl font-bold text-[#3E2723]">
+            Ajukan Tukar Tambah
+          </h2>
           <button
             onClick={onClose}
             className="text-2xl leading-none text-gray-400 hover:text-gray-700"
@@ -1205,7 +1216,7 @@ function OfferModal({ target, myProducts, onClose }) {
                   <span className="font-semibold">
                     {formatIDR(additionalCash)}
                   </span>{' '}
-                  jika barter disetujui.
+                  jika tukar tambah disetujui.
                 </p>
               ) : (
                 <p className="text-xs text-gray-600">
@@ -1214,7 +1225,7 @@ function OfferModal({ target, myProducts, onClose }) {
                   <span className="font-semibold">
                     {formatIDR(additionalCash)}
                   </span>{' '}
-                  jika ia menyetujui barter ini.
+                  jika ia menyetujui tukar tambah ini.
                 </p>
               )}
             </div>
@@ -1256,6 +1267,6 @@ function OfferModal({ target, myProducts, onClose }) {
   );
 }
 
-SellerBarterPage.layout = (page) => (
-  <MainLayout title="Barter Produk">{page}</MainLayout>
+SellerTradeInPage.layout = (page) => (
+  <MainLayout title="Tukar Tambah Produk">{page}</MainLayout>
 );

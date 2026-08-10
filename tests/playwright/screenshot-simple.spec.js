@@ -102,10 +102,10 @@ test('Screenshot: Seller Add Product', async ({ page }) => {
   await takeScreenshot(page, 'seller-add-product');
 });
 
-test('Screenshot: Seller Barter', async ({ page }) => {
+test('Screenshot: Seller Tukar Tambah', async ({ page }) => {
   await login(page, 'cikidaw@gmail.com', 'daw123');
-  await page.goto(`${BASE_URL}/seller/barter`);
-  await takeScreenshot(page, 'seller-barter');
+  await page.goto(`${BASE_URL}/seller/tukar-tambah`);
+  await takeScreenshot(page, 'seller-tukar tambah');
 });
 
 // ========== HALAMAN VALIDATOR ==========

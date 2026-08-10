@@ -72,7 +72,7 @@ model Product {
   validatedAt          DateTime? @map("validated_at")
   validatedBy          BigInt?   @map("validated_by")
   validatedByUser      User?     @relation("validatedBy", fields: [validatedBy], references: [id])
-  isBarterable         Boolean   @map("is_barterable")
+  isTradeInEnabled         Boolean   @map("is_trade_in_enabled")
   images               Json?     @db.Json
   video                String?
   saleType             String    @map("sale_type")

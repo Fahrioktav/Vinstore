@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class BarterRequest extends Model
+class TradeInRequest extends Model
 {
     use HasFactory;
 
@@ -36,7 +36,7 @@ class BarterRequest extends Model
 
     public const PAYMENT_EXPIRED = 'expired';
 
-    // Selisih uang dikembalikan ke pembayarnya karena barternya gagal.
+    // Selisih uang dikembalikan ke pembayarnya karena tukar tambahnya gagal.
     public const PAYMENT_REFUNDED = 'refunded';
 
     // Peran yang wajib membayar selisih harga. Pihak yang produknya lebih
@@ -51,7 +51,7 @@ class BarterRequest extends Model
         'responder_store_id',
         'offered_product_id',
         'requested_product_id',
-        // Snapshot identitas: riwayat barter harus tetap terbaca meski produk
+        // Snapshot identitas: riwayat tukar tambah harus tetap terbaca meski produk
         // atau tokonya dihapus di kemudian hari (temuan V3-01).
         'offered_product_name',
         'requested_product_name',
@@ -108,20 +108,20 @@ class BarterRequest extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (BarterRequest $barter) {
-            if (empty($barter->public_id)) {
-                $barter->public_id = self::generatePublicId();
+        static::creating(function (TradeInRequest $tradeIn) {
+            if (empty($tradeIn->public_id)) {
+                $tradeIn->public_id = self::generatePublicId();
             }
 
-            $barter->fillMissingSnapshots();
+            $tradeIn->fillMissingSnapshots();
         });
     }
 
     /**
-     * Salin nama produk dan toko ke baris barter ini.
+     * Salin nama produk dan toko ke baris tukar tambah ini.
      *
      * Dilakukan otomatis saat pembuatan agar tidak ada satu pun jalur pembuatan
-     * barter yang bisa lupa mengisinya.
+     * tukar tambah yang bisa lupa mengisinya.
      */
     public function fillMissingSnapshots(): void
     {
@@ -134,7 +134,7 @@ class BarterRequest extends Model
     /**
      * Nama-nama untuk ditampilkan.
      *
-     * Snapshot didahulukan karena itulah identitas PADA SAAT barter disepakati;
+     * Snapshot didahulukan karena itulah identitas PADA SAAT tukar tambah disepakati;
      * relasi hidup hanya dipakai bila snapshot-nya belum ada (data lama).
      */
     public function getDisplayOfferedProductNameAttribute(): string
@@ -165,11 +165,17 @@ class BarterRequest extends Model
             ?? 'Toko tidak tersedia';
     }
 
+    /**
+     * Prefixnya sengaja tetap `BRT` meski fiturnya sudah berganti nama menjadi
+     * tukar tambah. Nilai ini sudah tersimpan di baris yang ada dan ditampilkan
+     * ke pengguna; menggantinya hanya membuat data lama dan data baru berbeda
+     * pola, tanpa manfaat apa pun karena idnya memang tidak bermakna.
+     */
     public static function generatePublicId(): string
     {
         do {
             $publicId = 'BRT'.random_int(10000000, 99999999);
-        } while (DB::table('barter_requests')->where('public_id', $publicId)->exists());
+        } while (DB::table('trade_in_requests')->where('public_id', $publicId)->exists());
 
         return $publicId;
     }
@@ -205,7 +211,7 @@ class BarterRequest extends Model
     }
 
     /**
-     * Cek apakah barter ini memerlukan pembayaran (ada additional_cash)
+     * Cek apakah tukar tambah ini memerlukan pembayaran (ada additional_cash)
      */
     public function requiresPayment(): bool
     {
@@ -291,8 +297,8 @@ class BarterRequest extends Model
     public function payerLabel(): string
     {
         return $this->payerRole() === self::PAYER_RESPONDER
-            ? 'penerima barter'
-            : 'pengaju barter';
+            ? 'penerima tukar tambah'
+            : 'pengaju tukar tambah';
     }
 
     /**
@@ -305,7 +311,7 @@ class BarterRequest extends Model
     }
 
     /**
-     * Cek apakah barter sudah siap untuk ditukar kepemilikan produknya
+     * Cek apakah tukar tambah sudah siap untuk ditukar kepemilikan produknya
      * (sudah accepted dan payment sudah selesai jika diperlukan)
      */
     public function isReadyToExchange(): bool
@@ -317,7 +323,7 @@ class BarterRequest extends Model
     /* ===================== Pengiriman dua arah ===================== */
 
     /**
-     * Barter yang barangnya sedang dalam perjalanan antar kedua seller.
+     * Tukar tambah yang barangnya sedang dalam perjalanan antar kedua seller.
      */
     public function isShipping(): bool
     {
@@ -330,7 +336,7 @@ class BarterRequest extends Model
     }
 
     /**
-     * Peran sebuah toko dalam barter ini: 'requester', 'responder', atau null.
+     * Peran sebuah toko dalam tukar tambah ini: 'requester', 'responder', atau null.
      */
     public function roleOfStore(?Store $store): ?string
     {
@@ -369,12 +375,12 @@ class BarterRequest extends Model
     /* ==================== Tenggat pengiriman ==================== */
 
     /**
-     * Berapa hari kedua seller punya waktu mengisi nomor resi sejak barter
+     * Berapa hari kedua seller punya waktu mengisi nomor resi sejak tukar tambah
      * masuk tahap saling kirim.
      *
      * Lewat dari ini, pihak yang sudah memenuhi kewajibannya boleh melaporkan
      * pihak lawan ke admin. Tanpa tenggat, satu seller yang menghilang membuat
-     * barter menggantung selamanya dan kedua produk terkunci dari penjualan.
+     * tukar tambah menggantung selamanya dan kedua produk terkunci dari penjualan.
      */
     public const SHIPPING_DEADLINE_DAYS = 3;
 
@@ -448,7 +454,7 @@ class BarterRequest extends Model
         }
 
         if ($this->hasPendingRefund()) {
-            return 'Laporan untuk barter ini sedang ditinjau admin.';
+            return 'Laporan untuk tukar tambah ini sedang ditinjau admin.';
         }
 
         $counterpart = $role === 'requester' ? 'responder' : 'requester';
@@ -466,7 +472,7 @@ class BarterRequest extends Model
         // yang menunggu.
         if (! $iShipped) {
             if ($this->isShippingOverdue()) {
-                return 'Tenggat pengiriman sudah lewat. Segera isi nomor resi sebelum pihak lawan melaporkan barter ini.';
+                return 'Tenggat pengiriman sudah lewat. Segera isi nomor resi sebelum pihak lawan melaporkan tukar tambah ini.';
             }
 
             return 'Anda belum mengisi nomor resi. Batas waktunya '.($deadline ?? '-').'.';
@@ -495,7 +501,7 @@ class BarterRequest extends Model
         return $this->shippingDeadlineAt()?->toIso8601String();
     }
 
-    /* ============ Pencairan selisih uang & sanggahan barter ============ */
+    /* ============ Pencairan selisih uang & sanggahan tukar tambah ============ */
 
     public function payoutRequests()
     {
@@ -516,7 +522,7 @@ class BarterRequest extends Model
                 ->first();
         }
 
-        return PayoutRequest::where('barter_request_id', $this->id)
+        return PayoutRequest::where('trade_in_request_id', $this->id)
             ->blocking()
             ->latest('id')
             ->first();
@@ -528,7 +534,7 @@ class BarterRequest extends Model
             return $this->refundRequests->contains(fn ($refund) => $refund->status === 'pending');
         }
 
-        return RefundRequest::where('barter_request_id', $this->id)
+        return RefundRequest::where('trade_in_request_id', $this->id)
             ->where('status', 'pending')
             ->exists();
     }
@@ -539,13 +545,13 @@ class BarterRequest extends Model
             return $this->refundRequests->contains(fn ($refund) => $refund->status === 'approved');
         }
 
-        return RefundRequest::where('barter_request_id', $this->id)
+        return RefundRequest::where('trade_in_request_id', $this->id)
             ->where('status', 'approved')
             ->exists();
     }
 
     /**
-     * Selisih uang barter adalah hak pihak yang menyerahkan produk LEBIH MAHAL —
+     * Selisih uang tukar tambah adalah hak pihak yang menyerahkan produk LEBIH MAHAL —
      * yaitu kebalikan dari pembayarnya. Bisa responder (pengaju yang menambah
      * uang) maupun requester (penerima yang menambah uang).
      */
@@ -559,7 +565,7 @@ class BarterRequest extends Model
     }
 
     /**
-     * Bolehkah penerima selisih mengajukan pencairan uang barter ini?
+     * Bolehkah penerima selisih mengajukan pencairan uang tukar tambah ini?
      *
      * Syaratnya mengikuti pola escrow pesanan: barang harus benar-benar sudah
      * sampai di kedua belah pihak. Status 'completed' hanya tercapai setelah
@@ -608,11 +614,11 @@ class BarterRequest extends Model
         }
 
         if ($this->payout_released_at !== null) {
-            return 'Selisih uang barter ini sudah dicairkan.';
+            return 'Selisih uang tukar tambah ini sudah dicairkan.';
         }
 
         if ($this->payment_status !== self::PAYMENT_PAID) {
-            return 'Selisih uang barter ini belum dibayar '.$this->payerLabel().'.';
+            return 'Selisih uang tukar tambah ini belum dibayar '.$this->payerLabel().'.';
         }
 
         if ($this->status !== self::STATUS_COMPLETED) {
@@ -620,7 +626,7 @@ class BarterRequest extends Model
         }
 
         if ($this->hasApprovedRefund()) {
-            return 'Selisih uang barter ini sudah dikembalikan ke '.$this->payerLabel().'.';
+            return 'Selisih uang tukar tambah ini sudah dikembalikan ke '.$this->payerLabel().'.';
         }
 
         if ($this->hasPendingRefund()) {
@@ -628,7 +634,7 @@ class BarterRequest extends Model
         }
 
         if ($this->activePayoutRequest() !== null) {
-            return 'Pengajuan pencairan untuk barter ini sudah ada.';
+            return 'Pengajuan pencairan untuk tukar tambah ini sudah ada.';
         }
 
         return null;
@@ -637,7 +643,7 @@ class BarterRequest extends Model
     /**
      * Bolehkah pembayar selisih meminta uangnya kembali?
      *
-     * Berlaku ketika selisih sudah dibayar tapi barternya tidak pernah tuntas —
+     * Berlaku ketika selisih sudah dibayar tapi tukar tambahnya tidak pernah tuntas —
      * misalnya pihak lawan tidak pernah mengirimkan barangnya. Keputusan akhir
      * tetap di admin, yang bisa melihat status pengiriman kedua pihak.
      */
@@ -699,7 +705,7 @@ class BarterRequest extends Model
     {
         $payout = $this->relationLoaded('payoutRequests')
             ? $this->payoutRequests->sortByDesc('id')->first()
-            : PayoutRequest::where('barter_request_id', $this->id)->latest('id')->first();
+            : PayoutRequest::where('trade_in_request_id', $this->id)->latest('id')->first();
 
         if (! $payout) {
             return null;
@@ -717,7 +723,7 @@ class BarterRequest extends Model
     {
         $refund = $this->relationLoaded('refundRequests')
             ? $this->refundRequests->sortByDesc('id')->first()
-            : RefundRequest::where('barter_request_id', $this->id)->latest('id')->first();
+            : RefundRequest::where('trade_in_request_id', $this->id)->latest('id')->first();
 
         if (! $refund) {
             return null;

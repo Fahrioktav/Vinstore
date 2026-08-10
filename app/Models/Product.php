@@ -81,8 +81,8 @@ class Product extends Model
         'images',
         'video',
         'certificate',
-        'is_barterable',
-        'locked_for_barter_id',
+        'is_trade_in_enabled',
+        'locked_for_trade_in_id',
         'approval_status',
         'approved_at',
         'approved_by',
@@ -133,7 +133,7 @@ class Product extends Model
         'width' => 'integer',
         'height' => 'integer',
         'images' => 'array',
-        'is_barterable' => 'boolean',
+        'is_trade_in_enabled' => 'boolean',
         'approved_at' => 'datetime',
         'validated_at' => 'datetime',
         'guess_starts_at' => 'datetime',
@@ -145,35 +145,35 @@ class Product extends Model
     ];
 
     /**
-     * Produk yang dapat ditawarkan/diajukan untuk barter:
-     * sudah disetujui, masih punya stok, ditandai bisa dibarter oleh seller,
-     * dan tidak sedang terikat barter lain yang belum tuntas.
+     * Produk yang dapat ditawarkan/diajukan untuk tukar tambah:
+     * sudah disetujui, masih punya stok, ditandai bisa ditukar tambah oleh seller,
+     * dan tidak sedang terikat tukar tambah lain yang belum tuntas.
      * (Produk yang sudah terjual/stok habis otomatis tidak masuk.)
      */
-    public function scopeBarterable($query)
+    public function scopeTradeInEnabled($query)
     {
         return $query->where('approval_status', self::STATUS_APPROVED)
-            ->where('is_barterable', true)
+            ->where('is_trade_in_enabled', true)
             ->where('stock', '>', 0)
-            ->whereNull('locked_for_barter_id');
+            ->whereNull('locked_for_trade_in_id');
     }
 
     /**
-     * Produk yang sedang dikunci karena terikat barter yang sudah disetujui
+     * Produk yang sedang dikunci karena terikat tukar tambah yang sudah disetujui
      * tetapi belum tuntas (menunggu pembayaran selisih atau menunggu kedua
      * belah pihak saling menerima barang).
      *
      * Selama terkunci, produk tidak boleh dibeli pembeli biasa maupun
-     * ditawarkan pada barter lain — lihat temuan T-08.
+     * ditawarkan pada tukar tambah lain — lihat temuan T-08.
      */
-    public function isLockedForBarter(): bool
+    public function isLockedForTradeIn(): bool
     {
-        return $this->locked_for_barter_id !== null;
+        return $this->locked_for_trade_in_id !== null;
     }
 
-    public function lockedForBarter()
+    public function lockedForTradeIn()
     {
-        return $this->belongsTo(BarterRequest::class, 'locked_for_barter_id');
+        return $this->belongsTo(TradeInRequest::class, 'locked_for_trade_in_id');
     }
 
     /**
@@ -296,14 +296,14 @@ class Product extends Model
         return $this->belongsTo(User::class, 'validated_by');
     }
 
-    public function barterRequestsOffered()
+    public function tradeInRequestsOffered()
     {
-        return $this->hasMany(BarterRequest::class, 'offered_product_id');
+        return $this->hasMany(TradeInRequest::class, 'offered_product_id');
     }
 
-    public function barterRequestsRequested()
+    public function tradeInRequestsRequested()
     {
-        return $this->hasMany(BarterRequest::class, 'requested_product_id');
+        return $this->hasMany(TradeInRequest::class, 'requested_product_id');
     }
 
     /* ===================== Tebak Harga ===================== */

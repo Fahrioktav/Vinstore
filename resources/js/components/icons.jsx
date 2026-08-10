@@ -161,8 +161,8 @@ export const CelebrateIcon = SparklesIcon;
 
 /* ===================== Fitur khas Vinstore ===================== */
 
-/** Barter: panah dua arah, menggantikan karakter ⇄ yang dulu dipakai. */
-export const BarterIcon = ArrowsRightLeftIcon;
+/** Tukar Tambah: panah dua arah, menggantikan karakter ⇄ yang dulu dipakai. */
+export const TradeInIcon = ArrowsRightLeftIcon;
 
 /** Lelang: harga yang terus naik. Heroicons tidak punya ikon palu lelang. */
 export const AuctionIcon = ArrowTrendingUpIcon;

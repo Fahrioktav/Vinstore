@@ -74,7 +74,7 @@ Browser Chrome akan terbuka otomatis dan:
 - Profile, Cart, Checkout, Orders, Support, Register Toko
 
 ### Seller (5 halaman)
-- Dashboard, Edit Toko, Add Product, Barter, Create Auction
+- Dashboard, Edit Toko, Add Product, Tukar Tambah, Create Auction
 
 ### Validator (2 halaman)
 - Dashboard, Product Detail

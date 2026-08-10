@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\BarterRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\TradeInRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,13 +14,13 @@ use Tests\TestCase;
  * TEMUAN V3-05 — selisih harga dibekukan saat pengajuan dibuat dan tidak
  * pernah dihitung ulang saat disetujui.
  *
- * Kartu barter menampilkan harga produk yang HIDUP (relasi ke products),
+ * Kartu tukar tambah menampilkan harga produk yang HIDUP (relasi ke products),
  * sementara additional_cash dan payer_role berasal dari harga saat pengajuan
  * dikirim. Bila salah satu seller mengubah harga produknya di antara kedua
  * momen itu, yang ditagih bisa menjadi pihak yang justru menyerahkan barang
  * lebih mahal — persis kebalikan dari yang seharusnya.
  */
-class BarterStalePriceTest extends TestCase
+class TradeInStalePriceTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -105,7 +105,7 @@ class BarterStalePriceTest extends TestCase
             'category' => 'Antik',
             'description' => 'Barang antik',
             'approval_status' => Product::STATUS_APPROVED,
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
         ]);
     }
 
@@ -113,19 +113,19 @@ class BarterStalePriceTest extends TestCase
      * Skenario yang dilaporkan pengguna: pengaju ditagih padahal barangnya
      * lebih mahal.
      */
-    public function test_selisih_dihitung_ulang_saat_barter_disetujui(): void
+    public function test_selisih_dihitung_ulang_saat_tukar_tambah_disetujui(): void
     {
         // Saat diajukan: produk pengaju LEBIH MURAH (1jt vs 3jt).
         $offered = $this->makeProduct($this->requesterStore, 'Gramofon', 1_000_000);
         $requested = $this->makeProduct($this->responderStore, 'Guci Antik', 3_000_000);
 
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$requested->public_id,
+            '/seller/tukar-tambah/'.$requested->public_id,
             ['offered_product_id' => $offered->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
-        $this->assertSame(BarterRequest::PAYER_REQUESTER, $barter->payer_role);
+        $tradeIn = TradeInRequest::firstOrFail();
+        $this->assertSame(TradeInRequest::PAYER_REQUESTER, $tradeIn->payer_role);
 
         // Pengaju menaikkan harga produknya: sekarang produknya JAUH LEBIH MAHAL.
         $offered->forceFill(['price' => 5_000_000])->save();
@@ -133,18 +133,18 @@ class BarterStalePriceTest extends TestCase
         // Penerima menyetujui berdasarkan harga yang ia lihat sekarang:
         // Gramofon 5jt ditukar Guci Antik 3jt -> PENERIMA yang harus menambah 2jt.
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
         $this->assertSame(
-            BarterRequest::PAYER_RESPONDER,
-            $barter->payer_role,
+            TradeInRequest::PAYER_RESPONDER,
+            $tradeIn->payer_role,
             'Pengaju ditagih padahal produknya lebih mahal — selisih tidak dihitung ulang saat disetujui.'
         );
         $this->assertEquals(
             2_000_000,
-            $barter->additional_cash,
+            $tradeIn->additional_cash,
             'Nominal selisih masih memakai harga lama saat pengajuan dibuat.'
         );
     }
@@ -155,7 +155,7 @@ class BarterStalePriceTest extends TestCase
      * pengaju ditagih lebih besar daripada yang ia setujui saat mengajukan?
      *
      * Tidak bisa — mengedit produk mengembalikan approval_status ke
-     * pending_validator, dan isBarterable() mensyaratkan approved. Barternya
+     * pending_validator, dan isTradeInEnabled() mensyaratkan approved. Tukar tambahnya
      * ditolak sebelum sempat menagih siapa pun.
      */
     public function test_penerima_tidak_bisa_menaikkan_harga_lalu_menyetujui(): void
@@ -164,12 +164,12 @@ class BarterStalePriceTest extends TestCase
         $requested = $this->makeProduct($this->responderStore, 'Guci Antik', 3_000_000);
 
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$requested->public_id,
+            '/seller/tukar-tambah/'.$requested->public_id,
             ['offered_product_id' => $offered->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
-        $this->assertEquals(0, $barter->additional_cash);
+        $tradeIn = TradeInRequest::firstOrFail();
+        $this->assertEquals(0, $tradeIn->additional_cash);
 
         // Penerima menaikkan harga produknya sendiri setelah menerima pengajuan.
         $this->actingAs($this->responderUser)
@@ -182,39 +182,39 @@ class BarterStalePriceTest extends TestCase
             ]);
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
         $this->assertSame(
-            BarterRequest::STATUS_PENDING,
-            $barter->status,
+            TradeInRequest::STATUS_PENDING,
+            $tradeIn->status,
             'Penerima berhasil menyetujui setelah menaikkan harga produknya sendiri.'
         );
-        $this->assertEquals(0, $barter->additional_cash);
+        $this->assertEquals(0, $tradeIn->additional_cash);
     }
 
     /**
      * Setelah disetujui, selisihnya dibekukan. Harga produk yang terkunci
-     * barter karena itu tidak boleh berubah lagi — kalau boleh, kartu barter
+     * tukar tambah karena itu tidak boleh berubah lagi — kalau boleh, kartu tukar tambah
      * akan menampilkan harga yang bertentangan dengan nominal yang ditagih.
      */
-    public function test_harga_produk_terkunci_barter_tidak_dapat_diubah(): void
+    public function test_harga_produk_terkunci_tukar_tambah_tidak_dapat_diubah(): void
     {
         $offered = $this->makeProduct($this->requesterStore, 'Gramofon', 1_000_000);
         $requested = $this->makeProduct($this->responderStore, 'Guci Antik', 3_000_000);
 
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$requested->public_id,
+            '/seller/tukar-tambah/'.$requested->public_id,
             ['offered_product_id' => $offered->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
+        $tradeIn = TradeInRequest::firstOrFail();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        $this->assertNotNull($offered->fresh()->locked_for_barter_id);
+        $this->assertNotNull($offered->fresh()->locked_for_trade_in_id);
 
         $this->actingAs($this->requesterUser)
             ->put('/seller/products/'.$offered->public_id, [
@@ -228,7 +228,7 @@ class BarterStalePriceTest extends TestCase
         $this->assertEquals(
             1_000_000,
             $offered->fresh()->price,
-            'Harga produk yang sedang terikat barter berhasil diubah.'
+            'Harga produk yang sedang terikat tukar tambah berhasil diubah.'
         );
     }
 
@@ -236,29 +236,29 @@ class BarterStalePriceTest extends TestCase
      * Turunan yang sama: selisih menjadi nol setelah harga disamakan, sehingga
      * tidak boleh ada pihak yang ditagih sama sekali.
      */
-    public function test_barter_tidak_menagih_siapa_pun_bila_harga_menjadi_sama(): void
+    public function test_tukar_tambah_tidak_menagih_siapa_pun_bila_harga_menjadi_sama(): void
     {
         $offered = $this->makeProduct($this->requesterStore, 'Gramofon', 1_000_000);
         $requested = $this->makeProduct($this->responderStore, 'Guci Antik', 3_000_000);
 
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$requested->public_id,
+            '/seller/tukar-tambah/'.$requested->public_id,
             ['offered_product_id' => $offered->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
+        $tradeIn = TradeInRequest::firstOrFail();
 
         // Harga disamakan sebelum disetujui.
         $offered->forceFill(['price' => 3_000_000])->save();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        $barter->refresh();
+        $tradeIn->refresh();
 
-        $this->assertEquals(0, $barter->additional_cash);
-        $this->assertNull($barter->payer_role);
-        $this->assertSame(BarterRequest::PAYMENT_NOT_REQUIRED, $barter->payment_status);
-        $this->assertSame(BarterRequest::STATUS_SHIPPING, $barter->status);
+        $this->assertEquals(0, $tradeIn->additional_cash);
+        $this->assertNull($tradeIn->payer_role);
+        $this->assertSame(TradeInRequest::PAYMENT_NOT_REQUIRED, $tradeIn->payment_status);
+        $this->assertSame(TradeInRequest::STATUS_SHIPPING, $tradeIn->status);
     }
 }

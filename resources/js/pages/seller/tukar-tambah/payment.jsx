@@ -3,24 +3,26 @@ import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { formatIDR, getProductImage } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
-import { BarterIcon, MoneyIcon, SuccessIcon } from '@/components/icons';
+import { TradeInIcon, MoneyIcon, SuccessIcon } from '@/components/icons';
 import { toast } from 'sonner';
 
-export default function BarterPaymentPage() {
-  const { barter, snapToken, viewerRole } = usePage().props;
+export default function TradeInPaymentPage() {
+  const { tradeIn, snapToken, viewerRole } = usePage().props;
   // Pembayar selisih bisa pengaju maupun penerima, jadi label "produk Anda"
   // tidak lagi selalu berarti produk yang ditawarkan.
   const isRequester = viewerRole !== 'responder';
   const myProduct = isRequester
-    ? barter.offered_product
-    : barter.requested_product;
+    ? tradeIn.offered_product
+    : tradeIn.requested_product;
   const theirProduct = isRequester
-    ? barter.requested_product
-    : barter.offered_product;
-  const myStore = isRequester ? barter.requester_store : barter.responder_store;
+    ? tradeIn.requested_product
+    : tradeIn.offered_product;
+  const myStore = isRequester
+    ? tradeIn.requester_store
+    : tradeIn.responder_store;
   const theirStore = isRequester
-    ? barter.responder_store
-    : barter.requester_store;
+    ? tradeIn.responder_store
+    : tradeIn.requester_store;
   const [processing, setProcessing] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [pollingStatus, setPollingStatus] = useState(false);
@@ -46,7 +48,7 @@ export default function BarterPaymentPage() {
     const interval = setInterval(async () => {
       try {
         const response = await fetch(
-          `/seller/barter/${barter.public_id}/payment-status`
+          `/seller/tukar-tambah/${tradeIn.public_id}/payment-status`
         );
         const data = await response.json();
 
@@ -56,7 +58,7 @@ export default function BarterPaymentPage() {
           toast.success(
             'Pembayaran berhasil! Silakan saling mengirim barang dan isi nomor resinya.'
           );
-          router.visit('/seller/barter');
+          router.visit('/seller/tukar-tambah');
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
@@ -68,16 +70,16 @@ export default function BarterPaymentPage() {
       setPollingStatus(false);
       setProcessing(false);
       toast.info(
-        'Pembayaran sedang diproses. Silakan cek halaman barter dalam beberapa menit.'
+        'Pembayaran sedang diproses. Silakan cek halaman tukar tambah dalam beberapa menit.'
       );
-      router.visit('/seller/barter');
+      router.visit('/seller/tukar-tambah');
     }, 30000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [pollingStatus, barter.public_id]);
+  }, [pollingStatus, tradeIn.public_id]);
 
   const handlePay = () => {
     if (!snapToken) {
@@ -117,18 +119,18 @@ export default function BarterPaymentPage() {
     <div className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
       <div className="mx-auto max-w-3xl">
         <h1 className="mb-2 text-3xl font-bold text-[#E9E19E]">
-          Pembayaran Selisih Barter
+          Pembayaran Selisih Tukar Tambah
         </h1>
         <p className="mb-8 text-sm text-white/80">
-          Silakan selesaikan pembayaran untuk menyelesaikan proses barter.
+          Silakan selesaikan pembayaran untuk menyelesaikan proses tukar tambah.
         </p>
 
         <div className="rounded-xl bg-white p-6 shadow-lg">
-          {/* Barter Info */}
+          {/* Tukar Tambah Info */}
           <div className="mb-6">
             <div className="mb-4 flex items-center justify-between border-b pb-3">
               <h2 className="text-lg font-bold text-[#3E2723]">
-                Detail Barter #{barter.public_id}
+                Detail Tukar Tambah #{tradeIn.public_id}
               </h2>
               <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                 Disetujui
@@ -143,7 +145,7 @@ export default function BarterPaymentPage() {
                 store={myStore}
               />
               <div className="flex justify-center text-[#B77C4C]">
-                <BarterIcon className="h-9 w-9" />
+                <TradeInIcon className="h-9 w-9" />
               </div>
               <ProductCard
                 product={theirProduct}
@@ -177,13 +179,13 @@ export default function BarterPaymentPage() {
               </div>
               <div className="flex justify-between border-t pt-2 text-base font-bold text-[#B77C4C]">
                 <span>Selisih (Tambahan):</span>
-                <span>{formatIDR(barter.additional_cash)}</span>
+                <span>{formatIDR(tradeIn.additional_cash)}</span>
               </div>
             </div>
 
             <p className="mb-4 text-xs text-gray-600">
               Karena produk Anda lebih murah, Anda perlu membayar selisih harga
-              untuk melanjutkan barter. Setelah pembayaran berhasil, kedua
+              untuk melanjutkan tukar tambah. Setelah pembayaran berhasil, kedua
               seller saling mengirim barang dan mengisi nomor resi. Kepemilikan
               baru berpindah setelah keduanya mengonfirmasi barang diterima.
             </p>
@@ -210,7 +212,7 @@ export default function BarterPaymentPage() {
               >
                 {processing
                   ? '⏳ Memproses...'
-                  : `Bayar ${formatIDR(barter.additional_cash)}`}
+                  : `Bayar ${formatIDR(tradeIn.additional_cash)}`}
               </button>
             )}
 
@@ -224,10 +226,10 @@ export default function BarterPaymentPage() {
         {!processing && !paymentCompleted && (
           <div className="mt-6 text-center">
             <a
-              href="/seller/barter"
+              href="/seller/tukar-tambah"
               className="inline-block rounded-lg bg-white/10 px-6 py-2 font-semibold text-white hover:bg-white/20"
             >
-              ← Kembali ke Barter
+              ← Kembali ke Tukar Tambah
             </a>
           </div>
         )}
@@ -260,6 +262,6 @@ function ProductCard({ product, label, store }) {
   );
 }
 
-BarterPaymentPage.layout = (page) => (
-  <MainLayout title="Pembayaran Barter">{page}</MainLayout>
+TradeInPaymentPage.layout = (page) => (
+  <MainLayout title="Pembayaran Tukar Tambah">{page}</MainLayout>
 );

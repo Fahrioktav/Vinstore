@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\BarterRequest;
 use App\Models\PayoutRequest;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\TradeInRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,25 +13,25 @@ use Tests\TestCase;
 /**
  * TEMUAN V3-01 & V3-04 — test ini MERAH sampai perbaikannya dikerjakan.
  *
- * Foreign key barter dan tabel keuangannya memakai ON DELETE CASCADE:
+ * Foreign key tukar tambah dan tabel keuangannya memakai ON DELETE CASCADE:
  *
- *   barter_requests.offered_product_id   -> products         CASCADE
- *   barter_requests.requested_product_id -> products         CASCADE
- *   barter_requests.requester_store_id   -> stores           CASCADE
- *   barter_requests.responder_store_id   -> stores           CASCADE
- *   payout_requests.barter_request_id    -> barter_requests  CASCADE
+ *   trade_in_requests.offered_product_id   -> products         CASCADE
+ *   trade_in_requests.requested_product_id -> products         CASCADE
+ *   trade_in_requests.requester_store_id   -> stores           CASCADE
+ *   trade_in_requests.responder_store_id   -> stores           CASCADE
+ *   payout_requests.trade_in_request_id    -> trade_in_requests  CASCADE
  *   payout_requests.store_id             -> stores           CASCADE
- *   refund_requests.barter_request_id    -> barter_requests  CASCADE
+ *   refund_requests.trade_in_request_id    -> trade_in_requests  CASCADE
  *
- * Artinya menghapus satu produk menghapus barternya, dan menghapus barternya
+ * Artinya menghapus satu produk menghapus tukar tambahnya, dan menghapus tukar tambahnya
  * menghapus catatan pencairan serta pengembalian dananya. Perbaikan K-04 dulu
- * menyelamatkan riwayat `orders` dengan nullOnDelete + snapshot; tabel barter
+ * menyelamatkan riwayat `orders` dengan nullOnDelete + snapshot; tabel tukar tambah
  * dan tabel keuangan yang lahir setelahnya tidak pernah ikut diubah.
  *
- * Yang diharapkan setelah perbaikan: barter dan catatan pencairan tetap ada
+ * Yang diharapkan setelah perbaikan: tukar tambah dan catatan pencairan tetap ada
  * sebagai jejak audit, dengan kolom produk/toko menjadi NULL.
  */
-class BarterCascadeIntegrityTest extends TestCase
+class TradeInCascadeIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -97,64 +97,64 @@ class BarterCascadeIntegrityTest extends TestCase
             'category' => 'Antik',
             'description' => 'Barang antik',
             'approval_status' => Product::STATUS_APPROVED,
-            'is_barterable' => true,
+            'is_trade_in_enabled' => true,
         ]);
     }
 
-    /** Barter yang selisihnya sudah lunas dan barangnya sedang saling dikirim. */
-    private function paidBarter(): BarterRequest
+    /** Tukar tambah yang selisihnya sudah lunas dan barangnya sedang saling dikirim. */
+    private function paidTradeIn(): TradeInRequest
     {
         $this->actingAs($this->requesterUser)->post(
-            '/seller/barter/'.$this->requestedProduct->public_id,
+            '/seller/tukar-tambah/'.$this->requestedProduct->public_id,
             ['offered_product_id' => $this->offeredProduct->public_id]
         );
 
-        $barter = BarterRequest::firstOrFail();
+        $tradeIn = TradeInRequest::firstOrFail();
 
         $this->actingAs($this->responderUser)
-            ->post('/seller/barter/'.$barter->public_id.'/accept');
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/accept');
 
-        $barter->refresh()->forceFill([
-            'payment_status' => BarterRequest::PAYMENT_PAID,
+        $tradeIn->refresh()->forceFill([
+            'payment_status' => TradeInRequest::PAYMENT_PAID,
             'paid_at' => now(),
-            'status' => BarterRequest::STATUS_SHIPPING,
+            'status' => TradeInRequest::STATUS_SHIPPING,
             'shipping_started_at' => now(),
         ])->save();
 
-        return $barter->fresh();
+        return $tradeIn->fresh();
     }
 
     /**
      * Inti V3-01. Penerima menghapus produk yang sudah ia janjikan, setelah
      * pengaju membayar dan mengirimkan barangnya.
      */
-    public function test_menghapus_produk_tidak_menghapus_barter_yang_sedang_berjalan(): void
+    public function test_menghapus_produk_tidak_menghapus_tukar_tambah_yang_sedang_berjalan(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         // Pengaju sudah mengirimkan barangnya.
         $this->actingAs($this->requesterUser)
-            ->post('/seller/barter/'.$barter->public_id.'/ship', ['tracking_number' => 'JNE-A']);
+            ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/ship', ['tracking_number' => 'JNE-A']);
 
         $this->requestedProduct->delete();
 
         $this->assertTrue(
-            BarterRequest::where('public_id', $barter->public_id)->exists(),
-            'Barter terhapus bersama produknya — pengaju kehilangan barang dan uang tanpa jejak apa pun.'
+            TradeInRequest::where('public_id', $tradeIn->public_id)->exists(),
+            'Tukar tambah terhapus bersama produknya — pengaju kehilangan barang dan uang tanpa jejak apa pun.'
         );
     }
 
     /**
      * Inti V3-04. Catatan pencairan adalah bukti uang benar-benar ditransfer.
      */
-    public function test_menghapus_produk_tidak_menghapus_catatan_pencairan_barter(): void
+    public function test_menghapus_produk_tidak_menghapus_catatan_pencairan_tukar_tambah(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $payout = PayoutRequest::create([
-            'barter_request_id' => $barter->id,
+            'trade_in_request_id' => $tradeIn->id,
             'store_id' => $this->responderStore->id,
-            'amount' => $barter->additional_cash,
+            'amount' => $tradeIn->additional_cash,
             'bank_name' => 'BCA',
             'account_number' => '1234567890',
             'account_holder' => 'Seller B',
@@ -165,7 +165,7 @@ class BarterCascadeIntegrityTest extends TestCase
 
         $this->assertTrue(
             PayoutRequest::where('public_id', $payout->public_id)->exists(),
-            'Catatan pencairan terhapus mengikuti barternya — jejak audit uang keluar hilang.'
+            'Catatan pencairan terhapus mengikuti tukar tambahnya — jejak audit uang keluar hilang.'
         );
     }
 
@@ -175,12 +175,12 @@ class BarterCascadeIntegrityTest extends TestCase
      */
     public function test_menghapus_toko_tidak_menghapus_riwayat_pencairan(): void
     {
-        $barter = $this->paidBarter();
+        $tradeIn = $this->paidTradeIn();
 
         $payout = PayoutRequest::create([
-            'barter_request_id' => $barter->id,
+            'trade_in_request_id' => $tradeIn->id,
             'store_id' => $this->responderStore->id,
-            'amount' => $barter->additional_cash,
+            'amount' => $tradeIn->additional_cash,
             'bank_name' => 'BCA',
             'account_number' => '1234567890',
             'account_holder' => 'Seller B',
