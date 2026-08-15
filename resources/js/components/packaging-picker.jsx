@@ -76,9 +76,6 @@ export default function PackagingPicker({
         <h4 className="mb-1 text-sm font-bold text-gray-900">
           Jenis Pengemasan
         </h4>
-        <p className="mb-3 text-xs text-gray-500">
-          Pilih sesuai kerapuhan barang dari toko ini.
-        </p>
         {body}
       </div>
     );
@@ -87,10 +84,6 @@ export default function PackagingPicker({
   return (
     <div className="rounded-lg border bg-white p-6 shadow-md">
       <h3 className="mb-1 text-lg font-bold text-gray-900">Jenis Pengemasan</h3>
-      <p className="mb-4 text-sm text-gray-500">
-        Pilih sesuai kerapuhan barang Anda. Barang keramik, kaca, dan porselen
-        sangat disarankan memakai peti kayu.
-      </p>
       {body}
     </div>
   );

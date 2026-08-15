@@ -26,14 +26,8 @@ export default function WeightDimensionFields({ values = {}, onChange }) {
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-      <p className="text-sm font-semibold text-[#2F3E46]">
+      <p className="mb-4 text-sm font-semibold text-[#2F3E46]">
         Berat &amp; Dimensi Paket
-      </p>
-      <p className="mt-1 mb-4 text-xs text-gray-500">
-        Dipakai menghitung biaya pengiriman yang ditagihkan ke pemenang lelang.
-        Yang ditagih adalah berat yang lebih besar antara berat asli dan berat
-        volumetrik (P × L × T ÷ 6000), sama seperti cara kurir menghitung —
-        barang besar tapi ringan tetap memakan ruang.
       </p>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -82,12 +76,6 @@ export default function WeightDimensionFields({ values = {}, onChange }) {
           />
         </div>
       </div>
-
-      <p className="mt-2 text-xs text-gray-400">
-        Barang di bawah 3 kg dibulatkan ke 3 kg karena tarif 3–10 kg adalah
-        tarif dasar. Dimensi boleh dikosongkan; bila kosong, biayanya murni dari
-        berat asli.
-      </p>
     </div>
   );
 }

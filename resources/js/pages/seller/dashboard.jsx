@@ -167,13 +167,9 @@ export default function SellerDashboard() {
         {/* Pencairan Dana */}
         <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
           <div className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="mb-2 text-xl font-bold text-[#53685B]">
+            <h2 className="mb-4 text-xl font-bold text-[#53685B]">
               Pencairan Dana
             </h2>
-            <p className="mb-4 text-xs text-gray-500">
-              Dana tidak cair otomatis. Ajukan pencairan per pesanan lewat menu
-              Aksi di tabel Customer Orders, lalu tunggu persetujuan admin.
-            </p>
             <div className="space-y-4">
               <BalanceLine
                 label="Siap diajukan"
@@ -768,14 +764,9 @@ function OrderRow({ order, bankPrefill }) {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#53685B]">
                 <ShippingIcon className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  Masukkan Nomor Resi
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Diperlukan untuk memproses pesanan
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Masukkan Nomor Resi
+              </h3>
             </div>
             <form onSubmit={handleTrackingSubmit}>
               <div className="mb-5">
@@ -791,9 +782,6 @@ function OrderRow({ order, bankPrefill }) {
                   required
                   autoFocus
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Masukkan nomor resi dari ekspedisi pengiriman
-                </p>
               </div>
               <div className="flex gap-3">
                 <button
@@ -847,10 +835,6 @@ function OrderRow({ order, bankPrefill }) {
                   {formatIDR(order.price)}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Sesuai hasil penjualan pesanan ini. Dana ditransfer admin ke
-                rekening di bawah setelah pengajuan disetujui.
-              </p>
             </div>
 
             <form onSubmit={submitPayout} className="space-y-4">
@@ -906,14 +890,9 @@ function OrderRow({ order, bankPrefill }) {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500">
                 <EditIcon className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  Edit Nomor Resi
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Perbarui nomor resi pengiriman
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Edit Nomor Resi
+              </h3>
             </div>
             <form onSubmit={handleEditTrackingSubmit}>
               <div className="mb-5">

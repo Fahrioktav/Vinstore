@@ -103,13 +103,8 @@ export default function SellerEditProductPage() {
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm font-semibold text-[#2F3E46]">
+              <p className="mb-4 text-sm font-semibold text-[#2F3E46]">
                 Berat & Dimensi Paket
-              </p>
-              <p className="mt-1 mb-4 text-xs text-gray-500">
-                Dipakai menghitung biaya pengiriman. Yang ditagih adalah berat
-                yang lebih besar antara berat asli dan berat volumetrik (P × L ×
-                T ÷ 6000), sama seperti cara kurir menghitung.
               </p>
 
               <div className="grid gap-4 md:grid-cols-4">
@@ -158,11 +153,6 @@ export default function SellerEditProductPage() {
                   />
                 </div>
               </div>
-
-              <p className="mt-2 text-xs text-gray-400">
-                Berat dibulatkan ke atas ke kilogram penuh — 1.200 gram ditagih
-                2 kg. Dimensi boleh dikosongkan.
-              </p>
             </div>
 
             {isTebakHarga && (

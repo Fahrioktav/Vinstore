@@ -147,10 +147,6 @@ export default function CartPage() {
             <h3 className="mb-4 text-lg font-bold text-gray-900">
               Detail Alamat
             </h3>
-            <p className="mb-3 text-sm text-gray-500">
-              Nama jalan, nomor rumah, dan patokan. Wilayah tujuannya sendiri
-              diambil dari titik peta di bawah.
-            </p>
             <textarea
               value={data.shipping_address}
               onChange={(e) => setData('shipping_address', e.target.value)}

@@ -119,12 +119,12 @@ export default function AuctionCheckoutPage() {
             <h3 className="mb-4 text-lg font-bold text-gray-900">
               Detail Alamat
             </h3>
-            <p className="mb-3 text-sm text-gray-500">
-              Nama jalan, nomor rumah, dan patokan.{' '}
-              {locked
-                ? 'Bagian ini masih bisa diperbaiki karena tidak memengaruhi tagihan.'
-                : 'Wilayah tujuannya sendiri diambil dari titik peta di bawah.'}
-            </p>
+            {locked && (
+              <p className="mb-3 text-sm text-gray-500">
+                Bagian ini masih bisa diperbaiki karena tidak memengaruhi
+                tagihan.
+              </p>
+            )}
             <textarea
               value={data.shipping_address}
               onChange={(e) => setData('shipping_address', e.target.value)}
@@ -305,11 +305,6 @@ export default function AuctionCheckoutPage() {
                   ? 'Simpan Alamat & Bayar'
                   : 'Lanjut ke Pembayaran'}
             </button>
-
-            <p className="mt-4 text-center text-xs text-gray-500">
-              Angka di atas masih pratinjau. Yang ditagihkan adalah hasil
-              hitungan server setelah form ini dikirim.
-            </p>
           </div>
         </div>
       </div>
