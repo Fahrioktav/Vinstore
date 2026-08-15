@@ -209,6 +209,9 @@ export async function buatProduk(page, opsi = {}) {
 /**
  * Buat lelang baru sebagai seller yang sedang login.
  *
+ * Lelang diajukan lewat form Tambah Produk dengan memilih jenis penjualan
+ * "Lelang" — tidak ada lagi form pengajuan lelang tersendiri.
+ *
  * `starts_at` divalidasi terhadap AWAL MENIT BERJALAN, jadi menit yang sedang
  * berjalan pun diterima. Nilai default di sini tetap menit berikutnya supaya
  * lelangnya sempat melewati status `scheduled` — itulah yang ditunggu
@@ -225,7 +228,8 @@ export async function buatLelang(page, opsi = {}) {
     selesai = waktuLokal(60 * 24),
   } = opsi;
 
-  await page.goto('/seller/auctions/create');
+  await page.goto('/seller/products/create');
+  await page.selectOption('select[name="sale_type"]', 'lelang');
   await page.fill('input[name="name"]', nama);
   await page.fill('textarea[name="description"]', deskripsi);
   // Berat wajib sejak pesanan lelang ikut menagih ongkir.

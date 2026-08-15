@@ -67,9 +67,16 @@ class AuctionController extends Controller
         ]);
     }
 
+    /**
+     * Form pengajuan lelang tersendiri sudah tidak ada.
+     *
+     * Barang lelang kini diajukan lewat form Tambah Produk dengan memilih jenis
+     * penjualan "Lelang" — seller cukup mengenal satu pintu masuk. Rutenya
+     * dipertahankan supaya tautan lama tidak mati.
+     */
     public function create()
     {
-        return Inertia::render('seller/auctions/create');
+        return redirect()->route('seller.products.create');
     }
 
     public function store(Request $request)

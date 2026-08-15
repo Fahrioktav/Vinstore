@@ -352,16 +352,12 @@ export default function SellerDashboard() {
 
         {/* Auctions Section */}
         <div className="rounded-2xl bg-white p-6 shadow-md">
-          <div className="mb-6 flex items-center justify-between">
+          {/* Tanpa tombol tambah sendiri: barang lelang kini diajukan lewat
+              form Tambah Produk dengan memilih jenis penjualan "Lelang". */}
+          <div className="mb-6">
             <h2 className="text-2xl font-bold text-[#53685B]">
               Daftar Barang Lelang
             </h2>
-            <Link
-              href="/seller/auctions/create"
-              className="rounded-lg bg-[#B77C4C] px-6 py-2 font-semibold text-white transition hover:bg-[#8d5e39]"
-            >
-              + Add Lelang
-            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

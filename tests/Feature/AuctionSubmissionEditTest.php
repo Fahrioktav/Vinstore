@@ -65,6 +65,48 @@ class AuctionSubmissionEditTest extends TestCase
         ]);
     }
 
+    /**
+     * Form pengajuan lelang tersendiri sudah tidak ada — barang lelang diajukan
+     * lewat form Tambah Produk dengan memilih jenis penjualan "Lelang". Rutenya
+     * dipertahankan sebagai pengalih supaya tautan lama tidak mati.
+     */
+    public function test_rute_form_lelang_lama_mengalihkan_ke_form_produk(): void
+    {
+        $this->actingAs($this->seller)
+            ->get('/seller/auctions/create')
+            ->assertRedirect(route('seller.products.create'));
+    }
+
+    public function test_pengajuan_lelang_dari_form_gabungan_tersimpan(): void
+    {
+        $this->actingAs($this->seller)
+            ->post('/seller/auctions', [
+                // `sale_type` ikut terkirim karena form-nya dipakai bersama
+                // produk biasa; AuctionController mengabaikannya.
+                'sale_type' => 'lelang',
+                'name' => 'Keris Jawa',
+                'description' => 'Keris antik bertuah',
+                'image' => \Illuminate\Http\UploadedFile::fake()->image('keris.jpg'),
+                'weight' => 2500,
+                'starting_price' => 1500000,
+                'min_increment' => 100000,
+                'starts_at' => now()->addHour()->format('Y-m-d\TH:i'),
+                'ends_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('seller.dashboard'));
+
+        $auction = Auction::where('name', 'Keris Jawa')->firstOrFail();
+
+        $this->assertSame($this->store->id, $auction->store_id);
+        $this->assertSame(2500, $auction->weight);
+        $this->assertSame(Auction::STATUS_PENDING_VALIDATOR, $auction->approval_status);
+        $this->assertSame('pending', $auction->status);
+
+        // Tidak ada baris produk yang ikut terbuat: lelang tetap entitasnya
+        // sendiri, yang digabung hanya formnya.
+        $this->assertSame(0, \App\Models\Product::where('name', 'Keris Jawa')->count());
+    }
+
     public function test_seller_bisa_membuka_form_edit_lelang_yang_baru_diajukan(): void
     {
         $auction = $this->makeAuction();

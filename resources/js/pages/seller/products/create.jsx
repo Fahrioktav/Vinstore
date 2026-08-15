@@ -11,21 +11,35 @@ import {
 } from '@/components/auth/auth-layout';
 import { CertificateIcon, VideoIcon } from '@/components/icons';
 
+/**
+ * Satu pintu masuk untuk seluruh jenis penjualan.
+ *
+ * Perlu diketahui saat membaca berkas ini: TEBAK HARGA dan LELANG tidak setara
+ * di belakang layar meski di form ini tampak sederajat. Tebak harga hanyalah
+ * nilai kolom `sale_type` pada tabel `products` yang sama, sedangkan lelang
+ * adalah entitasnya sendiri di tabel `auctions` — lengkap dengan penawaran,
+ * jaminan, pemenang, dan penjadwal penutupnya.
+ *
+ * Karena itu form ini berpindah tujuan kirim, bukan berpindah isi saja: pilihan
+ * "Lelang" mengirimkannya ke AuctionController, selebihnya ke ProductController.
+ * Yang digabung adalah pengalaman sellernya, bukan modelnya.
+ */
 export default function SellerCreateProductPage() {
   const { categories = [] } = usePage().props;
   const [saleType, setSaleType] = useState('normal');
   const isTebakHarga = saleType === 'tebak_harga';
+  const isLelang = saleType === 'lelang';
 
   return (
     <section className="flex w-full max-w-2xl grow px-6 py-8">
       <Card className="my-auto w-full shadow-md transition hover:shadow-lg">
         <CardContent>
           <h2 className="font-poppins mb-6 text-2xl font-bold">
-            Tambah Produk
+            {isLelang ? 'Tambah Barang Lelang' : 'Tambah Produk'}
           </h2>
 
           <Form
-            action="/seller/products"
+            action={isLelang ? '/seller/auctions' : '/seller/products'}
             method="POST"
             encType="multipart/form-data"
             className="flex flex-col gap-4"
@@ -65,6 +79,7 @@ export default function SellerCreateProductPage() {
                   >
                     <option value="normal">Penjualan Biasa</option>
                     <option value="tebak_harga">Tebak Harga</option>
+                    <option value="lelang">Lelang</option>
                   </select>
                   {isTebakHarga && (
                     <p className="mt-1 text-xs text-gray-500">
@@ -74,35 +89,100 @@ export default function SellerCreateProductPage() {
                       mengirim satu tebakan.
                     </p>
                   )}
+                  {isLelang && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Barang ditawarkan lewat penawaran terbuka dan baru terjual
+                      setelah lelangnya tutup. Pengajuannya melewati validator
+                      dan admin seperti produk biasa.
+                    </p>
+                  )}
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <AuthLabel htmlFor="stock">Stok</AuthLabel>
-                    <AuthInput
-                      id="stock"
-                      type="number"
-                      name="stock"
-                      required
-                      min="0"
-                      defaultValue="0"
-                    />
+                {!isLelang && (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div>
+                      <AuthLabel htmlFor="stock">Stok</AuthLabel>
+                      <AuthInput
+                        id="stock"
+                        type="number"
+                        name="stock"
+                        required
+                        min="0"
+                        defaultValue="0"
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="price">
+                        {isTebakHarga
+                          ? 'Harga Normal (tetap terlihat)'
+                          : 'Harga'}
+                      </AuthLabel>
+                      <AuthInput
+                        id="price"
+                        type="number"
+                        // step="0.01"
+                        name="price"
+                        required
+                        min="0"
+                        defaultValue="0"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <AuthLabel htmlFor="price">
-                      {isTebakHarga ? 'Harga Normal (tetap terlihat)' : 'Harga'}
-                    </AuthLabel>
-                    <AuthInput
-                      id="price"
-                      type="number"
-                      // step="0.01"
-                      name="price"
-                      required
-                      min="0"
-                      defaultValue="0"
-                    />
+                )}
+
+                {isLelang && (
+                  <div className="grid gap-6 rounded-lg border border-[#B77C4C]/30 bg-[#B77C4C]/5 p-4 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <p className="text-sm font-semibold text-[#2F3E46]">
+                        Pengaturan Lelang
+                      </p>
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="starting_price">Harga Awal</AuthLabel>
+                      <AuthInput
+                        id="starting_price"
+                        type="number"
+                        name="starting_price"
+                        min="1000"
+                        required={isLelang}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Harga awal mulai Rp 1.000.000 mewajibkan peserta
+                        membayar deposit 10% sebelum boleh menawar.
+                      </p>
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="min_increment">
+                        Minimal Kenaikan Bid
+                      </AuthLabel>
+                      <AuthInput
+                        id="min_increment"
+                        type="number"
+                        name="min_increment"
+                        min="1000"
+                        required={isLelang}
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="starts_at">Tanggal Mulai</AuthLabel>
+                      <AuthInput
+                        id="starts_at"
+                        type="datetime-local"
+                        name="starts_at"
+                        required={isLelang}
+                      />
+                    </div>
+                    <div>
+                      <AuthLabel htmlFor="ends_at">Tanggal Selesai</AuthLabel>
+                      <AuthInput
+                        id="ends_at"
+                        type="datetime-local"
+                        name="ends_at"
+                        required={isLelang}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <p className="mb-4 text-sm font-semibold text-[#2F3E46]">
@@ -209,27 +289,30 @@ export default function SellerCreateProductPage() {
                   </div>
                 )}
 
-                <div>
-                  <AuthLabel htmlFor="category">Kategori</AuthLabel>
-                  <select
-                    id="category"
-                    name="category"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
-                    required
-                  >
-                    <option value="">Pilih kategori</option>
-                    {categories.map((category) => (
-                      <option key={category.name} value={category.name}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  {categories.length === 0 && (
-                    <p className="mt-1 text-xs text-red-500">
-                      Belum ada kategori. Hubungi admin untuk membuat kategori.
-                    </p>
-                  )}
-                </div>
+                {!isLelang && (
+                  <div>
+                    <AuthLabel htmlFor="category">Kategori</AuthLabel>
+                    <select
+                      id="category"
+                      name="category"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#53685B] focus:outline-none"
+                      required
+                    >
+                      <option value="">Pilih kategori</option>
+                      {categories.map((category) => (
+                        <option key={category.name} value={category.name}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    {categories.length === 0 && (
+                      <p className="mt-1 text-xs text-red-500">
+                        Belum ada kategori. Hubungi admin untuk membuat
+                        kategori.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <AuthLabel htmlFor="description">Deskripsi</AuthLabel>
                   <AuthTextArea
@@ -240,7 +323,9 @@ export default function SellerCreateProductPage() {
                   />
                 </div>
                 <div>
-                  <AuthLabel htmlFor="image">Gambar Produk</AuthLabel>
+                  <AuthLabel htmlFor="image">
+                    {isLelang ? 'Foto Barang' : 'Gambar Produk'}
+                  </AuthLabel>
                   <AuthInput
                     id="image"
                     type="file"
@@ -249,43 +334,47 @@ export default function SellerCreateProductPage() {
                     required
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Gambar utama produk. Format: JPG, PNG (Max 2MB).
+                    Format: JPG, PNG (Max 2MB).
                   </p>
                 </div>
-                <div>
-                  <AuthLabel htmlFor="images">
-                    Foto Tambahan (tampak depan, samping, kondisi)
-                  </AuthLabel>
-                  <AuthInput
-                    id="images"
-                    type="file"
-                    name="images[]"
-                    accept="image/*"
-                    multiple
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Bisa pilih beberapa foto sekaligus (maks. 5). Akan tampil di
-                    detail produk untuk buyer. Format: JPG, PNG (Max 2MB /
-                    foto).
-                  </p>
-                </div>
-                <div>
-                  <AuthLabel htmlFor="video">
-                    <VideoIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
-                    Video Produk (Opsional)
-                  </AuthLabel>
-                  <AuthInput
-                    id="video"
-                    type="file"
-                    name="video"
-                    accept="video/mp4,video/webm,video/quicktime"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Video singkat kondisi barang. Format: MP4, WebM, MOV (Max
-                    20MB).
-                  </p>
-                </div>
-                {!isTebakHarga && (
+                {!isLelang && (
+                  <div>
+                    <AuthLabel htmlFor="images">
+                      Foto Tambahan (tampak depan, samping, kondisi)
+                    </AuthLabel>
+                    <AuthInput
+                      id="images"
+                      type="file"
+                      name="images[]"
+                      accept="image/*"
+                      multiple
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Bisa pilih beberapa foto sekaligus (maks. 5). Akan tampil
+                      di detail produk untuk buyer. Format: JPG, PNG (Max 2MB /
+                      foto).
+                    </p>
+                  </div>
+                )}
+                {!isLelang && (
+                  <div>
+                    <AuthLabel htmlFor="video">
+                      <VideoIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                      Video Produk (Opsional)
+                    </AuthLabel>
+                    <AuthInput
+                      id="video"
+                      type="file"
+                      name="video"
+                      accept="video/mp4,video/webm,video/quicktime"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Video singkat kondisi barang. Format: MP4, WebM, MOV (Max
+                      20MB).
+                    </p>
+                  </div>
+                )}
+                {!isTebakHarga && !isLelang && (
                   <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <input
                       id="is_trade_in_enabled"
@@ -305,26 +394,30 @@ export default function SellerCreateProductPage() {
                     </span>
                   </label>
                 )}
-                <div>
-                  <AuthLabel htmlFor="certificate">
-                    <CertificateIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
-                    Sertifikat Keaslian (Opsional)
-                  </AuthLabel>
-                  <AuthInput
-                    id="certificate"
-                    type="file"
-                    name="certificate"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Format: PDF, JPG, PNG (Max 5MB)
-                  </p>
-                </div>
+                {!isLelang && (
+                  <div>
+                    <AuthLabel htmlFor="certificate">
+                      <CertificateIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                      Sertifikat Keaslian (Opsional)
+                    </AuthLabel>
+                    <AuthInput
+                      id="certificate"
+                      type="file"
+                      name="certificate"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Format: PDF, JPG, PNG (Max 5MB)
+                    </p>
+                  </div>
+                )}
                 <div className="flex justify-end gap-4">
                   <AuthButtonLink href="/seller/dashboard">
                     Kembali
                   </AuthButtonLink>
-                  <AuthButton type="submit">Simpan Produk</AuthButton>
+                  <AuthButton type="submit">
+                    {isLelang ? 'Ajukan Lelang' : 'Simpan Produk'}
+                  </AuthButton>
                 </div>
               </>
             )}

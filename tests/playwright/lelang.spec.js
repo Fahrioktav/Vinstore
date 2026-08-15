@@ -61,7 +61,8 @@ test.describe('Fitur Lelang', () => {
     page,
   }) => {
     await loginAs(page, 'seller1');
-    await page.goto('/seller/auctions/create');
+    await page.goto('/seller/products/create');
+    await page.selectOption('select[name="sale_type"]', 'lelang');
 
     const nama = namaUji('Lelang Tanggal Salah');
 
@@ -76,7 +77,7 @@ test.describe('Fitur Lelang', () => {
     await page.getByRole('button', { name: 'Ajukan Lelang' }).click();
 
     // Hasil yang diharapkan: tidak tersimpan, tetap di form pengajuan.
-    await expect(page).toHaveURL(/\/seller\/auctions\/create/, {
+    await expect(page).toHaveURL(/\/seller\/products\/create/, {
       timeout: 20000,
     });
   });
