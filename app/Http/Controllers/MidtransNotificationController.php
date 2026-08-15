@@ -112,10 +112,22 @@ class MidtransNotificationController extends Controller
     /**
      * Notifikasi pembayaran uang jaminan lelang.
      *
-     * Hanya jaminan yang masih `pending` yang boleh berubah menjadi `paid`.
-     * Setelah itu statusnya milik alur lelang — dipakai jadi uang muka,
-     * dikembalikan, atau hangus — dan tidak boleh ditarik mundur oleh notifikasi
-     * yang datang terlambat.
+     * Yang boleh menerima kabar pelunasan bukan hanya jaminan `pending`, tetapi
+     * juga yang sudah telanjur ditandai `expired`.
+     *
+     * Alasannya: `expired` dipasang oleh penutupan lelang atas jaminan yang saat
+     * itu belum dibayar — dan "belum dibayar pada detik itu" tidak sama dengan
+     * "tidak akan pernah dibayar". Pembeli yang memilih virtual account bisa saja
+     * sudah menekan bayar semenit sebelum lelangnya tutup. Menolak uangnya
+     * membuat jaminan bernilai `expired` padahal dananya benar-benar diterima,
+     * dan pemiliknya kehilangan jalur pengembalian sama sekali (temuan V7-01).
+     *
+     * Pemilik jaminan semacam itu pasti kalah — untuk menawar ia harus punya
+     * jaminan yang sudah aktif — jadi menaikkannya ke `paid` selalu berujung ke
+     * jalur pengembalian, tidak pernah ke uang muka.
+     *
+     * Status selebihnya (`applied`, `refunded`, `forfeited`) sudah milik alur
+     * lelang dan tidak boleh ditarik mundur oleh notifikasi yang terlambat.
      */
     private function handleDepositNotification(
         ?string $paymentReference,
@@ -131,25 +143,31 @@ class MidtransNotificationController extends Controller
 
         $deposit->midtrans_transaction_id = $payload['transaction_id'] ?? $deposit->midtrans_transaction_id;
 
-        if ($deposit->status !== AuctionDeposit::STATUS_PENDING) {
-            $deposit->save();
+        $menungguPelunasan = in_array($deposit->status, [
+            AuctionDeposit::STATUS_PENDING,
+            AuctionDeposit::STATUS_EXPIRED,
+        ], true);
 
-            if ($paymentStatus === 'paid') {
-                Log::warning('Pembayaran deposit lelang datang atas jaminan yang sudah tidak menunggu bayaran.', [
+        if ($paymentStatus === 'paid' && $menungguPelunasan) {
+            $terlambat = $deposit->status === AuctionDeposit::STATUS_EXPIRED;
+
+            $deposit->status = AuctionDeposit::STATUS_PAID;
+            $deposit->paid_at = now();
+
+            if ($terlambat) {
+                Log::info('Deposit lelang lunas setelah lelangnya tutup; masuk jalur pengembalian.', [
                     'deposit_public_id' => $deposit->public_id,
-                    'status' => $deposit->status,
                     'gross_amount' => $payload['gross_amount'] ?? null,
                 ]);
             }
-
-            return response()->json(['message' => 'Notification processed.']);
-        }
-
-        if ($paymentStatus === 'paid') {
-            $deposit->status = AuctionDeposit::STATUS_PAID;
-            $deposit->paid_at = now();
-        } elseif ($isFailure) {
+        } elseif ($isFailure && $deposit->status === AuctionDeposit::STATUS_PENDING) {
             $deposit->status = AuctionDeposit::STATUS_EXPIRED;
+        } elseif ($paymentStatus === 'paid') {
+            Log::warning('Pembayaran deposit lelang datang atas jaminan yang sudah tidak menunggu bayaran.', [
+                'deposit_public_id' => $deposit->public_id,
+                'status' => $deposit->status,
+                'gross_amount' => $payload['gross_amount'] ?? null,
+            ]);
         }
 
         $deposit->save();

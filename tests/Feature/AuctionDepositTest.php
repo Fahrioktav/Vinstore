@@ -347,6 +347,88 @@ class AuctionDepositTest extends TestCase
         $this->assertSame(AuctionDeposit::STATUS_PAID, $depositKalah->fresh()->status);
     }
 
+    /**
+     * Uang yang masuk setelah lelang tutup tetap harus diakui (temuan V7-01).
+     *
+     * Pembeli virtual account bisa saja menekan bayar semenit sebelum lelangnya
+     * tutup dan notifikasinya baru datang beberapa jam kemudian. Menolaknya
+     * membuat jaminan bernilai `expired` padahal dananya benar-benar diterima,
+     * dan pemiliknya kehilangan jalur pengembalian sama sekali.
+     */
+    public function test_deposit_yang_lunas_setelah_lelang_tutup_tetap_diakui(): void
+    {
+        $auction = $this->lelang();
+
+        $this->actingAs($this->penawar)->post('/auctions/'.$auction->public_id.'/deposit');
+        $deposit = AuctionDeposit::where('auction_id', $auction->id)->firstOrFail();
+
+        $auction->update(['ends_at' => now()->subMinute()]);
+        Artisan::call('auctions:finish');
+
+        $this->assertSame(AuctionDeposit::STATUS_EXPIRED, $deposit->fresh()->status);
+
+        // Uangnya baru masuk sekarang.
+        $this->postJson('/midtrans/notification', $this->webhookPayload($deposit->payment_reference, 200_000))
+            ->assertOk();
+
+        $deposit->refresh()->load('auction');
+
+        $this->assertSame(AuctionDeposit::STATUS_PAID, $deposit->status);
+        $this->assertNotNull($deposit->paid_at);
+
+        // Pemiliknya tidak pernah menawar, jadi ia pasti kalah dan berhak
+        // meminta uangnya kembali.
+        $this->assertTrue($deposit->canRequestRefund());
+    }
+
+    public function test_deposit_yang_lunas_terlambat_bisa_diajukan_pengembaliannya(): void
+    {
+        $auction = $this->lelang();
+
+        $this->actingAs($this->penawar)->post('/auctions/'.$auction->public_id.'/deposit');
+        $deposit = AuctionDeposit::where('auction_id', $auction->id)->firstOrFail();
+
+        $auction->update(['ends_at' => now()->subMinute()]);
+        Artisan::call('auctions:finish');
+
+        $this->postJson('/midtrans/notification', $this->webhookPayload($deposit->payment_reference, 200_000));
+
+        $this->actingAs($this->penawar)
+            ->post('/deposit-lelang/'.$deposit->public_id.'/refund', [
+                'bank_name' => 'BCA',
+                'account_number' => '1234567890',
+                'account_holder' => 'Penawar',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(AuctionDeposit::STATUS_REFUND_REQUESTED, $deposit->fresh()->status);
+    }
+
+    /**
+     * Kegagalan pembayaran atas jaminan yang sudah gugur tidak boleh
+     * menghidupkannya, dan status yang sudah milik alur lelang tidak boleh
+     * ditarik mundur.
+     */
+    public function test_status_yang_sudah_berpindah_tidak_ditarik_mundur(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositLunas($auction, $this->penawar);
+        $deposit->update(['payment_reference' => $deposit->public_id]);
+
+        foreach ([
+            AuctionDeposit::STATUS_APPLIED,
+            AuctionDeposit::STATUS_REFUNDED,
+            AuctionDeposit::STATUS_FORFEITED,
+        ] as $status) {
+            $deposit->forceFill(['status' => $status])->save();
+
+            $this->postJson('/midtrans/notification', $this->webhookPayload($deposit->payment_reference, 200_000))
+                ->assertOk();
+
+            $this->assertSame($status, $deposit->fresh()->status);
+        }
+    }
+
     public function test_deposit_yang_tidak_pernah_dibayar_kedaluwarsa_saat_lelang_tutup(): void
     {
         $auction = $this->lelang();

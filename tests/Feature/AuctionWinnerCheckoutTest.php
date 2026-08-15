@@ -172,35 +172,91 @@ class AuctionWinnerCheckoutTest extends TestCase
     }
 
     /**
-     * Midtrans menolak order_id yang sudah pernah dipakai, jadi percobaan
-     * pembayaran kedua harus memakai referensi baru — bukan menabrak yang lama.
+     * Komponen biaya dikunci setelah transaksi Snap dibuat (temuan V7-02).
+     *
+     * Midtrans menolak `order_id` yang sudah pernah dipakai, sedangkan halaman
+     * Snap yang lama tetap hidup di peramban pembeli. Tagihan yang boleh berubah
+     * karena itu menuntut referensi baru, dan pembayaran atas halaman lama akan
+     * jatuh ke referensi yang tidak lagi ada. Menguncinya membuat keadaan itu
+     * mustahil.
      */
-    public function test_mengubah_tujuan_lalu_membayar_lagi_memakai_referensi_baru(): void
+    public function test_titik_antar_tidak_bisa_diubah_setelah_tagihan_dibuat(): void
     {
         $auction = $this->lelangSelesai();
 
         $this->bayar($auction);
 
         $order = Order::where('auction_id', $auction->id)->firstOrFail();
-        $referensiPertama = $order->payment_reference;
+        $referensi = $order->payment_reference;
+        $tagihan = (int) round((float) $order->price);
 
-        $this->assertSame($order->public_id, $referensiPertama);
+        $this->assertSame($order->public_id, $referensi);
+        $this->assertSame(10_000, $order->shipping_cost);
 
-        // Pemenang berubah pikiran: kirim ke Denpasar, bukan Prambanan.
+        // Pemenang kembali dan mencoba mengirim ke Denpasar.
         $this->bayar($auction, [
+            'shipping_address' => 'Jl. Baru No. 9',
             'shipping_latitude' => -8.6705,
             'shipping_longitude' => 115.2126,
+            'shipping_method' => 'express',
+            'packaging_type' => 'kayu',
+            'notes' => 'Titip di satpam.',
         ]);
 
         $order->refresh();
 
-        $this->assertSame($order->public_id.'-2', $order->payment_reference);
-        $this->assertSame(20_000, $order->shipping_cost);
+        // Referensi dan seluruh angkanya tidak bergerak sedikit pun.
+        $this->assertSame($referensi, $order->payment_reference);
+        $this->assertSame($tagihan, (int) round((float) $order->price));
+        $this->assertSame(10_000, $order->shipping_cost);
+        $this->assertSame('standard', $order->shipping_method);
+        $this->assertSame('standard', $order->packaging_type);
+        $this->assertSame(-7.752, round($order->shipping_latitude, 3));
 
-        // Percobaan ketiga menaikkan urutannya, bukan mengulang dari awal.
+        // Yang memang tidak berpengaruh pada nominal tetap boleh diperbaiki.
+        $this->assertSame('Jl. Baru No. 9', $order->shipping_address);
+        $this->assertSame('Titip di satpam.', $order->notes);
+
+        // Token yang sama dipakai ulang, bukan dibuatkan yang baru.
+        $this->assertSame('snap-token-palsu', $order->snap_token);
+    }
+
+    public function test_halaman_pembayaran_menandai_tagihan_yang_sudah_dikunci(): void
+    {
+        $auction = $this->lelangSelesai();
+
+        $this->actingAs($this->pemenang)
+            ->get('/auctions/'.$auction->public_id.'/checkout')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('locked', false));
+
         $this->bayar($auction);
 
-        $this->assertSame($order->public_id.'-3', $order->fresh()->payment_reference);
+        $this->actingAs($this->pemenang)
+            ->get('/auctions/'.$auction->public_id.'/checkout')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('locked', true));
+    }
+
+    /**
+     * Pemenang tidak boleh membatalkan sendiri pesanan lelangnya (temuan
+     * V7-03): jaminannya akan tersangkut di antara jalur pengembalian dan jalur
+     * penghangusan, dan sanksi depositnya kehilangan arti.
+     */
+    public function test_pemenang_tidak_dapat_membatalkan_pesanan_lelangnya(): void
+    {
+        $auction = $this->lelangSelesai();
+
+        $order = Order::where('auction_id', $auction->id)->firstOrFail();
+
+        $this->actingAs($this->pemenang)
+            ->delete('/order/'.$order->public_id)
+            ->assertSessionHas('error');
+
+        $order->refresh();
+
+        $this->assertSame('Waiting', $order->status);
+        $this->assertSame('pending', $order->payment_status);
     }
 
     public function test_tujuan_luar_jawa_dikenai_tarif_lebih_mahal(): void

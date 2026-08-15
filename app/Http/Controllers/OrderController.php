@@ -363,6 +363,29 @@ class OrderController extends Controller
             ->whereIn('status', ['Waiting', 'On The Way'])
             ->firstOrFail();
 
+        // Pesanan lelang tidak boleh dibatalkan sendiri oleh pemenangnya.
+        //
+        // Dua alasan. Pertama, jaminannya akan tersangkut: pengembalian hanya
+        // menerima status `paid` sedangkan jaminan pemenang sudah berpindah ke
+        // `applied`, dan penghangusan hanya dijalankan penjadwal yang menyaring
+        // pembayaran `pending`/`unpaid` — pembatalan mengubahnya menjadi
+        // `cancelled` sehingga tidak tersentuh keduanya. Uangnya berakhir tanpa
+        // pemilik dan tanpa jejak di buku besar (temuan V7-03).
+        //
+        // Kedua, dan lebih mendasar: bila pemenang bisa membatalkan sendiri,
+        // sanksi deposit kehilangan artinya — siapa pun yang menang lalu berubah
+        // pikiran cukup menekan satu tombol untuk lolos. Yang berubah pikiran
+        // cukup membiarkan tenggatnya lewat, dan konsekuensinya melewati satu
+        // jalur yang sama untuk semua orang.
+        if ($order->auction_id !== null) {
+            return back()->with(
+                'error',
+                'Pesanan hasil lelang tidak dapat dibatalkan sendiri. '
+                .'Bila Anda tidak jadi membayar, pesanan ini batal otomatis setelah '
+                .Order::AUCTION_PAYMENT_WINDOW_HOURS.' jam dan deposit Anda hangus.'
+            );
+        }
+
         $order->status = 'Cancelled';
         $order->payment_status = $order->payment_status === 'paid'
             ? $order->payment_status

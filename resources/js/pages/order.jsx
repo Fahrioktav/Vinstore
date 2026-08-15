@@ -265,7 +265,12 @@ export default function OrderPage() {
                               Barang Diterima
                             </button>
                           )}
-                        {['Waiting', 'On The Way'].includes(order.status) ? (
+                        {/* Pesanan lelang tidak punya tombol batal: hasil lelang
+                            mengikat, dan membatalkannya sendiri akan membuat
+                            deposit pemenang tersangkut tanpa pemilik. Yang tidak
+                            jadi membayar cukup membiarkan tenggatnya lewat. */}
+                        {['Waiting', 'On The Way'].includes(order.status) &&
+                        !order.auction ? (
                           <button
                             type="button"
                             className="text-xs font-semibold text-red-400 transition hover:text-red-300"

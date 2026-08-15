@@ -19,15 +19,15 @@ import CostBreakdown from '@/components/cost-breakdown';
  * dikembalikan setelah form ini terkirim.
  */
 export default function AuctionCheckoutPage() {
-  const { auction, order, user, feeRates } = usePage().props;
+  const { auction, order, user, feeRates, locked } = usePage().props;
 
   const { data, setData, post, processing, errors } = useForm({
     shipping_address: order.shipping_address || user?.address || '',
-    shipping_method: 'standard',
-    packaging_type: feeRates.packaging.default,
-    shipping_latitude: '',
-    shipping_longitude: '',
-    notes: '',
+    shipping_method: order.shipping_method || 'standard',
+    packaging_type: order.packaging_type || feeRates.packaging.default,
+    shipping_latitude: locked ? (order.shipping_latitude ?? '') : '',
+    shipping_longitude: locked ? (order.shipping_longitude ?? '') : '',
+    notes: order.notes || '',
   });
 
   const winningPrice = Number(order.product_price) || 0;
@@ -82,6 +82,19 @@ export default function AuctionCheckoutPage() {
     <section className="px-4 py-8 sm:px-6 md:px-16">
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_400px]">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {locked && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">Tagihan sudah dibuat dan dikunci</p>
+              <p className="mt-1 text-xs">
+                Titik antar, metode pengiriman, dan jenis pengemasan tidak dapat
+                diubah lagi karena tagihannya sudah terkirim ke Midtrans.
+                Mengubahnya akan membuat tagihan lama tetap hidup dan uang Anda
+                berisiko masuk ke tagihan yang salah. Alamat tertulis dan
+                catatan masih bisa Anda perbaiki di bawah.
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-4 rounded-lg border bg-white p-6 shadow-md">
             <img
               src={getAuctionImage(auction)}
@@ -107,8 +120,10 @@ export default function AuctionCheckoutPage() {
               Detail Alamat
             </h3>
             <p className="mb-3 text-sm text-gray-500">
-              Nama jalan, nomor rumah, dan patokan. Wilayah tujuannya sendiri
-              diambil dari titik peta di bawah.
+              Nama jalan, nomor rumah, dan patokan.{' '}
+              {locked
+                ? 'Bagian ini masih bisa diperbaiki karena tidak memengaruhi tagihan.'
+                : 'Wilayah tujuannya sendiri diambil dari titik peta di bawah.'}
             </p>
             <textarea
               value={data.shipping_address}
@@ -125,67 +140,105 @@ export default function AuctionCheckoutPage() {
             )}
           </div>
 
-          <DeliveryPointCard
-            latitude={data.shipping_latitude}
-            longitude={data.shipping_longitude}
-            onChange={(lat, lng) => {
-              setData((current) => ({
-                ...current,
-                shipping_latitude: lat,
-                shipping_longitude: lng,
-              }));
-            }}
-            stores={[auction.store]}
-            distanceKm={quote.distance_km}
-            error={errors.shipping_latitude || errors.shipping_longitude}
-          />
-
-          <div className="rounded-lg border bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">
-              Metode Pengiriman
-            </h3>
-            <div className="space-y-3">
-              {shippingOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 hover:border-[#53685B] has-[:checked]:border-[#53685B] has-[:checked]:bg-[#53685B]/5"
-                >
-                  <input
-                    type="radio"
-                    name="shipping_method"
-                    value={option.value}
-                    checked={data.shipping_method === option.value}
-                    onChange={(e) => setData('shipping_method', e.target.value)}
-                    className="h-4 w-4 text-[#53685B]"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">
-                      {option.title}
-                    </p>
-                    <p className="text-sm text-gray-500">{option.note}</p>
-                  </div>
-                  <p className="font-bold text-gray-900">
-                    {formatIDR(quoteFor(option.value).shipping_cost)}
-                  </p>
-                </label>
-              ))}
+          {locked ? (
+            <div className="rounded-lg border bg-white p-6 shadow-md">
+              <h3 className="mb-4 text-lg font-bold text-gray-900">
+                Pengiriman yang Sudah Ditagihkan
+              </h3>
+              <dl className="space-y-2 text-sm">
+                <Terkunci
+                  label="Metode pengiriman"
+                  value={
+                    order.shipping_method === 'express'
+                      ? 'Pengiriman Express'
+                      : 'Pengiriman Standard'
+                  }
+                />
+                <Terkunci
+                  label="Jenis pengemasan"
+                  value={
+                    feeRates.packaging.options[order.packaging_type]?.label ??
+                    '-'
+                  }
+                />
+                <Terkunci
+                  label="Titik antar"
+                  value={
+                    order.shipping_area ||
+                    (order.shipping_latitude
+                      ? `${Number(order.shipping_latitude).toFixed(5)}, ${Number(order.shipping_longitude).toFixed(5)}`
+                      : '-')
+                  }
+                />
+              </dl>
             </div>
-            {errors.shipping_method && (
-              <p className="mt-2 text-sm text-red-600">
-                {errors.shipping_method}
-              </p>
-            )}
-          </div>
+          ) : (
+            <>
+              <DeliveryPointCard
+                latitude={data.shipping_latitude}
+                longitude={data.shipping_longitude}
+                onChange={(lat, lng) => {
+                  setData((current) => ({
+                    ...current,
+                    shipping_latitude: lat,
+                    shipping_longitude: lng,
+                  }));
+                }}
+                stores={[auction.store]}
+                distanceKm={quote.distance_km}
+                error={errors.shipping_latitude || errors.shipping_longitude}
+              />
 
-          <PackagingPicker
-            value={data.packaging_type}
-            onChange={(type) => setData('packaging_type', type)}
-            rates={feeRates}
-            priceFor={(type) =>
-              quoteFor(data.shipping_method, type).packaging_fee
-            }
-            error={errors.packaging_type}
-          />
+              <div className="rounded-lg border bg-white p-6 shadow-md">
+                <h3 className="mb-4 text-lg font-bold text-gray-900">
+                  Metode Pengiriman
+                </h3>
+                <div className="space-y-3">
+                  {shippingOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 hover:border-[#53685B] has-[:checked]:border-[#53685B] has-[:checked]:bg-[#53685B]/5"
+                    >
+                      <input
+                        type="radio"
+                        name="shipping_method"
+                        value={option.value}
+                        checked={data.shipping_method === option.value}
+                        onChange={(e) =>
+                          setData('shipping_method', e.target.value)
+                        }
+                        className="h-4 w-4 text-[#53685B]"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {option.title}
+                        </p>
+                        <p className="text-sm text-gray-500">{option.note}</p>
+                      </div>
+                      <p className="font-bold text-gray-900">
+                        {formatIDR(quoteFor(option.value).shipping_cost)}
+                      </p>
+                    </label>
+                  ))}
+                </div>
+                {errors.shipping_method && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.shipping_method}
+                  </p>
+                )}
+              </div>
+
+              <PackagingPicker
+                value={data.packaging_type}
+                onChange={(type) => setData('packaging_type', type)}
+                rates={feeRates}
+                priceFor={(type) =>
+                  quoteFor(data.shipping_method, type).packaging_fee
+                }
+                error={errors.packaging_type}
+              />
+            </>
+          )}
 
           <div className="rounded-lg border bg-white p-6 shadow-md">
             <h3 className="mb-4 text-lg font-bold text-gray-900">
@@ -246,7 +299,11 @@ export default function AuctionCheckoutPage() {
               disabled={processing}
               className="mt-6 w-full rounded-lg bg-[#53685B] px-6 py-4 font-bold text-white transition hover:bg-[#3c4a3e] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {processing ? 'Memproses...' : 'Lanjut ke Pembayaran'}
+              {processing
+                ? 'Memproses...'
+                : locked
+                  ? 'Simpan Alamat & Bayar'
+                  : 'Lanjut ke Pembayaran'}
             </button>
 
             <p className="mt-4 text-center text-xs text-gray-500">
@@ -257,6 +314,16 @@ export default function AuctionCheckoutPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Satu baris rincian pengiriman yang sudah tidak bisa diubah. */
+function Terkunci({ label, value }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-gray-500">{label}</dt>
+      <dd className="text-right font-semibold text-gray-900">{value}</dd>
+    </div>
   );
 }
 

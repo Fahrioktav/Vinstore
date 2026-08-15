@@ -421,9 +421,29 @@ class AuctionController extends Controller
             'auction' => $auction,
             'order' => $order,
             'feeRates' => app(ShippingCostService::class)->publicRates(),
+            // Setelah transaksi Snap dibuat, komponen biayanya dikunci — lihat
+            // catatan di pay(). Halaman perlu tahu supaya tidak menawarkan
+            // pilihan yang akan diabaikan server.
+            'locked' => $order->snap_token !== null,
         ]);
     }
 
+    /**
+     * Pemenang mengirimkan rincian pengiriman, lalu ditagih.
+     *
+     * KOMPONEN BIAYA DIKUNCI SEKALI. Begitu transaksi Snap dibuat, titik antar,
+     * metode pengiriman, dan jenis pengemasan tidak lagi bisa diubah — yang
+     * masih boleh diperbaiki hanyalah alamat tertulis dan catatan, yang tidak
+     * memengaruhi nominal.
+     *
+     * Ini bukan pembatasan tanpa sebab. Midtrans menolak `order_id` yang sudah
+     * pernah dipakai, sehingga tagihan yang berubah menuntut referensi baru —
+     * dan halaman Snap yang lama tetap hidup di peramban pembeli. Bila ia
+     * menyelesaikan yang lama, webhook mencari referensi yang sudah tidak ada
+     * dan menjawab 404: uangnya diterima Midtrans, pesanannya tetap menunggu
+     * pembayaran, lalu dibatalkan penjadwal berikut depositnya dihanguskan
+     * (temuan V7-02). Mengunci nominalnya membuat keadaan itu mustahil.
+     */
     public function pay(Request $request, Auction $auction)
     {
         $order = $this->winnerOrderOrFail($auction);
@@ -432,12 +452,15 @@ class AuctionController extends Controller
             return $order;
         }
 
+        // Tagihan yang sudah punya transaksi Snap tidak dihitung ulang.
+        $terkunci = $order->snap_token !== null;
+
         $validated = $request->validate([
             'shipping_address' => 'required|string|max:1000',
-            'shipping_method' => 'required|in:standard,express',
+            'shipping_method' => [$terkunci ? 'nullable' : 'required', 'in:standard,express'],
             'packaging_type' => 'nullable|string',
-            'shipping_latitude' => 'required|numeric|between:-90,90',
-            'shipping_longitude' => 'required|numeric|between:-180,180',
+            'shipping_latitude' => [$terkunci ? 'nullable' : 'required', 'numeric', 'between:-90,90'],
+            'shipping_longitude' => [$terkunci ? 'nullable' : 'required', 'numeric', 'between:-180,180'],
             'notes' => 'nullable|string|max:1000',
         ], [
             'shipping_latitude.required' => 'Pilih titik pengantaran di peta terlebih dahulu.',
@@ -445,6 +468,20 @@ class AuctionController extends Controller
         ]);
 
         $auction->load('store');
+
+        if ($terkunci) {
+            // Hanya keterangan yang diperbarui; seluruh angkanya tetap.
+            $order->update([
+                'shipping_address' => $validated['shipping_address'],
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            return redirect()->route('auctions.show', $auction->public_id)->with([
+                'success' => 'Alamat diperbarui. Silakan selesaikan pembayaran yang sudah dibuat.',
+                'snap_token' => $order->snap_token,
+                'snap_context' => 'order',
+            ]);
+        }
 
         $destLat = (float) $validated['shipping_latitude'];
         $destLng = (float) $validated['shipping_longitude'];
@@ -480,19 +517,6 @@ class AuctionController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // Midtrans menolak order_id yang sudah pernah dipakai. Pemenang yang
-        // kembali ke halaman ini untuk mengganti alamat atau jenis pengemasannya
-        // karena itu perlu referensi baru — nominalnya pun sudah berbeda.
-        // Referensi lama sengaja ditinggalkan tanpa pasangan: transaksi Snap
-        // yang menagih angka lama memang tidak boleh lagi diselesaikan.
-        if ($order->snap_token) {
-            $order->update([
-                'payment_reference' => $this->nextPaymentReference($order),
-                'snap_token' => null,
-                'snap_redirect_url' => null,
-            ]);
-        }
-
         // Yang ditagihkan adalah tagihan penuh dikurangi deposit yang sudah
         // masuk lebih dulu. `price` sendiri tetap tagihan penuh.
         $order->refresh();
@@ -521,24 +545,6 @@ class AuctionController extends Controller
             'snap_token' => $transaction['token'],
             'snap_context' => 'order',
         ]);
-    }
-
-    /**
-     * Referensi pembayaran berikutnya untuk sebuah pesanan: public_id-nya
-     * dengan akhiran urutan percobaan (ORD12345678-2, -3, dan seterusnya).
-     *
-     * Tetap memuat public_id-nya secara utuh supaya masih terbaca manusia saat
-     * dicocokkan dengan dashboard Midtrans.
-     */
-    private function nextPaymentReference(Order $order): string
-    {
-        $attempt = 2;
-
-        if (preg_match('/-(\d+)$/', (string) $order->payment_reference, $matches)) {
-            $attempt = (int) $matches[1] + 1;
-        }
-
-        return $order->public_id.'-'.$attempt;
     }
 
     /**
