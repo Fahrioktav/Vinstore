@@ -19,18 +19,6 @@ import {
   ViewIcon,
 } from '@/components/icons';
 import ActionMenu from '@/components/ui/action-menu';
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
 import { toast } from 'sonner';
 import { confirmDestructive, confirmDialog } from '@/lib/dialog';
 
@@ -97,8 +85,6 @@ export default function SellerDashboard() {
     orderCount,
     totalIncome,
     monthlyIncome,
-    monthlyIncomeData,
-    productIncome,
     auctions,
     store,
     payouts,
@@ -175,91 +161,6 @@ export default function SellerDashboard() {
             <p className="text-2xl font-bold">
               {formatIDR(monthlyIncome || 0)}
             </p>
-          </div>
-        </div>
-
-        {/* Income Charts */}
-        <div className="mb-8 grid gap-6 md:grid-cols-2">
-          {/* Monthly Income Chart */}
-          <div className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="mb-6 text-xl font-bold text-[#53685B]">
-              Grafik Pendapatan Bulanan
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={monthlyIncomeData}>
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="month"
-                  style={{ fontSize: '12px' }}
-                  angle={-15}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) =>
-                    `Rp ${(value / 1000000).toFixed(1)}M`
-                  }
-                />
-                <Tooltip
-                  formatter={(value) => formatIDR(value)}
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="income"
-                  stroke="#10b981"
-                  fillOpacity={1}
-                  fill="url(#colorIncome)"
-                  name="Pendapatan"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Top Products Income */}
-          <div className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="mb-6 text-xl font-bold text-[#53685B]">
-              Top 5 Produk Terlaris
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={productIncome}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  style={{ fontSize: '11px' }}
-                  angle={-15}
-                  textAnchor="end"
-                  height={80}
-                  interval={0}
-                />
-                <YAxis
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) =>
-                    `Rp ${(value / 1000000).toFixed(1)}M`
-                  }
-                />
-                <Tooltip
-                  formatter={(value) => formatIDR(value)}
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Bar dataKey="income" fill="#B77C4C" name="Pendapatan" />
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         </div>
 

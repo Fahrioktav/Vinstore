@@ -81,40 +81,11 @@ class SellerDashboardController extends Controller
             ->whereMonth('created_at', date('m'))
             ->sum('price');
 
-        // Income per bulan untuk grafik (6 bulan terakhir)
-        $monthlyIncomeData = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = date('Y-m', strtotime("-$i months"));
-            $monthName = date('M Y', strtotime("-$i months"));
-
-            $income = Order::where('store_id', $store->id)
-                ->whereIn('status', ['Delivered', 'Completed'])
-                ->whereYear('created_at', date('Y', strtotime("-$i months")))
-                ->whereMonth('created_at', date('m', strtotime("-$i months")))
-                ->sum('price');
-
-            $monthlyIncomeData[] = [
-                'month' => $monthName,
-                'income' => $income,
-            ];
-        }
-
-        // Income per produk (top 5)
-        $productIncome = Order::whereIn('product_id', $products->pluck('id'))
-            ->whereNotNull('product_id')
-            ->whereIn('status', ['Delivered', 'Completed'])
-            ->selectRaw('product_id, SUM(price) as total_income')
-            ->groupBy('product_id')
-            ->orderByDesc('total_income')
-            ->limit(5)
-            ->with('product')
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'name' => $order->product->name,
-                    'income' => $order->total_income,
-                ];
-            });
+        // Catatan: grafik pendapatan bulanan dan "Top 5 Produk Terlaris" sudah
+        // dihapus dari dashboard, berikut kedua kueri yang menyiapkan datanya —
+        // yang bulanan menjalankan enam SUM terpisah setiap kali halaman ini
+        // dibuka. Angka pendapatan yang masih ditampilkan adalah $totalIncome
+        // dan $monthlyIncome di atas.
 
         return Inertia::render('seller/dashboard', compact(
             'products',
@@ -129,9 +100,7 @@ class SellerDashboardController extends Controller
             'pendingPayoutAmount',
             'paidOutAmount',
             'totalIncome',
-            'monthlyIncome',
-            'monthlyIncomeData',
-            'productIncome'
+            'monthlyIncome'
         ));
     }
 }
