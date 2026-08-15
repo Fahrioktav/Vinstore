@@ -397,7 +397,7 @@ class OrderController extends Controller
 
         try {
             $transaction = DB::transaction(function () use ($request, $user, $shippingArea) {
-                $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
+                $cartItems = Cart::with('product.store')->where('user_id', $user->id)->get();
 
                 if ($cartItems->isEmpty()) {
                     throw new \RuntimeException('Keranjang kamu kosong.');
@@ -411,6 +411,20 @@ class OrderController extends Controller
                 // Ongkir dan biaya peti ditagih sekali per toko, bukan per baris
                 // keranjang: dua barang dari toko yang sama dikirim dalam satu paket.
                 $shippingChargedForStore = [];
+
+                // Biaya berat pun sekali per paket, jadi berat seluruh isi tiap
+                // toko harus sudah dijumlahkan sebelum baris pertamanya dihitung.
+                $packageWeightGram = [];
+
+                foreach ($cartItems as $item) {
+                    if (! $item->product) {
+                        continue;
+                    }
+
+                    $key = $item->product->store?->public_id ?? 'none';
+                    $packageWeightGram[$key] = ($packageWeightGram[$key] ?? 0)
+                        + $costs->lineWeightGram($item->product, (int) $item->quantity);
+                }
 
                 $paymentReference = 'PAY'.random_int(100000000, 999999999);
                 $grossAmount = 0;
@@ -471,6 +485,7 @@ class OrderController extends Controller
                         $destLng,
                         $firstOfStore,
                         $packagingType,
+                        $packageWeightGram[$storeKey] ?? null,
                     );
 
                     $grossAmount += $quote['total'];
@@ -694,18 +709,17 @@ class OrderController extends Controller
     {
         $suffix = $order->public_id;
         $methodLabel = $method === 'express' ? 'Express' : 'Standard';
-        $distanceLabel = $quote['distance_km'] !== null
-            ? ' '.number_format((float) $quote['distance_km'], 1, ',', '.').' km'
-            : '';
+        $regionLabel = ' '.app(ShippingCostService::class)->regionLabel($quote['region'] ?? 'luar_jawa');
 
         // Ditandai "volumetrik" bila yang menentukan tagihan adalah dimensi
         // paketnya, bukan beratnya — supaya pembeli tahu dari mana angkanya.
         $isVolumetric = ($quote['volumetric_weight_gram'] ?? 0) > ($quote['actual_weight_gram'] ?? 0);
-        $weightLabel = 'Biaya Berat '.number_format($quote['weight_gram'] / 1000, 2, ',', '.').' kg'
+        $billableGram = $quote['billable_weight_gram'] ?? $quote['weight_gram'];
+        $weightLabel = 'Biaya Berat '.number_format($billableGram / 1000, 2, ',', '.').' kg'
             .($isVolumetric ? ' (volumetrik)' : '');
 
         $rows = [
-            ['SHIP', $quote['shipping_cost'], 'Ongkir '.$methodLabel.$distanceLabel.' - '.($storeName ?? 'Toko')],
+            ['SHIP', $quote['shipping_cost'], 'Ongkir '.$methodLabel.$regionLabel.' - '.($storeName ?? 'Toko')],
             ['WEIGHT', $quote['weight_fee'], $weightLabel],
             ['PACK', $quote['packaging_fee'], 'Pengemasan '.app(ShippingCostService::class)->packagingLabel($quote['packaging_type'] ?? null)],
             ['SVC', $quote['service_fee'], 'Biaya Layanan'],

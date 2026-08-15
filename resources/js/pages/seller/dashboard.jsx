@@ -50,6 +50,45 @@ const payoutStatusColors = {
   rejected: 'bg-red-100 text-red-800',
 };
 
+// Label persetujuan dipakai bersama oleh tabel produk DAN tabel lelang.
+// Sebelumnya hanya tabel produk yang memakainya, sehingga tabel lelang
+// menampilkan nilai mentah dari basis data — dua gaya penulisan dalam satu
+// layar (temuan V6-07).
+const approvalColors = {
+  approved: 'bg-green-100 text-green-700',
+  draft: 'bg-gray-100 text-gray-700',
+  pending_validator: 'bg-yellow-100 text-yellow-700',
+  pending_admin: 'bg-blue-100 text-blue-700',
+  pending: 'bg-yellow-100 text-yellow-700',
+  rejected: 'bg-red-100 text-red-700',
+};
+
+const approvalLabels = {
+  approved: 'Disetujui',
+  draft: 'Draf',
+  pending_validator: 'Menunggu Validator',
+  pending_admin: 'Menunggu Admin',
+  pending: 'Menunggu',
+  rejected: 'Ditolak',
+};
+
+// Tahapan hidup lelang, terpisah dari status persetujuannya.
+const auctionStatusLabels = {
+  pending: 'Belum Dijadwalkan',
+  scheduled: 'Terjadwal',
+  active: 'Berlangsung',
+  ended: 'Selesai',
+  cancelled: 'Dibatalkan',
+};
+
+const auctionStatusColors = {
+  pending: 'bg-gray-100 text-gray-700',
+  scheduled: 'bg-blue-100 text-blue-700',
+  active: 'bg-green-100 text-green-700',
+  ended: 'bg-gray-200 text-gray-700',
+  cancelled: 'bg-red-100 text-red-700',
+};
+
 export default function SellerDashboard() {
   const {
     products,
@@ -458,10 +497,22 @@ export default function SellerDashboard() {
                         {formatIDR(auction.current_price)}
                       </td>
                       <td className="px-4 py-3">{auction.bids_count}</td>
-                      <td className="px-4 py-3 capitalize">
-                        {auction.approval_status}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalColors[auction.approval_status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {approvalLabels[auction.approval_status] ||
+                            auction.approval_status}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 capitalize">{auction.status}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${auctionStatusColors[auction.status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {auctionStatusLabels[auction.status] ||
+                            auction.status}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         {auction.winner?.username || '-'}
                       </td>
@@ -580,22 +631,6 @@ function ProductRow({ product, isSelected, onSelect }) {
         preserveScroll: true,
       });
     }
-  };
-
-  const approvalColors = {
-    approved: 'bg-green-100 text-green-700',
-    pending_validator: 'bg-yellow-100 text-yellow-700',
-    pending_admin: 'bg-blue-100 text-blue-700',
-    pending: 'bg-yellow-100 text-yellow-700',
-    rejected: 'bg-red-100 text-red-700',
-  };
-
-  const approvalLabels = {
-    approved: 'Disetujui',
-    pending_validator: 'Menunggu Validator',
-    pending_admin: 'Menunggu Admin',
-    pending: 'Menunggu',
-    rejected: 'Ditolak',
   };
 
   return (

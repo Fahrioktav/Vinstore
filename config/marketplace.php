@@ -14,39 +14,69 @@
 
 return [
     'shipping' => [
-        // Tarif dasar per paket (dihitung sekali per toko), menutup biaya
-        // penanganan kurir terlepas dari jarak.
-        'base_fee' => (int) env('SHIPPING_BASE_FEE', 5000),
+        // Tarif dasar per paket (dihitung sekali per toko) menurut WILAYAH
+        // tujuan, bukan menurut jarak tempuh.
+        //
+        // Komponen per-kilometer yang dipakai versi sebelumnya sudah dihapus:
+        // ongkir kini rata untuk seluruh Pulau Jawa, dan rata pula untuk luar
+        // Jawa. Jaraknya sendiri masih dihitung dan disimpan pada pesanan,
+        // tetapi hanya sebagai keterangan — tidak lagi memengaruhi tagihan.
+        'base_fee' => [
+            'jawa' => (int) env('SHIPPING_BASE_FEE_JAWA', 10000),
+            'luar_jawa' => (int) env('SHIPPING_BASE_FEE_LUAR_JAWA', 20000),
+        ],
 
-        // Tarif jarak per kilometer dari titik toko ke titik pengantaran.
-        'per_km' => (int) env('SHIPPING_PER_KM', 2000),
+        /*
+         * Kotak pembatas Pulau Jawa (termasuk Madura).
+         *
+         * Sebuah pengiriman dihitung "jawa" hanya bila TITIK TOKO DAN TITIK
+         * TUJUAN sama-sama berada di dalam kotak ini. Cukup salah satu di luar,
+         * tarifnya menjadi luar Jawa — karena paketnya memang menyeberang.
+         *
+         * Kotak persegi tentu tidak persis mengikuti garis pantai. Dua tempat
+         * yang keliru terbaca sebagai Jawa: ujung selatan Lampung (sekitar
+         * Bakauheni) dan ujung barat Bali (sekitar Gilimanuk) — keduanya
+         * berhimpit di selat yang sama dan tidak bisa dipisahkan oleh kotak.
+         * Pemisahan yang lebih tepat butuh data poligon wilayah, yang berlebihan
+         * untuk selisih tarif sepuluh ribu rupiah.
+         */
+        'java_bounds' => [
+            'min_lat' => -8.85,
+            'max_lat' => -5.72,
+            'min_lng' => 105.00,
+            'max_lng' => 114.65,
+        ],
 
-        // Jarak minimum yang ditagihkan. Tanpa ini pembeli yang lokasinya
-        // persis di depan toko membayar komponen jarak Rp 0.
-        'min_distance_km' => 1.0,
-
-        // Batas atas jarak yang ditagihkan. Menjaga ongkir tetap masuk akal
-        // untuk kiriman lintas pulau sekaligus meredam koordinat ngawur.
-        'max_distance_km' => 100.0,
+        // Wilayah yang dipakai bila koordinat toko atau pembeli tidak diketahui.
+        // Sengaja luar Jawa: menebak yang lebih murah berarti marketplace
+        // menombok ongkir tiap kali koordinatnya kosong.
+        'default_region' => env('SHIPPING_DEFAULT_REGION', 'luar_jawa'),
 
         // Pengali per metode pengiriman.
         'method_multiplier' => [
             'standard' => 1.0,
             'express' => 1.6,
         ],
-
-        // Dipakai bila toko atau pembeli tidak punya koordinat: jarak tidak
-        // dapat dihitung, jadi perhitungan kembali ke tarif rata seperti
-        // versi sebelumnya agar checkout tetap bisa jalan.
-        'flat_fallback' => [
-            'standard' => 10000,
-            'express' => 25000,
-        ],
     ],
 
     'weight' => [
-        // Tarif per kilogram; berat dibulatkan ke atas ke kilogram penuh.
-        'per_kg' => (int) env('SHIPPING_PER_KG', 3000),
+        /*
+         * Biaya berat bertingkat, dihitung SEKALI per paket (per toko) atas
+         * berat seluruh barang di dalamnya — bukan per baris keranjang.
+         *
+         * Tarifnya rata di dalam satu tingkat: 3 kg dan 10 kg sama-sama
+         * Rp 3.000. Barang di bawah 3 kg dibulatkan ke 3 kg karena tingkat
+         * pertama adalah tarif dasar, jadi tidak ada tagihan berat di bawah itu.
+         *
+         * `max_gram` null berarti tingkat terakhir — tanpa batas atas.
+         */
+        'tiers' => [
+            ['max_gram' => 10000, 'fee' => (int) env('SHIPPING_WEIGHT_FEE_TIER_1', 3000)],
+            ['max_gram' => null, 'fee' => (int) env('SHIPPING_WEIGHT_FEE_TIER_2', 6000)],
+        ],
+
+        // Berat terendah yang ditagihkan. Apa pun di bawah ini dibulatkan naik.
+        'min_billable_gram' => 3000,
 
         // Berat yang dipakai bila seller belum mengisi berat produk (gram).
         'default_gram' => 1000,
@@ -121,5 +151,29 @@ return [
         // Batas atas per baris pesanan, agar barang mahal tidak dikenai
         // potongan yang tidak wajar.
         'max' => (int) env('SERVICE_FEE_MAX', 100000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deposit lelang
+    |--------------------------------------------------------------------------
+    |
+    | Uang jaminan yang harus dibayar pembeli sebelum boleh menawar pada lelang
+    | bernilai tinggi. Tujuannya menyaring penawar yang tidak sungguh-sungguh:
+    | tanpa jaminan, pemenang yang kabur hanya merugikan seller — barangnya
+    | tertahan berhari-hari dan lelangnya harus diulang.
+    |
+    | Depositnya bukan biaya. Pemenang memakainya sebagai uang muka, dan yang
+    | kalah mengajukan pengembaliannya ke admin.
+    |
+    */
+    'auction_deposit' => [
+        // Lelang dengan harga awal di bawah ambang ini tidak memungut deposit.
+        // Barang murah tidak sepadan dengan rumitnya menagih dan mengembalikan
+        // uang jaminan.
+        'threshold' => (int) env('AUCTION_DEPOSIT_THRESHOLD', 1000000),
+
+        // Persentase dari harga awal lelang.
+        'percent' => (float) env('AUCTION_DEPOSIT_PERCENT', 10),
     ],
 ];

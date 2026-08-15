@@ -131,14 +131,16 @@ class OrderShippingAndPaymentTest extends TestCase
         $this->assertSame('express', $order->shipping_method);
         $this->assertSame('Tolong bubble wrap ekstra.', $order->notes);
 
-        // Toko pada tes ini tidak punya koordinat, jadi ongkir memakai tarif
-        // rata (fallback) dan jaraknya tidak tercatat.
-        $this->assertSame(25000, $order->shipping_cost);
+        // Toko pada tes ini tidak punya koordinat, jadi wilayahnya tidak dapat
+        // ditentukan dan jatuh ke tarif default (luar Jawa): Rp 20.000 x
+        // pengali express 1,6. Jaraknya pun tidak tercatat.
+        $this->assertSame(32000, $order->shipping_cost);
         $this->assertNull($order->shipping_distance_km);
 
-        // 2 x 1000 gram = 2 kg -> 2 x Rp 3.000.
+        // 2 x 1000 gram = 2 kg, dibulatkan naik ke batas terendah 3 kg dan
+        // ditagih tarif tingkat pertama.
         $this->assertSame(2000, $order->weight_gram);
-        $this->assertSame(6000, $order->weight_fee);
+        $this->assertSame(3000, $order->weight_fee);
 
         // Peti Rp 3.000 + pembungkus Rp 1.500 x 2 unit.
         $this->assertSame(6000, $order->packaging_fee);
@@ -147,10 +149,17 @@ class OrderShippingAndPaymentTest extends TestCase
         $this->assertSame(50000, $order->service_fee);
 
         // Total = barang + ongkir + berat + pengemasan + layanan.
-        $this->assertSame(2087000, (int) $order->price);
+        $this->assertSame(2091000, (int) $order->price);
     }
 
-    public function test_ongkir_dihitung_dari_jarak_toko_ke_titik_antar(): void
+    /**
+     * Ongkir kini ditentukan WILAYAH, bukan jarak.
+     *
+     * Jaraknya tetap dihitung dan disimpan pada pesanan sebagai keterangan —
+     * seller masih ingin tahu seberapa jauh kirimannya — tetapi tidak lagi
+     * memengaruhi tagihan.
+     */
+    public function test_ongkir_memakai_tarif_jawa_bila_toko_dan_tujuan_di_jawa(): void
     {
         $this->fakeSnap();
 
@@ -162,8 +171,6 @@ class OrderShippingAndPaymentTest extends TestCase
                 'quantity' => 1,
                 'shipping_address' => 'Prambanan, Sleman',
                 'shipping_method' => 'standard',
-                'shipping_latitude' => -7.7828,
-                'shipping_longitude' => 110.3671,
                 'shipping_latitude' => -7.752,
                 'shipping_longitude' => 110.4915,
             ]);
@@ -173,13 +180,28 @@ class OrderShippingAndPaymentTest extends TestCase
         $this->assertNotNull($order->shipping_distance_km);
         $this->assertEqualsWithDelta(13.9, $order->shipping_distance_km, 1.0);
 
-        // Ongkir = (dasar Rp 5.000 + jarak x Rp 2.000) x pengali standard 1,0.
-        $expected = (int) round(5000 + $order->shipping_distance_km * 2000);
-        $this->assertSame($expected, $order->shipping_cost);
+        $this->assertSame(10000, $order->shipping_cost);
+    }
 
-        // Jauh lebih besar daripada tarif rata Rp 10.000 — inilah bedanya
-        // dengan perhitungan lama.
-        $this->assertGreaterThan(10000, $order->shipping_cost);
+    public function test_ongkir_luar_jawa_lebih_mahal_daripada_dalam_jawa(): void
+    {
+        $this->fakeSnap();
+
+        $this->store->update(['latitude' => -7.7828, 'longitude' => 110.3671]);
+
+        // Tujuan di Denpasar: paketnya menyeberang, jadi tarif luar Jawa.
+        $this->actingAs($this->buyer)
+            ->post('/checkout/product/'.$this->product->public_id, [
+                'quantity' => 1,
+                'shipping_address' => 'Denpasar, Bali',
+                'shipping_method' => 'standard',
+                'shipping_latitude' => -8.6705,
+                'shipping_longitude' => 115.2126,
+            ]);
+
+        $order = Order::where('user_id', $this->buyer->id)->firstOrFail();
+
+        $this->assertSame(20000, $order->shipping_cost);
     }
 
     public function test_ongkir_express_lebih_mahal_daripada_standard(): void
@@ -244,7 +266,7 @@ class OrderShippingAndPaymentTest extends TestCase
     {
         $this->fakeSnap();
 
-        // 3,5 kg dibulatkan ke atas menjadi 4 kg.
+        // 3,5 kg masuk tingkat pertama (3-10 kg).
         $this->product->update(['weight' => 3500]);
 
         $this->actingAs($this->buyer)
@@ -259,7 +281,7 @@ class OrderShippingAndPaymentTest extends TestCase
         $order = Order::where('user_id', $this->buyer->id)->firstOrFail();
 
         $this->assertSame(3500, $order->weight_gram);
-        $this->assertSame(12000, $order->weight_fee);
+        $this->assertSame(3000, $order->weight_fee);
     }
 
     public function test_checkout_keranjang_wajib_mengisi_alamat(): void
@@ -321,17 +343,19 @@ class OrderShippingAndPaymentTest extends TestCase
         }
 
         // Kedua barang berasal dari toko yang sama, jadi ongkir dan biaya peti
-        // hanya ditagih sekali — keduanya masuk satu paket.
-        $this->assertSame(10000, (int) $orders->sum('shipping_cost'));
+        // hanya ditagih sekali — keduanya masuk satu paket. Toko tidak punya
+        // koordinat, jadi tarifnya default luar Jawa.
+        $this->assertSame(20000, (int) $orders->sum('shipping_cost'));
         $this->assertSame(3000 + 1500 + 1500, (int) $orders->sum('packaging_fee'));
 
-        // Biaya berat tetap per barang karena beratnya memang nyata masing-masing.
-        $this->assertSame(3000 + 3000, (int) $orders->sum('weight_fee'));
+        // Biaya berat pun sekali per paket: 2 x 1 kg = 2 kg, dibulatkan naik ke
+        // 3 kg dan ditagih tarif tingkat pertama SATU kali.
+        $this->assertSame(3000, (int) $orders->sum('weight_fee'));
 
         // Biaya layanan 2,5% dari nilai tiap barang.
         $this->assertSame(25000 + 12500, (int) $orders->sum('service_fee'));
 
-        $this->assertSame(1559500, (int) $orders->sum('price'));
+        $this->assertSame(1566500, (int) $orders->sum('price'));
     }
 
     public function test_biaya_layanan_masuk_dompet_admin_setelah_lunas(): void

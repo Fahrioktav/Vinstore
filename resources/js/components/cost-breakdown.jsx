@@ -1,4 +1,5 @@
 import { formatIDR } from '@/lib/utils';
+import { regionLabel } from '@/lib/shipping';
 
 /**
  * Rincian biaya checkout.
@@ -8,23 +9,34 @@ import { formatIDR } from '@/lib/utils';
  * setiap rupiah yang ia bayar untuk apa.
  *
  * @param {object} summary hasil summarize() dari @/lib/shipping
- * @param {number|null} distanceKm jarak yang dipakai, null bila belum ada titik
+ * @param {string|null} region 'jawa' | 'luar_jawa'; null bila titik antar belum
+ *   dipilih sehingga wilayahnya belum bisa ditentukan
  * @param {object} rates prop feeRates dari controller
  */
 export default function CostBreakdown({
   summary,
-  distanceKm,
+  region,
+  hasDestination = true,
   rates,
   storeCount = 1,
   packagingType,
 }) {
-  const formatKm = (km) =>
-    `${km.toLocaleString('id-ID', { maximumFractionDigits: 1 })} km`;
-
   // Ditandai bila yang menentukan tagihan adalah dimensi paketnya, bukan
   // beratnya — supaya pembeli tahu dari mana angkanya datang.
   const isVolumetric =
     summary.volumetric_weight_gram > summary.actual_weight_gram;
+
+  // Berat yang benar-benar ditagihkan: paket di bawah batas terendah
+  // dibulatkan naik, karena tingkat pertama adalah tarif dasar.
+  const billableGram = Math.max(
+    summary.weight_gram,
+    Number(rates.weight.min_billable_gram)
+  );
+
+  const formatKg = (gram) =>
+    `${(gram / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} kg`;
+
+  const firstTier = rates.weight.tiers[0];
 
   // Di keranjang, tiap toko bisa memilih pengemasan yang berbeda; saat itu
   // `packagingType` tidak dikirim dan labelnya tidak boleh mengklaim satu jenis.
@@ -42,20 +54,21 @@ export default function CostBreakdown({
     {
       label: 'Biaya pengiriman',
       value: summary.shipping_cost,
-      hint:
-        distanceKm === null
-          ? 'Tarif rata — pilih titik antar di peta untuk hitungan per km'
-          : `${formatKm(distanceKm)} × ${formatIDR(rates.shipping.per_km)}/km + dasar ${formatIDR(rates.shipping.base_fee)}` +
-            (storeCount > 1 ? ` (${storeCount} toko)` : ''),
+      hint: !hasDestination
+        ? 'Pilih titik antar di peta agar wilayah tujuannya bisa ditentukan'
+        : `Tarif ${regionLabel(region)} ${formatIDR(rates.shipping.base_fee[region])} per paket` +
+          (storeCount > 1 ? ` (${storeCount} toko)` : ''),
     },
     {
       label: 'Biaya berat',
       value: summary.weight_fee,
       hint:
-        `${(summary.weight_gram / 1000).toLocaleString('id-ID', {
-          maximumFractionDigits: 2,
-        })} kg × ${formatIDR(rates.weight.per_kg)}/kg (dibulatkan ke atas)` +
-        (isVolumetric ? ' — dihitung dari berat volumetrik' : ''),
+        `${formatKg(billableGram)}` +
+        (billableGram > summary.weight_gram
+          ? ` (dibulatkan dari ${formatKg(summary.weight_gram)} — minimum ${formatKg(Number(rates.weight.min_billable_gram))})`
+          : '') +
+        ` — tarif sampai ${formatKg(Number(firstTier.max_gram))} ${formatIDR(firstTier.fee)}, di atasnya ${formatIDR(rates.weight.tiers[1].fee)}` +
+        (isVolumetric ? '. Dihitung dari berat volumetrik' : ''),
     },
     {
       label: 'Biaya pengemasan',

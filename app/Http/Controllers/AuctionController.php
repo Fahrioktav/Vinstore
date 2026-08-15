@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Events\AuctionBidPlaced;
 use App\Models\Auction;
 use App\Models\AuctionBid;
+use App\Models\AuctionDeposit;
 use App\Models\Order;
+use App\Services\GeocodingService;
 use App\Services\MidtransService;
+use App\Services\ShippingCostService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,10 +55,16 @@ class AuctionController extends Controller
             'store.user',
             'winner',
             'order',
-            'bids' => fn ($query) => $query->with('user')->latest('amount')->latest()->take(20),
+            'bids' => fn ($query) => $query->with('user')->latest('amount')->latest('id')->take(20),
         ]);
 
-        return Inertia::render('auctions/show', compact('auction'));
+        return Inertia::render('auctions/show', [
+            'auction' => $auction,
+            // Jaminan milik pembuka halaman, supaya halaman tahu harus
+            // menampilkan tombol bayar deposit, form penawaran, atau pengajuan
+            // pengembalian.
+            'myDeposit' => $auction->depositOf($user),
+        ]);
     }
 
     public function create()
@@ -65,15 +74,10 @@ class AuctionController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'starting_price' => 'required|numeric|min:1000',
-            'min_increment' => 'required|numeric|min:1000',
-            'starts_at' => 'required|date|after_or_equal:now',
-            'ends_at' => 'required|date|after:starts_at',
-        ]);
+        $validated = $request->validate(
+            $this->auctionRules(true),
+            $this->auctionMessages()
+        );
 
         $store = Auth::user()->store;
 
@@ -88,21 +92,78 @@ class AuctionController extends Controller
             $imagePath = $image->storeAs('auctions', $imageName, 'public');
         }
 
-        Auction::create([
+        Auction::create(array_merge($this->auctionAttributes($validated), [
             'store_id' => $store->id,
-            'name' => $validated['name'],
-            'description' => $validated['description'],
             'image' => $imagePath,
-            'starting_price' => $validated['starting_price'],
-            'min_increment' => $validated['min_increment'],
             'current_price' => $validated['starting_price'],
-            'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
-            'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
             'approval_status' => 'pending_validator',
             'status' => 'pending',
-        ]);
+        ]));
 
         return redirect()->route('seller.dashboard')->with('success', 'Barang lelang berhasil diajukan dan menunggu persetujuan admin.');
+    }
+
+    /**
+     * Aturan validasi pengajuan lelang.
+     *
+     * Catatan tentang `starts_at`: pembandingnya adalah AWAL MENIT BERJALAN,
+     * bukan `now`. Input `<input type="datetime-local">` tidak mengirim detik,
+     * jadi seller yang memilih pukul 22.53 saat jam menunjukkan 22.53.20
+     * sebenarnya mengirim 22.53.00 — dua puluh detik di masa lalu — dan
+     * `after_or_equal:now` menolaknya tanpa alasan yang masuk akal dari sudut
+     * pandang seller (temuan V6-08).
+     *
+     * @param  bool  $imageRequired  Foto wajib saat pengajuan baru, opsional
+     *                               saat mengedit atau mengajukan ulang karena
+     *                               foto lamanya dipertahankan.
+     */
+    private function auctionRules(bool $imageRequired): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'image' => ($imageRequired ? 'required' : 'nullable').'|image|mimes:jpg,jpeg,png|max:2048',
+            // Berat dan dimensi dipakai menghitung ongkir pesanan pemenang,
+            // persis seperti pada produk biasa.
+            'weight' => 'required|integer|min:1|max:500000',
+            'length' => 'nullable|integer|min:1|max:500',
+            'width' => 'nullable|integer|min:1|max:500',
+            'height' => 'nullable|integer|min:1|max:500',
+            'starting_price' => 'required|numeric|min:1000',
+            'min_increment' => 'required|numeric|min:1000',
+            'starts_at' => ['required', 'date', 'after_or_equal:'.now()->startOfMinute()->format('Y-m-d H:i:s')],
+            'ends_at' => 'required|date|after:starts_at',
+        ];
+    }
+
+    private function auctionMessages(): array
+    {
+        return [
+            'starts_at.after_or_equal' => 'Waktu mulai tidak boleh di masa lalu. Pilih menit ini atau sesudahnya.',
+            'ends_at.after' => 'Waktu selesai harus setelah waktu mulai.',
+            'weight.required' => 'Berat barang wajib diisi agar ongkir pemenang bisa dihitung.',
+        ];
+    }
+
+    /**
+     * Atribut lelang yang berasal langsung dari form, sudah dinormalkan.
+     */
+    private function auctionAttributes(array $validated): array
+    {
+        return [
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'weight' => (int) $validated['weight'],
+            // Dimensi boleh kosong: berat volumetrik hanya dihitung bila
+            // ketiganya terisi.
+            'length' => $validated['length'] ?? null,
+            'width' => $validated['width'] ?? null,
+            'height' => $validated['height'] ?? null,
+            'starting_price' => $validated['starting_price'],
+            'min_increment' => $validated['min_increment'],
+            'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
+            'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
+        ];
     }
 
     public function edit(Auction $auction)
@@ -124,15 +185,10 @@ class AuctionController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Lelang hanya bisa diedit sebelum berjalan dan belum memiliki bid.');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'starting_price' => 'required|numeric|min:1000',
-            'min_increment' => 'required|numeric|min:1000',
-            'starts_at' => 'required|date|after_or_equal:now',
-            'ends_at' => 'required|date|after:starts_at',
-        ]);
+        $validated = $request->validate(
+            $this->auctionRules(false),
+            $this->auctionMessages()
+        );
 
         if ($request->hasFile('image')) {
             if ($auction->image && Storage::disk('public')->exists($auction->image)) {
@@ -144,20 +200,14 @@ class AuctionController extends Controller
             $auction->image = $image->storeAs('auctions', $imageName, 'public');
         }
 
-        $auction->fill([
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'starting_price' => $validated['starting_price'],
-            'min_increment' => $validated['min_increment'],
+        $auction->fill(array_merge($this->auctionAttributes($validated), [
             'current_price' => $validated['starting_price'],
-            'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
-            'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
             'approval_status' => 'pending_validator',
             'status' => 'pending',
             'approved_at' => null,
             'approved_by' => null,
             'rejection_reason' => null,
-        ])->save();
+        ]))->save();
 
         return redirect()->route('seller.dashboard')->with('success', 'Barang lelang berhasil diperbarui dan menunggu persetujuan admin.');
     }
@@ -226,15 +276,10 @@ class AuctionController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Hanya lelang selesai tanpa bid yang bisa diajukan ulang.');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'starting_price' => 'required|numeric|min:1000',
-            'min_increment' => 'required|numeric|min:1000',
-            'starts_at' => 'required|date|after_or_equal:now',
-            'ends_at' => 'required|date|after:starts_at',
-        ]);
+        $validated = $request->validate(
+            $this->auctionRules(false),
+            $this->auctionMessages()
+        );
 
         $imagePath = $auction->image;
 
@@ -244,19 +289,13 @@ class AuctionController extends Controller
             $imagePath = $image->storeAs('auctions', $imageName, 'public');
         }
 
-        Auction::create([
+        Auction::create(array_merge($this->auctionAttributes($validated), [
             'store_id' => Auth::user()->store->id,
-            'name' => $validated['name'],
-            'description' => $validated['description'],
             'image' => $imagePath,
-            'starting_price' => $validated['starting_price'],
-            'min_increment' => $validated['min_increment'],
             'current_price' => $validated['starting_price'],
-            'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at'], config('app.timezone')),
-            'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at'], config('app.timezone')),
             'approval_status' => 'pending_validator',
             'status' => 'pending',
-        ]);
+        ]));
 
         return redirect()->route('seller.dashboard')->with('success', 'Barang lelang berhasil diajukan ulang dan menunggu persetujuan admin.');
     }
@@ -270,10 +309,16 @@ class AuctionController extends Controller
         $user = Auth::user();
         $newBid = null;
 
+        // Penyegaran status dikerjakan DI LUAR transaksi penawaran. Sebelumnya
+        // keduanya berada dalam satu transaksi, sehingga penutupan lelang yang
+        // dilakukan di sini ikut dibatalkan begitu penawarannya ditolak — dan
+        // memang selalu ditolak, karena lelangnya baru saja ditutup (V6-06).
+        $this->refreshAuctionStatus($auction);
+        $auction->refresh();
+
         try {
             DB::transaction(function () use ($auction, $validated, $user, &$newBid) {
                 $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->firstOrFail();
-                $this->refreshAuctionStatus($auction);
 
                 if (! $auction->isActive()) {
                     throw new \RuntimeException('Lelang tidak sedang aktif.');
@@ -283,6 +328,17 @@ class AuctionController extends Controller
                     throw new \RuntimeException('Anda tidak boleh menawar barang lelang milik toko sendiri.');
                 }
 
+                // Lelang bernilai tinggi hanya boleh ditawar oleh yang sudah
+                // menaruh jaminan. Diperiksa di dalam kunci supaya jaminan yang
+                // baru saja hangus tidak sempat dipakai menawar.
+                if (! $auction->depositSatisfiedBy($user)) {
+                    throw new \RuntimeException(
+                        'Anda harus membayar deposit sebesar Rp '
+                        .number_format($auction->depositAmount(), 0, ',', '.')
+                        .' sebelum dapat menawar pada lelang ini.'
+                    );
+                }
+
                 $minimumBid = (float) $auction->current_price + (float) $auction->min_increment;
                 $amount = (float) $validated['amount'];
 
@@ -290,9 +346,16 @@ class AuctionController extends Controller
                     throw new \RuntimeException('Nominal bid minimal '.number_format($minimumBid, 0, ',', '.').'.');
                 }
 
-                // Cek apakah user ini adalah yang terakhir melakukan bid
+                // Cek apakah user ini adalah yang terakhir melakukan bid.
+                //
+                // Diurutkan menurut `id`, bukan `created_at`. Kolom waktu itu
+                // presisinya hanya sampai detik, dan menjelang penutupan lelang
+                // beberapa penawaran dalam satu detik adalah hal yang lumrah —
+                // saat seri, baris mana yang terambil tidak dijamin basis data.
+                // Akibatnya penawar yang sah bisa ditolak, atau justru lolos
+                // menawar dua kali beruntun (temuan V6-02).
                 $lastBid = AuctionBid::where('auction_id', $auction->id)
-                    ->latest()
+                    ->latest('id')
                     ->first();
 
                 if ($lastBid && $lastBid->user_id === $user->id) {
@@ -336,7 +399,155 @@ class AuctionController extends Controller
         return back()->with('success', 'Penawaran berhasil diajukan.');
     }
 
-    public function pay(Auction $auction)
+    /**
+     * Halaman pembayaran pemenang lelang.
+     *
+     * Lelang tidak melewati checkout, jadi di sinilah pemenang memilih titik
+     * antar, metode pengiriman, dan jenis pengemasannya — barulah ongkir, biaya
+     * berat, dan biaya layanan bisa dihitung. Sampai halaman ini dikirimkan,
+     * pesanannya masih berisi harga menang saja.
+     */
+    public function checkout(Auction $auction)
+    {
+        $order = $this->winnerOrderOrFail($auction);
+
+        if (! $order instanceof Order) {
+            return $order;
+        }
+
+        $auction->load('store');
+
+        return Inertia::render('auctions/checkout', [
+            'auction' => $auction,
+            'order' => $order,
+            'feeRates' => app(ShippingCostService::class)->publicRates(),
+        ]);
+    }
+
+    public function pay(Request $request, Auction $auction)
+    {
+        $order = $this->winnerOrderOrFail($auction);
+
+        if (! $order instanceof Order) {
+            return $order;
+        }
+
+        $validated = $request->validate([
+            'shipping_address' => 'required|string|max:1000',
+            'shipping_method' => 'required|in:standard,express',
+            'packaging_type' => 'nullable|string',
+            'shipping_latitude' => 'required|numeric|between:-90,90',
+            'shipping_longitude' => 'required|numeric|between:-180,180',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'shipping_latitude.required' => 'Pilih titik pengantaran di peta terlebih dahulu.',
+            'shipping_longitude.required' => 'Pilih titik pengantaran di peta terlebih dahulu.',
+        ]);
+
+        $auction->load('store');
+
+        $destLat = (float) $validated['shipping_latitude'];
+        $destLng = (float) $validated['shipping_longitude'];
+
+        // Seluruh komponen biaya dihitung ulang di server; angka dari frontend
+        // hanya pratinjau. Berat dan dimensinya milik lelang itu sendiri.
+        $quote = app(ShippingCostService::class)->quoteLine(
+            $auction,
+            1,
+            (int) round((float) $order->product_price),
+            $validated['shipping_method'],
+            $destLat,
+            $destLng,
+            true,
+            $validated['packaging_type'] ?? null,
+        );
+
+        $order->update([
+            'price' => $quote['total'],
+            'shipping_address' => $validated['shipping_address'],
+            'shipping_area' => app(GeocodingService::class)->areaName($destLat, $destLng),
+            'shipping_method' => $validated['shipping_method'],
+            'shipping_cost' => $quote['shipping_cost'],
+            'packaging_fee' => $quote['packaging_fee'],
+            'packaging_type' => $quote['packaging_type'],
+            'weight_fee' => $quote['weight_fee'],
+            'service_fee' => $quote['service_fee'],
+            'weight_gram' => $quote['weight_gram'],
+            'volumetric_weight_gram' => $quote['volumetric_weight_gram'],
+            'shipping_distance_km' => $quote['distance_km'],
+            'shipping_latitude' => $destLat,
+            'shipping_longitude' => $destLng,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Midtrans menolak order_id yang sudah pernah dipakai. Pemenang yang
+        // kembali ke halaman ini untuk mengganti alamat atau jenis pengemasannya
+        // karena itu perlu referensi baru — nominalnya pun sudah berbeda.
+        // Referensi lama sengaja ditinggalkan tanpa pasangan: transaksi Snap
+        // yang menagih angka lama memang tidak boleh lagi diselesaikan.
+        if ($order->snap_token) {
+            $order->update([
+                'payment_reference' => $this->nextPaymentReference($order),
+                'snap_token' => null,
+                'snap_redirect_url' => null,
+            ]);
+        }
+
+        // Yang ditagihkan adalah tagihan penuh dikurangi deposit yang sudah
+        // masuk lebih dulu. `price` sendiri tetap tagihan penuh.
+        $order->refresh();
+        $amountDue = $order->amountDue();
+
+        try {
+            $transaction = app(MidtransService::class)->createSnapTransaction(
+                $order->payment_reference,
+                $amountDue,
+                Auth::user(),
+                $this->auctionItemDetails($auction, $order, $quote, $amountDue)
+            );
+
+            $order->update([
+                'snap_token' => $transaction['token'] ?? null,
+                'snap_redirect_url' => $transaction['redirect_url'] ?? null,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Gagal membuat pembayaran Midtrans: '.$e->getMessage());
+        }
+
+        return redirect()->route('auctions.show', $auction->public_id)->with([
+            'success' => 'Rincian pembayaran lelang siap. Silakan selesaikan pembayaran.',
+            'snap_token' => $transaction['token'],
+            'snap_context' => 'order',
+        ]);
+    }
+
+    /**
+     * Referensi pembayaran berikutnya untuk sebuah pesanan: public_id-nya
+     * dengan akhiran urutan percobaan (ORD12345678-2, -3, dan seterusnya).
+     *
+     * Tetap memuat public_id-nya secara utuh supaya masih terbaca manusia saat
+     * dicocokkan dengan dashboard Midtrans.
+     */
+    private function nextPaymentReference(Order $order): string
+    {
+        $attempt = 2;
+
+        if (preg_match('/-(\d+)$/', (string) $order->payment_reference, $matches)) {
+            $attempt = (int) $matches[1] + 1;
+        }
+
+        return $order->public_id.'-'.$attempt;
+    }
+
+    /**
+     * Pesanan lelang milik pemenang yang sedang login, atau redirect bila
+     * pesanannya tidak boleh lagi dibayar.
+     *
+     * @return Order|\Illuminate\Http\RedirectResponse
+     */
+    private function winnerOrderOrFail(Auction $auction)
     {
         $this->finalizeExpiredAuctions();
 
@@ -351,45 +562,324 @@ class AuctionController extends Controller
             return redirect()->route('order')->with('success', 'Pembayaran lelang ini sudah lunas.');
         }
 
-        // Jika snap_token sudah ada, langsung redirect dengan snap_token
-        if ($order->snap_token) {
-            return redirect()->route('auctions.show', $auction->public_id)->with([
-                'success' => 'Silakan selesaikan pembayaran lelang.',
-                'snap_token' => $order->snap_token,
+        // Pesanan yang sudah gugur tidak boleh dibuatkan transaksi Snap baru.
+        // Tanpa penjaga ini pemenang yang membuka halamannya setelah lewat
+        // tenggat tetap dilayani, membayar, lalu uangnya masuk ke pesanan yang
+        // berstatus Cancelled (temuan V6-03).
+        if ($order->isPaymentDead() || $order->status === 'Cancelled') {
+            return redirect()->route('order')->with(
+                'error',
+                'Batas waktu pembayaran lelang ini sudah lewat, sehingga pesanannya dibatalkan.'
+            );
+        }
+
+        return $order;
+    }
+
+    /**
+     * Baris item_details Midtrans untuk pesanan lelang.
+     *
+     * Jumlah seluruh baris wajib sama persis dengan gross_amount, jadi deposit
+     * yang sudah dibayar masuk sebagai baris bernilai NEGATIF — bukan dengan
+     * mengecilkan harga barangnya, supaya pemenang melihat potongannya.
+     */
+    private function auctionItemDetails(Auction $auction, Order $order, array $quote, int $amountDue): array
+    {
+        $costs = app(ShippingCostService::class);
+        $methodLabel = $order->shipping_method === 'express' ? 'Express' : 'Standard';
+
+        $rows = [
+            [$auction->public_id, (int) round((float) $order->product_price), 'Lelang - '.$auction->name],
+            ['SHIP-'.$order->public_id, $quote['shipping_cost'], 'Ongkir '.$methodLabel.' '.$costs->regionLabel($quote['region'])],
+            ['WEIGHT-'.$order->public_id, $quote['weight_fee'], 'Biaya Berat '.number_format($quote['billable_weight_gram'] / 1000, 2, ',', '.').' kg'],
+            ['PACK-'.$order->public_id, $quote['packaging_fee'], 'Pengemasan '.$costs->packagingLabel($quote['packaging_type'])],
+            ['SVC-'.$order->public_id, $quote['service_fee'], 'Biaya Layanan'],
+        ];
+
+        $items = [];
+
+        foreach ($rows as [$id, $amount, $name]) {
+            if ((int) $amount <= 0) {
+                continue;
+            }
+
+            $items[] = [
+                'id' => MidtransService::truncate($id, 50),
+                'price' => (int) $amount,
+                'quantity' => 1,
+                // mb_substr lewat MidtransService::truncate(): substr() memotong
+                // per byte dan bisa membelah karakter multibyte, membuat payload
+                // gagal di-encode ke JSON.
+                'name' => MidtransService::truncate($name, 50),
+            ];
+        }
+
+        if ((int) $order->deposit_credit > 0) {
+            $items[] = [
+                'id' => MidtransService::truncate('DEP-'.$order->public_id, 50),
+                'price' => -((int) $order->deposit_credit),
+                'quantity' => 1,
+                'name' => MidtransService::truncate('Potongan deposit lelang', 50),
+            ];
+        }
+
+        // Penjaga terakhir: bila karena satu dan lain hal jumlah baris tidak
+        // sama dengan yang ditagihkan, Midtrans akan menolak transaksinya.
+        // Lebih baik dikirim sebagai satu baris ringkas daripada gagal total.
+        $sum = array_sum(array_column($items, 'price'));
+
+        if ($sum !== $amountDue) {
+            return [[
+                'id' => MidtransService::truncate($order->public_id, 50),
+                'price' => $amountDue,
+                'quantity' => 1,
+                'name' => MidtransService::truncate('Pembayaran lelang - '.$auction->name, 50),
+            ]];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Pembeli membayar uang jaminan agar berhak menawar.
+     *
+     * Jaminannya dibuat sekali per pengguna per lelang; pemanggilan berikutnya
+     * memakai transaksi Snap yang sama selama belum dibayar.
+     */
+    public function payDeposit(Auction $auction)
+    {
+        $this->activateApprovedAuctions();
+        $auction->refresh();
+
+        $user = Auth::user();
+
+        if (! $auction->requiresDeposit()) {
+            return back()->with('error', 'Lelang ini tidak memungut deposit.');
+        }
+
+        if (! $auction->isActive()) {
+            return back()->with('error', 'Deposit hanya bisa dibayar selama lelang berlangsung.');
+        }
+
+        if ($user->role === 'seller' && $user->store && $auction->store_id === $user->store->id) {
+            return back()->with('error', 'Anda tidak boleh menawar barang lelang milik toko sendiri.');
+        }
+
+        $existing = $auction->depositOf($user);
+
+        if ($existing && $existing->isActive()) {
+            return back()->with('success', 'Deposit Anda sudah aktif. Silakan langsung menawar.');
+        }
+
+        if ($existing && $existing->status !== AuctionDeposit::STATUS_PENDING) {
+            return back()->with('error', 'Deposit Anda pada lelang ini sudah tidak dapat dipakai lagi.');
+        }
+
+        $deposit = $existing;
+
+        if (! $deposit) {
+            $deposit = AuctionDeposit::create([
+                'auction_id' => $auction->id,
+                'user_id' => $user->id,
+                'amount' => $auction->depositAmount(),
+                'status' => AuctionDeposit::STATUS_PENDING,
+            ]);
+
+            $deposit->update(['payment_reference' => $deposit->public_id]);
+        }
+
+        if ($deposit->snap_token) {
+            return back()->with([
+                'success' => 'Silakan selesaikan pembayaran deposit.',
+                'snap_token' => $deposit->snap_token,
+                'snap_context' => 'deposit',
             ]);
         }
 
         try {
             $transaction = app(MidtransService::class)->createSnapTransaction(
-                $order->payment_reference,
-                (int) round((float) $order->price),
-                Auth::user(),
+                $deposit->payment_reference,
+                (int) $deposit->amount,
+                $user,
                 [[
-                    'id' => $auction->public_id,
-                    'price' => (int) round((float) $order->price),
+                    'id' => $deposit->public_id,
+                    'price' => (int) $deposit->amount,
                     'quantity' => 1,
-                    // mb_substr lewat MidtransService::truncate(): substr()
-                    // memotong per byte dan bisa membelah karakter multibyte,
-                    // membuat payload gagal di-encode ke JSON.
-                    'name' => MidtransService::truncate('Lelang - '.$auction->name, 50),
+                    'name' => MidtransService::truncate('Deposit lelang - '.$auction->name, 50),
                 ]]
             );
 
-            $order->update([
+            $deposit->update([
                 'snap_token' => $transaction['token'] ?? null,
                 'snap_redirect_url' => $transaction['redirect_url'] ?? null,
             ]);
         } catch (Throwable $e) {
             report($e);
 
-            return back()->with('error', 'Gagal membuat pembayaran Midtrans: '.$e->getMessage());
+            return back()->with('error', 'Gagal membuat pembayaran deposit: '.$e->getMessage());
         }
 
-        // Return dengan snap_token untuk trigger Snap Popup
-        return redirect()->route('auctions.show', $auction->public_id)->with([
-            'success' => 'Order lelang berhasil dibuat. Silakan selesaikan pembayaran.',
+        return back()->with([
+            'success' => 'Deposit dibuat. Silakan selesaikan pembayaran agar bisa menawar.',
             'snap_token' => $transaction['token'],
+            'snap_context' => 'deposit',
         ]);
+    }
+
+    /**
+     * Daftar deposit milik pembeli, tempat ia mengajukan pengembalian.
+     */
+    public function myDeposits()
+    {
+        $deposits = AuctionDeposit::with(['auction.store', 'reviewer'])
+            ->where('user_id', Auth::id())
+            ->latest('id')
+            ->get()
+            ->each(function (AuctionDeposit $deposit) {
+                // Dihitung di server agar halaman tidak perlu mengulang
+                // aturannya sendiri dan berisiko berbeda.
+                $deposit->setAttribute('can_request_refund', $deposit->canRequestRefund());
+                $deposit->setAttribute('refund_block_reason', $deposit->refundBlockReason());
+            });
+
+        return Inertia::render('deposits/index', compact('deposits'));
+    }
+
+    /**
+     * Peserta yang kalah meminta uang jaminannya kembali. Admin yang akan
+     * mentransfernya ke rekening yang diisi di sini.
+     */
+    public function requestDepositRefund(Request $request, AuctionDeposit $deposit)
+    {
+        if ($deposit->user_id !== Auth::id()) {
+            abort(403, 'Ini bukan deposit Anda.');
+        }
+
+        $validated = $request->validate([
+            'bank_name' => 'required|string|max:100',
+            'account_number' => 'required|string|max:100',
+            'account_holder' => 'required|string|max:150',
+        ]);
+
+        $deposit->load('auction');
+
+        if (! $deposit->canRequestRefund()) {
+            return back()->with('error', $deposit->refundBlockReason() ?? 'Deposit ini belum dapat dimintakan kembali.');
+        }
+
+        try {
+            DB::transaction(function () use ($deposit, $validated) {
+                $locked = AuctionDeposit::whereKey($deposit->getKey())->lockForUpdate()->firstOrFail();
+
+                // Diperiksa ulang di dalam kunci: penutupan lelang bisa saja
+                // mengubah statusnya tepat setelah pengecekan di atas.
+                if ($locked->status !== AuctionDeposit::STATUS_PAID) {
+                    throw new \RuntimeException('Deposit ini sudah tidak dapat dimintakan kembali.');
+                }
+
+                $locked->forceFill([
+                    'status' => AuctionDeposit::STATUS_REFUND_REQUESTED,
+                    'bank_name' => $validated['bank_name'],
+                    'account_number' => $validated['account_number'],
+                    'account_holder' => $validated['account_holder'],
+                    'refund_requested_at' => now(),
+                ])->save();
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengajuan pengembalian deposit dikirim dan menunggu verifikasi admin.');
+    }
+
+    public function adminDepositIndex()
+    {
+        $deposits = AuctionDeposit::with(['auction.store', 'user', 'reviewer'])
+            ->latest('id')
+            ->get();
+
+        return Inertia::render('admin/deposits/index', compact('deposits'));
+    }
+
+    /**
+     * Admin menyetujui pengembalian setelah benar-benar mentransfer dananya.
+     * Bukti transfer wajib, mengikuti pola pencairan saldo toko.
+     */
+    public function approveDepositRefund(Request $request, AuctionDeposit $deposit)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:1000',
+            'transfer_proof' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+        ], [
+            'transfer_proof.required' => 'Bukti transfer wajib diunggah sebelum pengembalian disetujui.',
+        ]);
+
+        if ($deposit->status !== AuctionDeposit::STATUS_REFUND_REQUESTED) {
+            return back()->with('error', 'Pengajuan pengembalian deposit ini sudah diproses.');
+        }
+
+        $proofPath = $request->file('transfer_proof')->store('deposits', 'public');
+
+        try {
+            DB::transaction(function () use ($deposit, $validated, $proofPath) {
+                $locked = AuctionDeposit::whereKey($deposit->getKey())->lockForUpdate()->firstOrFail();
+
+                if ($locked->status !== AuctionDeposit::STATUS_REFUND_REQUESTED) {
+                    throw new \RuntimeException('Pengajuan pengembalian deposit ini sudah diproses.');
+                }
+
+                $locked->forceFill([
+                    'status' => AuctionDeposit::STATUS_REFUNDED,
+                    'admin_note' => $validated['admin_note'] ?? null,
+                    'transfer_proof' => $proofPath,
+                    'refunded_at' => now(),
+                    'reviewed_by' => Auth::id(),
+                    'reviewed_at' => now(),
+                ])->save();
+            });
+        } catch (\RuntimeException $e) {
+            // Batalkan unggahan bukti bila pengembaliannya gagal diproses.
+            Storage::disk('public')->delete($proofPath);
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengembalian deposit ditandai sudah ditransfer.');
+    }
+
+    /**
+     * Pengajuan ditolak: depositnya kembali berstatus `paid` agar pembeli bisa
+     * memperbaiki nomor rekeningnya lalu mengajukan ulang.
+     */
+    public function rejectDepositRefund(Request $request, AuctionDeposit $deposit)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'required|string|max:1000',
+        ], [
+            'admin_note.required' => 'Alasan penolakan wajib diisi agar pembeli tahu apa yang harus diperbaiki.',
+        ]);
+
+        try {
+            DB::transaction(function () use ($deposit, $validated) {
+                $locked = AuctionDeposit::whereKey($deposit->getKey())->lockForUpdate()->firstOrFail();
+
+                if ($locked->status !== AuctionDeposit::STATUS_REFUND_REQUESTED) {
+                    throw new \RuntimeException('Pengajuan pengembalian deposit ini sudah diproses.');
+                }
+
+                $locked->forceFill([
+                    'status' => AuctionDeposit::STATUS_PAID,
+                    'admin_note' => $validated['admin_note'],
+                    'refund_requested_at' => null,
+                    'reviewed_by' => Auth::id(),
+                    'reviewed_at' => now(),
+                ])->save();
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengajuan pengembalian deposit ditolak. Pembeli dapat mengajukan ulang.');
     }
 
     public function adminIndex()
@@ -464,7 +954,7 @@ class AuctionController extends Controller
         Auction::where('approval_status', 'approved')
             ->whereIn('status', ['scheduled', 'active'])
             ->where('ends_at', '<=', now())
-            ->each(fn (Auction $auction) => $this->finishAuction($auction));
+            ->each(fn (Auction $auction) => $auction->finishNow());
     }
 
     private function refreshAuctionStatus(Auction $auction): void
@@ -474,8 +964,7 @@ class AuctionController extends Controller
         }
 
         if ($auction->ends_at->lte(now())) {
-            $this->finishAuction($auction);
-            $auction->refresh();
+            $auction->finishNow();
 
             return;
         }
@@ -484,57 +973,6 @@ class AuctionController extends Controller
             $auction->update(['status' => 'active']);
             $auction->refresh();
         }
-    }
-
-    private function finishAuction(Auction $auction): void
-    {
-        DB::transaction(function () use ($auction) {
-            $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->first();
-
-            if (! $auction || $auction->status === 'ended') {
-                return;
-            }
-
-            $highestBid = AuctionBid::where('auction_id', $auction->id)
-                ->orderByDesc('amount')
-                ->orderBy('created_at')
-                ->first();
-
-            $updates = [
-                'status' => 'ended',
-                'ended_at' => now(),
-            ];
-
-            if ($highestBid) {
-                $updates['winner_id'] = $highestBid->user_id;
-            }
-
-            $auction->update($updates);
-
-            if ($highestBid && ! Order::where('auction_id', $auction->id)->exists()) {
-                $order = Order::create([
-                    'user_id' => $highestBid->user_id,
-                    'product_id' => null,
-                    // Snapshot agar riwayat pesanan lelang tetap terbaca
-                    // meski lelang atau tokonya dihapus.
-                    'product_name' => $auction->name,
-                    'product_price' => $highestBid->amount,
-                    'auction_id' => $auction->id,
-                    'store_id' => $auction->store_id,
-                    'store_name' => $auction->store?->store_name,
-                    'quantity' => 1,
-                    'price' => $highestBid->amount,
-                    'status' => 'Waiting',
-                    // Lelang tidak punya form checkout, jadi alamat diambil dari
-                    // profil pemenang agar seller tetap punya tujuan pengiriman.
-                    'shipping_address' => $highestBid->user?->address,
-                    'payment_status' => 'pending',
-                    'payment_method' => 'midtrans',
-                ]);
-
-                $order->update(['payment_reference' => $order->public_id]);
-            }
-        });
     }
 
     private function authorizeSellerAuction(Auction $auction): void

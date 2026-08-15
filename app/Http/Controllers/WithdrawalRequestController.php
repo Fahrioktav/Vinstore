@@ -125,6 +125,16 @@ class WithdrawalRequestController extends Controller
         return back()->with('success', 'Pencairan disetujui dan ditandai sudah ditransfer.');
     }
 
+    /**
+     * Penolakan dikunci sekokoh penyetujuan.
+     *
+     * Sebelumnya reject() tidak memakai transaksi maupun lock, sehingga dua
+     * admin yang memproses pengajuan yang sama nyaris bersamaan sama-sama lolos
+     * pengecekan awal: satu memindahkan saldo dan menandai 'approved', lalu yang
+     * lain menimpanya menjadi 'rejected'. Saldo toko benar-benar berkurang
+     * tetapi catatannya berbunyi ditolak — jejak auditnya berbohong tentang uang
+     * yang sudah keluar (temuan V6-04).
+     */
     public function reject(Request $request, WithdrawalRequest $withdrawal)
     {
         if ($withdrawal->status !== 'pending') {
@@ -135,12 +145,24 @@ class WithdrawalRequestController extends Controller
             'admin_note' => 'nullable|string|max:1000',
         ]);
 
-        $withdrawal->update([
-            'status' => 'rejected',
-            'admin_note' => $validated['admin_note'] ?? null,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        try {
+            DB::transaction(function () use ($validated, $withdrawal) {
+                $locked = WithdrawalRequest::whereKey($withdrawal->getKey())->lockForUpdate()->firstOrFail();
+
+                if ($locked->status !== 'pending') {
+                    throw new \RuntimeException('Pengajuan pencairan ini sudah diproses.');
+                }
+
+                $locked->update([
+                    'status' => 'rejected',
+                    'admin_note' => $validated['admin_note'] ?? null,
+                    'reviewed_by' => Auth::id(),
+                    'reviewed_at' => now(),
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Pengajuan pencairan berhasil ditolak.');
     }

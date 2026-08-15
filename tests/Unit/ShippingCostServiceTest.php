@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\Auction;
 use App\Models\Product;
 use App\Models\Store;
 use App\Services\ShippingCostService;
@@ -24,13 +25,20 @@ class ShippingCostServiceTest extends TestCase
 
         $this->service = new ShippingCostService;
 
-        config()->set('marketplace.shipping.base_fee', 5000);
-        config()->set('marketplace.shipping.per_km', 2000);
-        config()->set('marketplace.shipping.min_distance_km', 1.0);
-        config()->set('marketplace.shipping.max_distance_km', 100.0);
+        config()->set('marketplace.shipping.base_fee', ['jawa' => 10000, 'luar_jawa' => 20000]);
+        config()->set('marketplace.shipping.java_bounds', [
+            'min_lat' => -8.85,
+            'max_lat' => -5.72,
+            'min_lng' => 105.00,
+            'max_lng' => 114.65,
+        ]);
+        config()->set('marketplace.shipping.default_region', 'luar_jawa');
         config()->set('marketplace.shipping.method_multiplier', ['standard' => 1.0, 'express' => 1.6]);
-        config()->set('marketplace.shipping.flat_fallback', ['standard' => 10000, 'express' => 25000]);
-        config()->set('marketplace.weight.per_kg', 3000);
+        config()->set('marketplace.weight.tiers', [
+            ['max_gram' => 10000, 'fee' => 3000],
+            ['max_gram' => null, 'fee' => 6000],
+        ]);
+        config()->set('marketplace.weight.min_billable_gram', 3000);
         config()->set('marketplace.weight.default_gram', 1000);
         config()->set('marketplace.weight.volumetric_divisor', 6000);
         config()->set('marketplace.packaging.default', 'standard');
@@ -41,55 +49,117 @@ class ShippingCostServiceTest extends TestCase
         config()->set('marketplace.service_fee', ['percent' => 2.5, 'min' => 1000, 'max' => 100000]);
     }
 
-    public function test_ongkir_dihitung_dari_tarif_dasar_ditambah_jarak(): void
+    /** Titik-titik uji: Yogyakarta (Jawa), Denpasar (Bali), Medan (Sumatera). */
+    private const JOGJA = [-7.7828, 110.3671];
+
+    private const DENPASAR = [-8.6705, 115.2126];
+
+    private function toko(array $koordinat = self::JOGJA): Store
     {
-        // 5000 + 10 km x 2000.
-        $this->assertSame(25000, $this->service->shippingCost(10.0, 'standard'));
+        return new Store([
+            'store_name' => 'Toko',
+            'latitude' => $koordinat[0],
+            'longitude' => $koordinat[1],
+        ]);
+    }
+
+    public function test_titik_di_pulau_jawa_dikenali(): void
+    {
+        $this->assertTrue($this->service->isInJava(...self::JOGJA));
+        // Jakarta.
+        $this->assertTrue($this->service->isInJava(-6.2088, 106.8456));
+        // Surabaya.
+        $this->assertTrue($this->service->isInJava(-7.2575, 112.7521));
+
+        // Denpasar, Medan, dan Makassar jelas di luar kotak.
+        $this->assertFalse($this->service->isInJava(...self::DENPASAR));
+        $this->assertFalse($this->service->isInJava(3.5952, 98.6722));
+        $this->assertFalse($this->service->isInJava(-5.1477, 119.4327));
+
+        $this->assertFalse($this->service->isInJava(null, null));
+    }
+
+    public function test_wilayah_jawa_hanya_bila_kedua_titik_di_jawa(): void
+    {
+        // Jogja -> Semarang: sama-sama di Jawa.
+        $this->assertSame('jawa', $this->service->shippingRegion($this->toko(), -6.9667, 110.4167));
+
+        // Jogja -> Denpasar: menyeberang.
+        $this->assertSame('luar_jawa', $this->service->shippingRegion($this->toko(), ...self::DENPASAR));
+
+        // Toko di Bali -> pembeli di Jawa: tetap menyeberang.
+        $this->assertSame(
+            'luar_jawa',
+            $this->service->shippingRegion($this->toko(self::DENPASAR), ...self::JOGJA)
+        );
+    }
+
+    public function test_koordinat_tidak_diketahui_jatuh_ke_wilayah_default(): void
+    {
+        // Menebak yang lebih murah berarti marketplace menombok ongkirnya.
+        $this->assertSame('luar_jawa', $this->service->shippingRegion($this->toko(), null, null));
+        $this->assertSame('luar_jawa', $this->service->shippingRegion(null, ...self::JOGJA));
+        $this->assertSame(
+            'luar_jawa',
+            $this->service->shippingRegion(new Store(['store_name' => 'Tanpa Peta']), ...self::JOGJA)
+        );
+    }
+
+    public function test_ongkir_memakai_tarif_dasar_wilayah(): void
+    {
+        $this->assertSame(10000, $this->service->shippingCost('jawa', 'standard'));
+        $this->assertSame(20000, $this->service->shippingCost('luar_jawa', 'standard'));
     }
 
     public function test_express_dikenai_pengali(): void
     {
-        // (5000 + 10 x 2000) x 1,6.
-        $this->assertSame(40000, $this->service->shippingCost(10.0, 'express'));
-    }
-
-    public function test_jarak_sangat_dekat_tetap_ditagih_jarak_minimum(): void
-    {
-        // Jarak 0,1 km dinaikkan ke minimum 1 km: 5000 + 1 x 2000.
-        $this->assertSame(7000, $this->service->shippingCost(0.1, 'standard'));
-    }
-
-    public function test_jarak_sangat_jauh_dibatasi_maksimum(): void
-    {
-        // Koordinat ngawur di sisi lain bumi tidak boleh menghasilkan ongkir
-        // jutaan rupiah.
-        $this->assertSame(
-            $this->service->shippingCost(100.0, 'standard'),
-            $this->service->shippingCost(9000.0, 'standard')
-        );
-    }
-
-    public function test_tanpa_koordinat_ongkir_memakai_tarif_rata(): void
-    {
-        $this->assertSame(10000, $this->service->shippingCost(null, 'standard'));
-        $this->assertSame(25000, $this->service->shippingCost(null, 'express'));
+        $this->assertSame(16000, $this->service->shippingCost('jawa', 'express'));
+        $this->assertSame(32000, $this->service->shippingCost('luar_jawa', 'express'));
     }
 
     public function test_metode_tidak_dikenal_diperlakukan_sebagai_standard(): void
     {
         $this->assertSame(
-            $this->service->shippingCost(10.0, 'standard'),
-            $this->service->shippingCost(10.0, 'kilat-super')
+            $this->service->shippingCost('jawa', 'standard'),
+            $this->service->shippingCost('jawa', 'kilat-super')
         );
     }
 
-    public function test_berat_dibulatkan_ke_atas_ke_kilogram_penuh(): void
+    public function test_jarak_tidak_lagi_memengaruhi_ongkir(): void
     {
+        // Dua tujuan di Jawa dengan jarak sangat berbeda tetap membayar sama.
+        $dekat = $this->service->shippingRegion($this->toko(), -7.7830, 110.3675);
+        $jauh = $this->service->shippingRegion($this->toko(), -6.2088, 106.8456);
+
+        $this->assertSame(
+            $this->service->shippingCost($dekat, 'standard'),
+            $this->service->shippingCost($jauh, 'standard')
+        );
+    }
+
+    public function test_biaya_berat_bertingkat_dan_rata_di_dalam_tingkatnya(): void
+    {
+        // Di bawah 3 kg dibulatkan ke 3 kg — tarif tingkat pertama adalah
+        // tarif dasar, jadi tidak ada yang lebih murah dari itu.
         $this->assertSame(3000, $this->service->weightFee(1));
-        $this->assertSame(3000, $this->service->weightFee(1000));
-        $this->assertSame(6000, $this->service->weightFee(1001));
-        $this->assertSame(12000, $this->service->weightFee(3500));
+        $this->assertSame(3000, $this->service->weightFee(3000));
+
+        // Rata di dalam satu tingkat: 3 kg dan 10 kg sama harganya.
+        $this->assertSame(3000, $this->service->weightFee(10000));
+
+        // Lewat 10 kg naik ke tingkat kedua.
+        $this->assertSame(6000, $this->service->weightFee(10001));
+        $this->assertSame(6000, $this->service->weightFee(50000));
+
+        // Paket kosong tidak ditagih apa pun.
         $this->assertSame(0, $this->service->weightFee(0));
+    }
+
+    public function test_berat_tertagih_dibulatkan_ke_batas_terendah(): void
+    {
+        $this->assertSame(3000, $this->service->billableWeightGram(500));
+        $this->assertSame(3000, $this->service->billableWeightGram(3000));
+        $this->assertSame(7500, $this->service->billableWeightGram(7500));
     }
 
     public function test_biaya_kemasan_dasar_hanya_sekali_per_toko(): void
@@ -166,7 +236,8 @@ class ShippingCostServiceTest extends TestCase
         $this->assertSame(1000, $quote['actual_weight_gram']);
         $this->assertSame(6000, $quote['volumetric_weight_gram']);
         $this->assertSame(6000, $quote['weight_gram']);
-        $this->assertSame(18000, $quote['weight_fee']);
+        // 6 kg masih di tingkat pertama.
+        $this->assertSame(3000, $quote['weight_fee']);
     }
 
     public function test_rincian_baris_mengikuti_jenis_pengemasan_pilihan_pembeli(): void
@@ -242,10 +313,11 @@ class ShippingCostServiceTest extends TestCase
 
         $quote = $this->service->quoteLine($product, 2, 1000000, 'standard', -7.7828, 110.3671);
 
-        // Jarak 0 km -> minimum 1 km: 5000 + 2000.
-        $this->assertSame(7000, $quote['shipping_cost']);
+        // Toko dan tujuan sama-sama di Jawa.
+        $this->assertSame('jawa', $quote['region']);
+        $this->assertSame(10000, $quote['shipping_cost']);
         $this->assertSame(4000, $quote['weight_gram']);
-        $this->assertSame(12000, $quote['weight_fee']);
+        $this->assertSame(3000, $quote['weight_fee']);
         $this->assertSame(6000, $quote['packaging_fee']);
         $this->assertSame(50000, $quote['service_fee']);
         $this->assertSame(2000000, $quote['subtotal']);
@@ -269,7 +341,49 @@ class ShippingCostServiceTest extends TestCase
         $this->assertSame(0, $quote['shipping_cost']);
         // Biaya peti juga tidak diulang, hanya pembungkus per unit.
         $this->assertSame(1500, $quote['packaging_fee']);
-        // Berat tetap ditagih karena barangnya memang punya berat sendiri.
+        // Biaya berat pun tidak diulang: barang kedua masuk paket yang sama,
+        // dan beratnya sudah ikut dihitung pada baris pertama.
+        $this->assertSame(0, $quote['weight_fee']);
+    }
+
+    public function test_biaya_berat_dihitung_atas_berat_seluruh_paket(): void
+    {
+        $store = $this->toko();
+
+        $product = new Product(['name' => 'Patung', 'price' => 500000, 'weight' => 6000]);
+        $product->setRelation('store', $store);
+
+        // Dua patung 6 kg dari toko yang sama: 12 kg dalam satu paket, jadi
+        // masuk tingkat kedua meski masing-masing barisnya hanya 6 kg.
+        $pertama = $this->service->quoteLine($product, 1, 500000, 'standard', self::JOGJA[0], self::JOGJA[1], true, null, 12000);
+        $kedua = $this->service->quoteLine($product, 1, 500000, 'standard', self::JOGJA[0], self::JOGJA[1], false, null, 12000);
+
+        $this->assertSame(6000, $pertama['weight_fee']);
+        $this->assertSame(0, $kedua['weight_fee']);
+        $this->assertSame(12000, $pertama['package_weight_gram']);
+    }
+
+    public function test_lelang_dihitung_dengan_jalur_yang_sama(): void
+    {
+        // Lelang membawa kolom berat dan dimensi yang sama dengan produk, jadi
+        // perhitungannya tidak perlu jalur tersendiri.
+        $store = $this->toko();
+
+        $auction = new Auction([
+            'name' => 'Guci Ming',
+            'weight' => 4000,
+            'length' => 30,
+            'width' => 20,
+            'height' => 20,
+        ]);
+        $auction->setRelation('store', $store);
+
+        $quote = $this->service->quoteLine($auction, 1, 2000000, 'standard', ...self::JOGJA);
+
+        $this->assertSame('jawa', $quote['region']);
+        $this->assertSame(10000, $quote['shipping_cost']);
+        // Berat asli 4 kg mengalahkan volumetrik 2 kg.
+        $this->assertSame(4000, $quote['weight_gram']);
         $this->assertSame(3000, $quote['weight_fee']);
     }
 }

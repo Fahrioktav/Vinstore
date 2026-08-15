@@ -35,6 +35,7 @@ export default function InvoicePage() {
   const packagingFee = Number(order.packaging_fee) || 0;
   const weightFee = Number(order.weight_fee) || 0;
   const serviceFee = Number(order.service_fee) || 0;
+  const depositCredit = Number(order.deposit_credit) || 0;
 
   const itemSubtotal =
     Number(order.price) - shippingCost - packagingFee - weightFee - serviceFee;
@@ -304,6 +305,25 @@ export default function InvoicePage() {
                       {formatIDR(order.price)}
                     </span>
                   </div>
+
+                  {/* Deposit lelang sudah masuk lebih dulu, jadi yang ditagihkan
+                      lewat Midtrans hanya sisanya. */}
+                  {depositCredit > 0 && (
+                    <div className="mt-4 space-y-2 border-t border-white/30 pt-4 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>Deposit lelang dibayar</span>
+                        <span className="font-semibold">
+                          − {formatIDR(depositCredit)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Sisa dibayar</span>
+                        <span className="text-lg font-bold">
+                          {formatIDR(Number(order.price) - depositCredit)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

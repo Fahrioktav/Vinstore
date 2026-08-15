@@ -8,6 +8,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import WeightDimensionFields from '@/components/weight-dimension-fields';
 
 export default function SellerCreateAuctionPage() {
   return (
@@ -65,6 +66,8 @@ export default function SellerCreateAuctionPage() {
                   />
                 </div>
 
+                <WeightDimensionFields />
+
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     <AuthLabel htmlFor="starting_price">Harga Awal</AuthLabel>
@@ -75,6 +78,10 @@ export default function SellerCreateAuctionPage() {
                       min="1000"
                       required
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Harga awal mulai Rp 1.000.000 mewajibkan peserta membayar
+                      deposit 10% sebelum boleh menawar.
+                    </p>
                   </div>
                   <div>
                     <AuthLabel htmlFor="min_increment">

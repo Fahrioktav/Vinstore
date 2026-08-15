@@ -312,7 +312,8 @@ export default function CheckoutPage() {
 
             <CostBreakdown
               summary={summary}
-              distanceKm={quote.distance_km}
+              region={quote.region}
+              hasDestination={quote.distance_km !== null}
               rates={feeRates}
               packagingType={data.packaging_type}
             />

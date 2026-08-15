@@ -7,7 +7,7 @@ import { openSnapPayment } from '@/lib/midtrans';
 import { toast } from 'sonner';
 
 export default function AuctionShow() {
-  const { auction: initialAuction, user, flash } = usePage().props;
+  const { auction: initialAuction, myDeposit, user, flash } = usePage().props;
 
   // State untuk real-time updates
   const [auction, setAuction] = useState(initialAuction);
@@ -21,21 +21,44 @@ export default function AuctionShow() {
     user && auction.winner && user.public_id === auction.winner.public_id;
   const canBid = auction.status === 'active';
 
-  // Handle snap_token untuk pembayaran lelang.
+  // Deposit sudah aktif berarti berhak menawar. `applied` ikut dianggap aktif
+  // agar pemenang tidak kehilangan haknya.
+  const depositActive = ['paid', 'applied'].includes(myDeposit?.status);
+  const depositBlocking = initialAuction.requires_deposit && !depositActive;
+
+  // Handle snap_token untuk pembayaran lelang maupun deposit.
   // Menunggu library Snap siap agar popup tidak gagal muncul diam-diam.
   useEffect(() => {
     if (!flash?.snap_token) {
       return;
     }
 
+    const isDeposit = flash.snap_context === 'deposit';
+
+    const afterPaid = () => {
+      // Deposit tidak menghasilkan pesanan; yang berubah hanya hak menawar di
+      // halaman ini, jadi cukup dimuat ulang.
+      if (isDeposit) {
+        router.reload({ only: ['auction', 'myDeposit'] });
+
+        return;
+      }
+
+      router.visit('/order');
+    };
+
     openSnapPayment(flash.snap_token, {
       onSuccess: () => {
-        toast.success('Pembayaran lelang berhasil!');
-        router.visit('/order');
+        toast.success(
+          isDeposit
+            ? 'Deposit berhasil dibayar!'
+            : 'Pembayaran lelang berhasil!'
+        );
+        afterPaid();
       },
       onPending: () => {
         toast.info('Pembayaran sedang diproses');
-        router.visit('/order');
+        afterPaid();
       },
       onError: () => {
         toast.error('Pembayaran gagal. Silakan coba lagi.');
@@ -160,39 +183,54 @@ export default function AuctionShow() {
               />
             </div>
 
+            {initialAuction.requires_deposit && (
+              <DepositPanel
+                auction={initialAuction}
+                deposit={myDeposit}
+                depositActive={depositActive}
+                canBid={canBid}
+              />
+            )}
+
             {canBid ? (
-              <Form
-                method="POST"
-                action={`/auctions/${auction.public_id}/bid`}
-                className="mt-6 space-y-3"
-                options={{ preserveScroll: true }}
-              >
-                {({ errors, processing }) => (
-                  <>
-                    <label className="block text-sm font-semibold text-gray-700">
-                      Ajukan penawaran
-                    </label>
-                    <input
-                      type="number"
-                      name="amount"
-                      min={minimumBid}
-                      defaultValue={minimumBid}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
-                      required
-                    />
-                    {errors.amount && (
-                      <p className="text-xs text-red-600">{errors.amount}</p>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={processing}
-                      className="w-full rounded-lg bg-[#B77C4C] px-5 py-3 font-semibold text-white transition hover:bg-[#8d5e39] disabled:opacity-50"
-                    >
-                      Tombol ajukan penawaran
-                    </button>
-                  </>
-                )}
-              </Form>
+              depositBlocking ? (
+                <div className="mt-6 rounded-lg bg-gray-100 p-4 text-sm text-gray-600">
+                  Bayar deposit terlebih dahulu untuk dapat menawar.
+                </div>
+              ) : (
+                <Form
+                  method="POST"
+                  action={`/auctions/${auction.public_id}/bid`}
+                  className="mt-6 space-y-3"
+                  options={{ preserveScroll: true }}
+                >
+                  {({ errors, processing }) => (
+                    <>
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Ajukan penawaran
+                      </label>
+                      <input
+                        type="number"
+                        name="amount"
+                        min={minimumBid}
+                        defaultValue={minimumBid}
+                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
+                        required
+                      />
+                      {errors.amount && (
+                        <p className="text-xs text-red-600">{errors.amount}</p>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full rounded-lg bg-[#B77C4C] px-5 py-3 font-semibold text-white transition hover:bg-[#8d5e39] disabled:opacity-50"
+                      >
+                        Tombol ajukan penawaran
+                      </button>
+                    </>
+                  )}
+                </Form>
+              )
             ) : (
               <div className="mt-6 rounded-lg bg-gray-100 p-4 text-sm text-gray-600">
                 Lelang tidak sedang aktif.
@@ -205,14 +243,12 @@ export default function AuctionShow() {
                   Pemenang: {auction.winner.username}
                 </p>
                 {isWinner && (
-                  <Form
-                    method="POST"
-                    action={`/auctions/${auction.public_id}/pay`}
+                  <Link
+                    href={`/auctions/${auction.public_id}/checkout`}
+                    className="mt-3 block w-full rounded-lg bg-[#53685B] px-4 py-2 text-center font-semibold text-white hover:bg-[#3c4a3e]"
                   >
-                    <button className="mt-3 w-full rounded-lg bg-[#53685B] px-4 py-2 font-semibold text-white hover:bg-[#3c4a3e]">
-                      Bayar Sekarang
-                    </button>
-                  </Form>
+                    Lanjut ke Pembayaran
+                  </Link>
                 )}
               </div>
             )}
@@ -270,6 +306,83 @@ AuctionShow.layout = (page) => (
     {page}
   </MainLayout>
 );
+
+const DEPOSIT_STATUS_LABELS = {
+  pending: 'Menunggu pembayaran',
+  paid: 'Aktif',
+  applied: 'Dipakai sebagai uang muka',
+  refund_requested: 'Pengembalian diproses admin',
+  refunded: 'Sudah dikembalikan',
+  forfeited: 'Hangus',
+  expired: 'Kedaluwarsa',
+};
+
+/**
+ * Kotak status deposit peserta.
+ *
+ * Hanya muncul pada lelang yang memungut jaminan. Tugasnya menjawab satu
+ * pertanyaan: apakah pembaca halaman ini sudah berhak menawar, dan kalau belum,
+ * apa yang harus ia lakukan.
+ */
+function DepositPanel({ auction, deposit, depositActive, canBid }) {
+  if (depositActive) {
+    return (
+      <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+        <p className="font-semibold">
+          Deposit aktif — {formatIDR(deposit.amount)}
+        </p>
+        <p className="mt-1 text-xs">
+          {deposit.status === 'applied'
+            ? 'Deposit ini dipakai sebagai uang muka pembayaran lelang Anda.'
+            : 'Anda berhak menawar. Bila kalah, deposit dapat diajukan kembali lewat halaman Deposit Lelang.'}
+        </p>
+        <Link
+          href="/deposit-lelang"
+          className="mt-2 inline-block text-xs font-semibold underline"
+        >
+          Lihat deposit saya
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p className="font-semibold">
+        Lelang ini mewajibkan deposit {formatIDR(auction.deposit_amount)}
+      </p>
+      <p className="mt-1 text-xs">
+        Sepuluh persen dari harga awal, dibayar sekali sebelum menawar. Bila
+        Anda menang, deposit menjadi uang muka; bila kalah, deposit dapat
+        diajukan kembali ke admin. Deposit hangus hanya bila Anda menang tetapi
+        tidak membayar sampai tenggat.
+      </p>
+
+      {deposit && deposit.status !== 'pending' && (
+        <p className="mt-2 text-xs font-semibold">
+          Status deposit Anda:{' '}
+          {DEPOSIT_STATUS_LABELS[deposit.status] ?? deposit.status}
+        </p>
+      )}
+
+      {canBid && (
+        <Form method="POST" action={`/auctions/${auction.public_id}/deposit`}>
+          {({ processing }) => (
+            <button
+              type="submit"
+              disabled={processing}
+              className="mt-3 w-full rounded-lg bg-[#B77C4C] px-4 py-2 font-semibold text-white transition hover:bg-[#8d5e39] disabled:opacity-50"
+            >
+              {deposit?.status === 'pending'
+                ? 'Lanjutkan Pembayaran Deposit'
+                : 'Bayar Deposit'}
+            </button>
+          )}
+        </Form>
+      )}
+    </div>
+  );
+}
 
 function Info({ label, value }) {
   return (

@@ -117,6 +117,13 @@ export default function CartPage() {
     .filter((km) => km !== null);
   const distanceKm = distances.length ? Math.max(...distances) : null;
 
+  // Wilayah tarif yang ditampilkan di ringkasan. Bila keranjang memuat toko
+  // dari kedua wilayah, yang disebut adalah yang termahal — itulah yang paling
+  // menjelaskan angka totalnya.
+  const region = lines.some((line) => line.region === 'luar_jawa')
+    ? 'luar_jawa'
+    : (lines[0]?.region ?? feeRates.shipping.default_region);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     post('/checkout/cart');
@@ -345,7 +352,8 @@ export default function CartPage() {
 
             <CostBreakdown
               summary={summary}
-              distanceKm={distanceKm}
+              region={region}
+              hasDestination={distanceKm !== null}
               rates={feeRates}
               storeCount={groups.length}
             />

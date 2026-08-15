@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Auction;
-use App\Models\AuctionBid;
+use App\Models\AuctionDeposit;
 use App\Models\Order;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,55 +22,7 @@ Artisan::command('auctions:finish', function () {
     Auction::where('approval_status', 'approved')
         ->whereIn('status', ['scheduled', 'active'])
         ->where('ends_at', '<=', now())
-        ->each(function (Auction $auction) {
-            DB::transaction(function () use ($auction) {
-                $auction = Auction::whereKey($auction->getKey())->lockForUpdate()->first();
-
-                if (! $auction || $auction->status === 'ended') {
-                    return;
-                }
-
-                $highestBid = AuctionBid::where('auction_id', $auction->id)
-                    ->orderByDesc('amount')
-                    ->orderBy('created_at')
-                    ->first();
-
-                $updates = [
-                    'status' => 'ended',
-                    'ended_at' => now(),
-                ];
-
-                if ($highestBid) {
-                    $updates['winner_id'] = $highestBid->user_id;
-                }
-
-                $auction->update($updates);
-
-                if ($highestBid && ! Order::where('auction_id', $auction->id)->exists()) {
-                    $order = Order::create([
-                        'user_id' => $highestBid->user_id,
-                        'product_id' => null,
-                        // Snapshot agar riwayat pesanan lelang tetap terbaca
-                        // meski lelang atau tokonya dihapus.
-                        'product_name' => $auction->name,
-                        'product_price' => $highestBid->amount,
-                        'auction_id' => $auction->id,
-                        'store_id' => $auction->store_id,
-                        'store_name' => $auction->store?->store_name,
-                        'quantity' => 1,
-                        'price' => $highestBid->amount,
-                        'status' => 'Waiting',
-                        // Lelang tidak punya form checkout, jadi alamat diambil
-                        // dari profil pemenang agar seller punya tujuan kirim.
-                        'shipping_address' => $highestBid->user?->address,
-                        'payment_status' => 'pending',
-                        'payment_method' => 'midtrans',
-                    ]);
-
-                    $order->update(['payment_reference' => $order->public_id]);
-                }
-            });
-        });
+        ->each(fn (Auction $auction) => $auction->finishNow());
 
     $this->info('Auction statuses synchronized.');
 })->purpose('Activate due auctions and finish expired auctions');
@@ -144,13 +96,22 @@ Schedule::command('orders:auto-complete')->hourly();
  * karena Midtrans tidak bisa menghubungi localhost.
  */
 Artisan::command('orders:release-abandoned', function () {
-    $deadline = now()->subHours(Order::PAYMENT_WINDOW_HOURS);
     $released = 0;
 
     Order::whereIn('payment_status', ['pending', 'unpaid'])
         ->whereNull('stock_restored_at')
         ->whereNull('stock_committed_at')
-        ->where('created_at', '<=', $deadline)
+        // Pesanan lelang punya tenggat sendiri yang lebih longgar, jadi
+        // penyaringannya tidak bisa memakai satu batas waktu untuk semua.
+        ->where(function ($query) {
+            $query->where(function ($q) {
+                $q->whereNull('auction_id')
+                    ->where('created_at', '<=', now()->subHours(Order::PAYMENT_WINDOW_HOURS));
+            })->orWhere(function ($q) {
+                $q->whereNotNull('auction_id')
+                    ->where('created_at', '<=', now()->subHours(Order::AUCTION_PAYMENT_WINDOW_HOURS));
+            });
+        })
         ->each(function (Order $order) use (&$released) {
             $order->update([
                 'status' => 'Cancelled',
@@ -158,6 +119,13 @@ Artisan::command('orders:release-abandoned', function () {
             ]);
 
             $order->restoreReservedStock();
+
+            // Pemenang lelang yang tidak kunjung membayar kehilangan depositnya.
+            // Inilah sanksi yang menjadi alasan deposit dipungut sejak awal.
+            if ($order->auction_id !== null) {
+                AuctionDeposit::forfeitForAbandonedOrder($order);
+            }
+
             $released++;
         });
 

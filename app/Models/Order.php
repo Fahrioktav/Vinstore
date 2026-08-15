@@ -31,6 +31,7 @@ class Order extends Model
         'packaging_type',
         'weight_fee',
         'service_fee',
+        'deposit_credit',
         'weight_gram',
         'volumetric_weight_gram',
         'shipping_distance_km',
@@ -65,6 +66,7 @@ class Order extends Model
         'packaging_fee' => 'integer',
         'weight_fee' => 'integer',
         'service_fee' => 'integer',
+        'deposit_credit' => 'integer',
         'weight_gram' => 'integer',
         'volumetric_weight_gram' => 'integer',
         'shipping_distance_km' => 'float',
@@ -86,6 +88,9 @@ class Order extends Model
         // Dashboard seller menampilkan total tagihan pembeli; tanpa angka ini
         // seller mengira seluruhnya menjadi haknya.
         'seller_payout_amount',
+        // Yang benar-benar harus dibayar sekarang, setelah dipotong deposit
+        // lelang. Halaman pesanan menampilkannya sebagai "sisa bayar".
+        'amount_due',
     ];
 
     /**
@@ -175,6 +180,41 @@ class Order extends Model
     public const PAYMENT_WINDOW_HOURS = 24;
 
     /**
+     * Tenggat pembayaran khusus pesanan lelang.
+     *
+     * Sengaja lebih longgar daripada pesanan biasa. Pemenang lelang tidak pernah
+     * melewati checkout — pesanannya dibuatkan penjadwal saat lelang tutup — jadi
+     * ia bisa saja baru menyadari kemenangannya beberapa jam kemudian. Dua hari
+     * memberi ruang untuk itu tanpa menahan barangnya terlalu lama (temuan
+     * V6-03, yang meminta tenggat ini diputuskan secara sadar, bukan diwarisi
+     * diam-diam dari pesanan biasa).
+     */
+    public const AUCTION_PAYMENT_WINDOW_HOURS = 48;
+
+    /**
+     * Tenggat pembayaran yang berlaku untuk pesanan ini.
+     */
+    public function paymentWindowHours(): int
+    {
+        return $this->auction_id !== null
+            ? self::AUCTION_PAYMENT_WINDOW_HOURS
+            : self::PAYMENT_WINDOW_HOURS;
+    }
+
+    /**
+     * Batas waktu pembayaran pesanan ini, atau null bila pesanannya memang tidak
+     * sedang menunggu pembayaran.
+     */
+    public function paymentDeadline(): ?\Illuminate\Support\Carbon
+    {
+        if (! in_array($this->payment_status, ['pending', 'unpaid'], true)) {
+            return null;
+        }
+
+        return $this->created_at?->copy()->addHours($this->paymentWindowHours());
+    }
+
+    /**
      * Pesanan yang masih berjalan atau pernah melibatkan uang.
      */
     public function scopeActive($query)
@@ -192,6 +232,17 @@ class Order extends Model
     public const SETTLED_PAYMENT_STATUSES = ['paid', 'refunded'];
 
     /**
+     * Status pembayaran yang menandakan pesanannya sudah gugur.
+     *
+     * Uang yang datang SESUDAH salah satu status ini bukan lagi pembayaran yang
+     * sah atas pesanan ini: stoknya sudah dilepas ke pembeli lain dan sellernya
+     * sudah melihat pesanan itu batal. Menerimanya sebagai 'paid' menghasilkan
+     * pesanan berstatus Cancelled tetapi lunas, stok yang tidak pernah dipotong,
+     * dan biaya layanan yang telanjur diakui sebagai pendapatan (temuan V6-01).
+     */
+    public const DEAD_PAYMENT_STATUSES = ['expired', 'cancelled'];
+
+    /**
      * Bolehkah status pembayaran baru ini diterapkan?
      *
      * Midtrans tidak menjamin urutan pengiriman notifikasi, dan
@@ -201,7 +252,9 @@ class Order extends Model
      * yang mencabut akses invoice pembeli sekaligus membatalkan pencairan dana
      * seller atas pesanan yang uangnya sudah diterima.
      *
-     * Transisi keluar dari 'paid' hanya sah menuju 'refunded'.
+     * Transisi keluar dari 'paid' hanya sah menuju 'refunded'. Pesanan yang
+     * sudah gugur pun hanya boleh bergerak ke 'refunded', yaitu saat dana yang
+     * telanjur masuk dikembalikan.
      */
     public function canApplyPaymentStatus(?string $newStatus): bool
     {
@@ -209,11 +262,24 @@ class Order extends Model
             return false;
         }
 
+        if ($this->isPaymentDead()) {
+            return $newStatus === 'refunded';
+        }
+
         if (! in_array($this->payment_status, self::SETTLED_PAYMENT_STATUSES, true)) {
             return true;
         }
 
         return $this->payment_status === 'paid' && $newStatus === 'refunded';
+    }
+
+    /**
+     * Apakah pesanan ini sudah gugur — kedaluwarsa atau dibatalkan — sehingga
+     * tidak boleh lagi menerima pembayaran baru.
+     */
+    public function isPaymentDead(): bool
+    {
+        return in_array($this->payment_status, self::DEAD_PAYMENT_STATUSES, true);
     }
 
     /**
@@ -353,6 +419,23 @@ class Order extends Model
             - (int) $this->packaging_fee
             - (int) $this->weight_fee
             - (int) $this->service_fee);
+    }
+
+    /**
+     * Nominal yang benar-benar ditagihkan lewat Midtrans sekarang.
+     *
+     * `price` tetap berisi tagihan penuh — itulah nilai transaksinya, dan dari
+     * sanalah hak seller serta biaya layanan dihitung. Deposit lelang yang sudah
+     * masuk lebih dulu dipotong di sini saja, sebagai uang muka.
+     */
+    public function amountDue(): int
+    {
+        return max(0, (int) round((float) $this->price) - (int) $this->deposit_credit);
+    }
+
+    public function getAmountDueAttribute(): int
+    {
+        return $this->amountDue();
     }
 
     /**

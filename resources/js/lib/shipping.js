@@ -58,33 +58,80 @@ export function distanceKm(store, destLat, destLng) {
   );
 }
 
-export function shippingCost(km, method, rates) {
+/**
+ * Apakah sebuah titik ada di Pulau Jawa. Cermin
+ * ShippingCostService::isInJava(); batas kotaknya datang dari config.
+ */
+export function isInJava(lat, lng, rates) {
+  if (!isNumber(lat) || !isNumber(lng)) return false;
+
+  const bounds = rates.shipping.java_bounds;
+
+  return (
+    Number(lat) >= Number(bounds.min_lat) &&
+    Number(lat) <= Number(bounds.max_lat) &&
+    Number(lng) >= Number(bounds.min_lng) &&
+    Number(lng) <= Number(bounds.max_lng)
+  );
+}
+
+/**
+ * Wilayah tarif: 'jawa' hanya bila toko DAN tujuan sama-sama di Pulau Jawa.
+ * Koordinat yang belum diketahui jatuh ke wilayah default, bukan yang termurah.
+ */
+export function shippingRegion(store, destLat, destLng, rates) {
+  if (!store || !isNumber(store.latitude) || !isNumber(store.longitude)) {
+    return rates.shipping.default_region;
+  }
+
+  if (!isNumber(destLat) || !isNumber(destLng)) {
+    return rates.shipping.default_region;
+  }
+
+  const sameIsland =
+    isInJava(store.latitude, store.longitude, rates) &&
+    isInJava(destLat, destLng, rates);
+
+  return sameIsland ? 'jawa' : 'luar_jawa';
+}
+
+export function regionLabel(region) {
+  return region === 'jawa' ? 'Pulau Jawa' : 'Luar Pulau Jawa';
+}
+
+export function shippingCost(region, method, rates) {
   const config = rates.shipping;
   const normalized = method === 'express' ? 'express' : 'standard';
 
-  if (km === null) {
-    return Number(config.flat_fallback[normalized] ?? 0);
-  }
-
-  const billable =
-    Math.round(
-      Math.min(
-        Math.max(km, Number(config.min_distance_km)),
-        Number(config.max_distance_km)
-      ) * 100
-    ) / 100;
-
+  const baseFee = Number(
+    config.base_fee[region] ?? config.base_fee[config.default_region]
+  );
   const multiplier = Number(config.method_multiplier[normalized] ?? 1);
 
-  return Math.round(
-    (Number(config.base_fee) + billable * Number(config.per_km)) * multiplier
-  );
+  return Math.round(baseFee * multiplier);
+}
+
+/**
+ * Tingkat pertama adalah tarif dasar, jadi paket di bawah batas terendah
+ * dibulatkan naik ke batas itu.
+ */
+export function billableWeightGram(totalGram, rates) {
+  return Math.max(totalGram, Number(rates.weight.min_billable_gram));
 }
 
 export function weightFee(totalGram, rates) {
   if (totalGram <= 0) return 0;
 
-  return Math.ceil(totalGram / 1000) * Number(rates.weight.per_kg);
+  const billable = billableWeightGram(totalGram, rates);
+  const tiers = rates.weight.tiers;
+
+  for (const tier of tiers) {
+    if (tier.max_gram === null || billable <= Number(tier.max_gram)) {
+      return Number(tier.fee);
+    }
+  }
+
+  return Number(tiers[tiers.length - 1].fee);
 }
 
 /**
@@ -140,6 +187,22 @@ export function productWeightGram(product, rates) {
 }
 
 /**
+ * Berat tertagih satu unit: yang lebih besar antara berat asli dan volumetrik.
+ */
+export function chargeableWeightGram(product, rates) {
+  return Math.max(
+    productWeightGram(product, rates),
+    volumetricWeightGram(product, rates)
+  );
+}
+
+export function lineWeightGram(product, quantity, rates) {
+  return (
+    chargeableWeightGram(product, rates) * Math.max(1, Number(quantity) || 1)
+  );
+}
+
+/**
  * Rincian biaya satu baris pesanan.
  *
  * @param {boolean} firstOfStore Baris pertama dari toko ini. Ongkir dan biaya
@@ -155,26 +218,34 @@ export function quoteLine({
   destLng,
   firstOfStore = true,
   packagingType,
+  packageWeightGram = null,
   rates,
 }) {
   const qty = Math.max(1, Number(quantity) || 1);
   const subtotal = Number(unitPrice) * qty;
 
   const km = distanceKm(product?.store, destLat, destLng);
-  const shipping = firstOfStore ? shippingCost(km, method, rates) : 0;
+  const region = shippingRegion(product?.store, destLat, destLng, rates);
+  const shipping = firstOfStore ? shippingCost(region, method, rates) : 0;
 
   // Yang ditagih adalah berat terbesar antara berat asli dan volumetrik.
   const actualGram = productWeightGram(product, rates) * qty;
   const volumetricGram = volumetricWeightGram(product, rates) * qty;
   const gram = Math.max(actualGram, volumetricGram);
 
+  // Biaya berat menyusul ongkir: sekali per paket, atas berat seluruh isinya.
+  const packageGram = packageWeightGram ?? gram;
+
   const line = {
+    region,
     distance_km: km,
     shipping_cost: shipping,
     weight_gram: gram,
     actual_weight_gram: actualGram,
     volumetric_weight_gram: volumetricGram,
-    weight_fee: weightFee(gram, rates),
+    package_weight_gram: packageGram,
+    billable_weight_gram: billableWeightGram(packageGram, rates),
+    weight_fee: firstOfStore ? weightFee(packageGram, rates) : 0,
     packaging_type: normalizePackagingType(packagingType, rates),
     packaging_fee: packagingFee(qty, firstOfStore, rates, packagingType),
     service_fee: serviceFee(subtotal, rates),
@@ -247,6 +318,18 @@ export function quoteCart({
   destLng,
   rates,
 }) {
+  // Biaya berat dihitung per paket, jadi berat seluruh isi tiap toko harus
+  // sudah diketahui sebelum baris pertamanya dihitung.
+  const packageWeight = {};
+
+  cartItems.forEach((item) => {
+    const storeKey = storeKeyOf(item);
+
+    packageWeight[storeKey] =
+      (packageWeight[storeKey] ?? 0) +
+      lineWeightGram(item.product, item.quantity, rates);
+  });
+
   const seenStores = new Set();
 
   return cartItems.map((item) => {
@@ -268,6 +351,7 @@ export function quoteCart({
         destLng,
         firstOfStore,
         packagingType: options.packaging_type,
+        packageWeightGram: packageWeight[storeKey],
         rates,
       }),
     };

@@ -43,6 +43,11 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'status' => fn () => $request->session()->get('status'),
                 'snap_token' => fn () => $request->session()->get('snap_token'),
+                // Apa yang sedang dibayar lewat popup Snap. Halaman lelang
+                // memakai ini untuk menentukan ke mana pembeli diarahkan setelah
+                // pembayaran selesai: pesanan lelang menuju daftar pesanan,
+                // sedangkan deposit cukup memuat ulang halaman lelangnya.
+                'snap_context' => fn () => $request->session()->get('snap_context'),
             ],
         ]);
     }

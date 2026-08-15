@@ -108,6 +108,8 @@ class AuctionSubmissionEditTest extends TestCase
             ->put('/seller/auctions/'.$auction->public_id, [
                 'name' => 'Guci Ming (revisi)',
                 'description' => 'Deskripsi sudah diperbaiki',
+                // Berat wajib sejak pesanan lelang ikut menagih ongkir.
+                'weight' => 2500,
                 'starting_price' => 1200000,
                 'min_increment' => 50000,
                 'starts_at' => now()->addDay()->format('Y-m-d\TH:i'),

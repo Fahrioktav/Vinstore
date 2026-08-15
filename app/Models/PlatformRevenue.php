@@ -28,6 +28,11 @@ class PlatformRevenue extends Model
      */
     public const SOURCE_SERVICE_FEE_REVERSAL = 'service_fee_reversal';
 
+    /**
+     * Deposit lelang yang hangus karena pemenangnya tidak pernah membayar.
+     */
+    public const SOURCE_AUCTION_DEPOSIT_FORFEIT = 'auction_deposit_forfeit';
+
     protected $fillable = [
         'public_id',
         'order_id',
@@ -104,6 +109,34 @@ class PlatformRevenue extends Model
                 'source' => self::SOURCE_SERVICE_FEE,
                 'amount' => $amount,
                 'description' => 'Biaya layanan pesanan '.$order->public_id,
+            ]);
+        } catch (QueryException $e) {
+            // Sudah pernah dicatat (pelanggaran kunci unik) — bukan kesalahan.
+            return null;
+        }
+    }
+
+    /**
+     * Catat deposit lelang yang hangus sebagai pendapatan marketplace.
+     *
+     * Idempotensinya bersandar pada kunci unik (order_id, source) yang sama
+     * dengan biaya layanan: satu pesanan lelang hanya punya satu pemenang, jadi
+     * hanya ada satu deposit yang bisa hangus atasnya.
+     */
+    public static function recordAuctionDepositForfeit(Order $order, AuctionDeposit $deposit): ?self
+    {
+        $amount = (int) $deposit->amount;
+
+        if ($amount <= 0 || $order->getKey() === null) {
+            return null;
+        }
+
+        try {
+            return self::create([
+                'order_id' => $order->getKey(),
+                'source' => self::SOURCE_AUCTION_DEPOSIT_FORFEIT,
+                'amount' => $amount,
+                'description' => 'Deposit lelang hangus '.$deposit->public_id.' atas pesanan '.$order->public_id,
             ]);
         } catch (QueryException $e) {
             // Sudah pernah dicatat (pelanggaran kunci unik) — bukan kesalahan.

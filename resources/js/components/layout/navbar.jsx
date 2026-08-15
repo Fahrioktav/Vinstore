@@ -6,6 +6,7 @@ import {
   HelpIcon,
   LogoutIcon,
   MenuIcon,
+  MoneyIcon,
   ProfileIcon,
 } from '@/components/icons';
 import { cn, getUserImage } from '@/lib/utils';
@@ -33,6 +34,7 @@ const links = {
     { label: 'Dashboard', href: '/admin/dashboard' },
     { label: 'Lelang', href: '/admin/auctions' },
     { label: 'Refund', href: '/admin/refunds' },
+    { label: 'Deposit', href: '/admin/deposit-lelang' },
     { label: 'Pencairan', href: '/admin/payouts' },
     { label: 'Pendapatan', href: '/admin/pendapatan' },
   ],
@@ -48,6 +50,9 @@ const menus = {
     ...baseMenus,
     bantuanUser,
     { label: 'Keranjang', href: '/cart', icon: CartIcon },
+    // Deposit lelang jarang dibuka — hanya saat pembeli mengikuti lelang
+    // bernilai tinggi — jadi tempatnya di dropdown profil, bukan navbar utama.
+    { label: 'Deposit Lelang', href: '/deposit-lelang', icon: MoneyIcon },
   ],
   seller: [...baseMenus, bantuanUser],
   admin: baseMenus,

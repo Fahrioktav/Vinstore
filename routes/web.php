@@ -196,7 +196,15 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
 
     // Lelang
     Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid'])->name('auctions.bid');
+    // Pemenang lelang tidak melewati checkout, jadi ongkir dan biaya lainnya
+    // baru dihitung di halaman pembayaran ini.
+    Route::get('/auctions/{auction}/checkout', [AuctionController::class, 'checkout'])->name('auctions.checkout');
     Route::post('/auctions/{auction}/pay', [AuctionController::class, 'pay'])->name('auctions.pay');
+
+    // Deposit lelang: jaminan peserta pada lelang bernilai tinggi.
+    Route::post('/auctions/{auction}/deposit', [AuctionController::class, 'payDeposit'])->name('auctions.deposit');
+    Route::get('/deposit-lelang', [AuctionController::class, 'myDeposits'])->name('deposits.index');
+    Route::post('/deposit-lelang/{deposit}/refund', [AuctionController::class, 'requestDepositRefund'])->name('deposits.refund');
 
     // Tebak Harga - kirim satu tebakan (final, tidak dapat diubah)
     Route::post('/products/{product}/guess', [PriceGuessController::class, 'store'])->name('products.guess');
@@ -303,6 +311,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('auctions', [AuctionController::class, 'adminIndex'])->name('auctions.index');
     Route::post('auctions/{auction}/approve', [AuctionController::class, 'approve'])->name('auctions.approve');
     Route::post('auctions/{auction}/reject', [AuctionController::class, 'reject'])->name('auctions.reject');
+
+    // Kelola pengembalian deposit lelang
+    Route::get('deposit-lelang', [AuctionController::class, 'adminDepositIndex'])->name('deposits.index');
+    Route::post('deposit-lelang/{deposit}/approve', [AuctionController::class, 'approveDepositRefund'])->name('deposits.approve');
+    Route::post('deposit-lelang/{deposit}/reject', [AuctionController::class, 'rejectDepositRefund'])->name('deposits.reject');
 
     // Kelola Refund
     Route::get('refunds', [RefundRequestController::class, 'adminIndex'])->name('refunds.index');

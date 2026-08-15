@@ -156,7 +156,11 @@ class ProductController extends Controller
             'is_trade_in_enabled' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
             'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
-            'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
+            // Pembandingnya awal menit berjalan, bukan 'now': input
+            // datetime-local tidak mengirim detik, sehingga menit yang
+            // sedang berjalan selalu terbaca sedikit di masa lalu dan
+            // ditolak tanpa alasan yang masuk akal (temuan V6-08).
+            'guess_starts_at' => ['nullable', 'required_if:sale_type,tebak_harga', 'date', 'after_or_equal:'.now()->startOfMinute()->format('Y-m-d H:i:s')],
             'guess_ends_at' => 'nullable|required_if:sale_type,tebak_harga|date|after:guess_starts_at',
         ]);
 
@@ -257,7 +261,11 @@ class ProductController extends Controller
             'is_trade_in_enabled' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
             'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
-            'guess_starts_at' => 'nullable|required_if:sale_type,tebak_harga|date|after_or_equal:now',
+            // Pembandingnya awal menit berjalan, bukan 'now': input
+            // datetime-local tidak mengirim detik, sehingga menit yang
+            // sedang berjalan selalu terbaca sedikit di masa lalu dan
+            // ditolak tanpa alasan yang masuk akal (temuan V6-08).
+            'guess_starts_at' => ['nullable', 'required_if:sale_type,tebak_harga', 'date', 'after_or_equal:'.now()->startOfMinute()->format('Y-m-d H:i:s')],
             'guess_ends_at' => 'nullable|required_if:sale_type,tebak_harga|date|after:guess_starts_at',
         ]);
 

@@ -9,6 +9,7 @@ import {
   AuthTextArea,
 } from '@/components/auth/auth-layout';
 import { getAuctionImage } from '@/lib/utils';
+import WeightDimensionFields from '@/components/weight-dimension-fields';
 
 export default function SellerRelistAuctionPage() {
   const { auction } = usePage().props;
@@ -16,6 +17,10 @@ export default function SellerRelistAuctionPage() {
     name: auction.name || '',
     description: auction.description || '',
     image: null,
+    weight: auction.weight ?? 1000,
+    length: auction.length ?? '',
+    width: auction.width ?? '',
+    height: auction.height ?? '',
     starting_price: auction.starting_price || '',
     min_increment: auction.min_increment || '',
     starts_at: '',
@@ -93,6 +98,11 @@ export default function SellerRelistAuctionPage() {
                 Kosongkan untuk memakai foto lelang lama.
               </p>
             </div>
+
+            <WeightDimensionFields
+              values={data}
+              onChange={(field, value) => setData(field, value)}
+            />
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>

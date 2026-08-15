@@ -1,4 +1,4 @@
-import { Form, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { cn, formatIDR } from '@/lib/utils';
 import MainLayout from '@/layouts/main-layout';
 import { ShippingIcon } from '@/components/icons';
@@ -235,19 +235,20 @@ export default function OrderPage() {
                               Bayar
                             </a>
                           )}
+                        {/* Pemenang lelang belum pernah mengisi tujuan
+                            pengiriman, jadi ia diarahkan ke halaman pembayaran
+                            lelang lebih dulu — di sanalah ongkirnya dihitung. */}
                         {!order.snap_redirect_url &&
                           order.auction &&
                           ['pending', 'unpaid'].includes(
                             order.payment_status
                           ) && (
-                            <Form
-                              action={`/auctions/${order.auction.public_id}/pay`}
-                              method="POST"
+                            <Link
+                              href={`/auctions/${order.auction.public_id}/checkout`}
+                              className="text-xs font-semibold text-yellow-300 transition hover:text-yellow-200"
                             >
-                              <button className="text-xs font-semibold text-yellow-300 transition hover:text-yellow-200">
-                                Bayar
-                              </button>
-                            </Form>
+                              Bayar
+                            </Link>
                           )}
                         {/* Konfirmasi penerimaan oleh pembeli. Selama tombol ini
                             belum ditekan, dana masih ditahan dan tidak masuk ke
