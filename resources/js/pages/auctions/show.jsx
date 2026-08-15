@@ -19,7 +19,12 @@ export default function AuctionShow() {
     Number(auction.min_increment);
   const isWinner =
     user && auction.winner && user.public_id === auction.winner.public_id;
-  const canBid = auction.status === 'active';
+
+  // Lelang hanya untuk pembeli. Seller, validator, dan admin tetap boleh
+  // membuka halaman ini, tetapi sebagai pengamat.
+  const isPembeli = user?.role === 'user';
+  const sedangBerjalan = auction.status === 'active';
+  const canBid = sedangBerjalan && isPembeli;
 
   // Deposit sudah aktif berarti berhak menawar. `applied` ikut dianggap aktif
   // agar pemenang tidak kehilangan haknya.
@@ -183,7 +188,7 @@ export default function AuctionShow() {
               />
             </div>
 
-            {initialAuction.requires_deposit && (
+            {initialAuction.requires_deposit && isPembeli && (
               <DepositPanel
                 auction={initialAuction}
                 deposit={myDeposit}
@@ -233,7 +238,11 @@ export default function AuctionShow() {
               )
             ) : (
               <div className="mt-6 rounded-lg bg-gray-100 p-4 text-sm text-gray-600">
-                Lelang tidak sedang aktif.
+                {!sedangBerjalan
+                  ? 'Lelang tidak sedang aktif.'
+                  : !user
+                    ? 'Masuk dengan akun pembeli untuk mengikuti lelang ini.'
+                    : 'Lelang hanya dapat diikuti oleh akun pembeli.'}
               </div>
             )}
 

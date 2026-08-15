@@ -218,17 +218,26 @@ class AuctionBidTest extends TestCase
         $this->assertSame(3, $auction->bids_count);
     }
 
+    /**
+     * Lelang hanya untuk pembeli.
+     *
+     * Sebelumnya seller ditahan hanya pada lelang TOKONYA SENDIRI, sehingga ia
+     * bebas menawar di lelang pesaing. Sekarang gerbangnya di tingkat rute:
+     * seluruh keikutsertaan lelang berada di grup `role:user`, dan seller yang
+     * mencobanya diarahkan pulang ke dashboard-nya tanpa sempat menyentuh
+     * controller.
+     */
     public function test_seller_tidak_boleh_menawar_lelang_tokonya_sendiri(): void
     {
         $auction = $this->lelangAktif();
 
         $this->ajukanBid($this->seller, $auction, 2000000)
-            ->assertSessionHas('error');
+            ->assertRedirect('/seller/dashboard');
 
         $this->assertSame(0, AuctionBid::where('auction_id', $auction->id)->count());
     }
 
-    public function test_seller_lain_tetap_boleh_menawar(): void
+    public function test_seller_lain_juga_tidak_boleh_menawar(): void
     {
         $auction = $this->lelangAktif();
 
@@ -245,9 +254,23 @@ class AuctionBidTest extends TestCase
         $this->berikanDeposit($auction, $sellerLain);
 
         $this->ajukanBid($sellerLain, $auction, 1050000)
-            ->assertSessionHas('success');
+            ->assertRedirect('/seller/dashboard');
 
-        $this->assertSame('1050000.00', $auction->fresh()->current_price);
+        $this->assertSame(0, AuctionBid::where('auction_id', $auction->id)->count());
+        $this->assertSame('1000000.00', $auction->fresh()->current_price);
+    }
+
+    public function test_validator_dan_admin_juga_tidak_boleh_menawar(): void
+    {
+        $auction = $this->lelangAktif();
+
+        $this->ajukanBid($this->makeUser('validator1', 'validator1@vinstore.test', 'validator'), $auction, 1050000)
+            ->assertRedirect('/validator/dashboard');
+
+        $this->ajukanBid($this->makeUser('admin1', 'admin1@vinstore.test', 'admin'), $auction, 1050000)
+            ->assertRedirect('/admin/dashboard');
+
+        $this->assertSame(0, AuctionBid::where('auction_id', $auction->id)->count());
     }
 
     public function test_lelang_yang_belum_mulai_tidak_menerima_penawaran(): void

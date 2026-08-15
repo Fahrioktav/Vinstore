@@ -244,15 +244,42 @@ class AuctionDepositTest extends TestCase
         $this->assertSame(1, AuctionDeposit::where('auction_id', $auction->id)->count());
     }
 
-    public function test_seller_tidak_boleh_membayar_deposit_lelang_tokonya_sendiri(): void
+    /**
+     * Seluruh keikutsertaan lelang tertutup bagi seller, termasuk membayar
+     * jaminan — bukan hanya pada lelang tokonya sendiri.
+     */
+    public function test_seller_tidak_boleh_membayar_deposit(): void
     {
         $auction = $this->lelang();
 
+        // Pemilik lelangnya sendiri.
         $this->actingAs($this->seller)
             ->post('/auctions/'.$auction->public_id.'/deposit')
-            ->assertSessionHas('error');
+            ->assertRedirect('/seller/dashboard');
+
+        // Seller lain, yang dulu masih diperbolehkan.
+        $sellerLain = $this->makeUser('sellerdep2', 'seller');
+
+        Store::create([
+            'user_id' => $sellerLain->id,
+            'store_name' => 'Toko Lain',
+            'category' => 'Logam',
+            'description' => 'Toko lain',
+            'location' => 'Solo',
+        ]);
+
+        $this->actingAs($sellerLain)
+            ->post('/auctions/'.$auction->public_id.'/deposit')
+            ->assertRedirect('/seller/dashboard');
 
         $this->assertSame(0, AuctionDeposit::count());
+    }
+
+    public function test_seller_tidak_dapat_membuka_halaman_deposit(): void
+    {
+        $this->actingAs($this->seller)
+            ->get('/deposit-lelang')
+            ->assertRedirect('/seller/dashboard');
     }
 
     public function test_webhook_menandai_deposit_lunas(): void

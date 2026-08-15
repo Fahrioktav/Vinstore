@@ -194,8 +194,30 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // Invoice
     Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
 
-    // Lelang
+    // Tebak Harga - kirim satu tebakan (final, tidak dapat diubah)
+    Route::post('/products/{product}/guess', [PriceGuessController::class, 'store'])->name('products.guess');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Keikutsertaan lelang — pembeli saja
+|--------------------------------------------------------------------------
+|
+| Lelang hanya untuk pembeli. Seller memakai sisi lain meja yang sama: ia yang
+| MENJUAL barang lelang, bukan yang menawarnya. Membiarkan seller ikut menawar
+| membuat batasnya kabur — ia bisa menaikkan harga di lelang pesaing, dan pada
+| marketplace sekecil ini keduanya kerap saling kenal.
+|
+| Sengaja dipisahkan dari grup `role:user,seller` di atas: seller tetap boleh
+| berbelanja produk biasa lewat keranjang dan checkout, yang ditutup di sini
+| hanya keikutsertaan lelangnya. Menawar, membayar jaminan, membayar pesanan
+| kemenangan, dan meminta jaminannya kembali semuanya masuk ke sini karena
+| keempatnya hanya berarti bagi orang yang boleh ikut lelang.
+|
+*/
+Route::middleware(['auth', 'role:user'])->group(function () {
     Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid'])->name('auctions.bid');
+
     // Pemenang lelang tidak melewati checkout, jadi ongkir dan biaya lainnya
     // baru dihitung di halaman pembayaran ini.
     Route::get('/auctions/{auction}/checkout', [AuctionController::class, 'checkout'])->name('auctions.checkout');
@@ -205,9 +227,6 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
     Route::post('/auctions/{auction}/deposit', [AuctionController::class, 'payDeposit'])->name('auctions.deposit');
     Route::get('/deposit-lelang', [AuctionController::class, 'myDeposits'])->name('deposits.index');
     Route::post('/deposit-lelang/{deposit}/refund', [AuctionController::class, 'requestDepositRefund'])->name('deposits.refund');
-
-    // Tebak Harga - kirim satu tebakan (final, tidak dapat diubah)
-    Route::post('/products/{product}/guess', [PriceGuessController::class, 'store'])->name('products.guess');
 });
 
 // Only role = seller can access

@@ -324,8 +324,11 @@ class AuctionController extends Controller
                     throw new \RuntimeException('Lelang tidak sedang aktif.');
                 }
 
-                if ($user->role === 'seller' && $user->store && $auction->store_id === $user->store->id) {
-                    throw new \RuntimeException('Anda tidak boleh menawar barang lelang milik toko sendiri.');
+                // Penjaga terakhir bila grup rutenya kelak dilonggarkan. Lelang
+                // hanya untuk pembeli — dan justru begitulah dulu seller bisa
+                // ikut menawar: gerbangnya ada, cakupannya yang kelewat luas.
+                if ($user->role !== 'user') {
+                    throw new \RuntimeException('Hanya pembeli yang dapat mengikuti lelang.');
                 }
 
                 // Lelang bernilai tinggi hanya boleh ditawar oleh yang sudah
@@ -667,8 +670,10 @@ class AuctionController extends Controller
             return back()->with('error', 'Deposit hanya bisa dibayar selama lelang berlangsung.');
         }
 
-        if ($user->role === 'seller' && $user->store && $auction->store_id === $user->store->id) {
-            return back()->with('error', 'Anda tidak boleh menawar barang lelang milik toko sendiri.');
+        // Penjaga terakhir bila grup rutenya kelak dilonggarkan; lihat catatan
+        // yang sama di bid().
+        if ($user->role !== 'user') {
+            return back()->with('error', 'Hanya pembeli yang dapat mengikuti lelang.');
         }
 
         $existing = $auction->depositOf($user);
