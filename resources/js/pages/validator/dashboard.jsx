@@ -284,6 +284,7 @@ export default function ValidatorDashboard() {
                   <th className="px-4 py-3 text-left">Foto</th>
                   <th className="px-4 py-3 text-left">Nama Lelang</th>
                   <th className="px-4 py-3 text-left">Toko</th>
+                  <th className="px-4 py-3 text-left">Sertifikat</th>
                   <th className="px-4 py-3 text-left">Harga Awal</th>
                   <th className="px-4 py-3 text-left">Waktu Mulai</th>
                   <th className="px-4 py-3 text-left">Waktu Selesai</th>
@@ -319,6 +320,24 @@ export default function ValidatorDashboard() {
                       </td>
                       <td className="px-4 py-3 text-gray-700">
                         {auction.store?.store_name || '-'}
+                      </td>
+                      {/* Bukti keaslian adalah yang paling menentukan di sini:
+                          validator memutuskan tanpa pernah memegang barangnya. */}
+                      <td className="px-4 py-3">
+                        {auction.certificate ? (
+                          <a
+                            href={getProductCertificate(auction)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-blue-600 underline hover:text-blue-800"
+                          >
+                            Lihat
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            Tidak ada
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-bold text-[#53685B]">
                         {formatIDR(auction.starting_price)}
@@ -370,7 +389,7 @@ export default function ValidatorDashboard() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="8"
                       className="px-4 py-8 text-center text-gray-500"
                     >
                       <p className="flex items-center justify-center gap-2 text-lg">

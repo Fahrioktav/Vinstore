@@ -394,23 +394,21 @@ export default function SellerCreateProductPage() {
                     </span>
                   </label>
                 )}
-                {!isLelang && (
-                  <div>
-                    <AuthLabel htmlFor="certificate">
-                      <CertificateIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
-                      Sertifikat Keaslian (Opsional)
-                    </AuthLabel>
-                    <AuthInput
-                      id="certificate"
-                      type="file"
-                      name="certificate"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Format: PDF, JPG, PNG (Max 5MB)
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <AuthLabel htmlFor="certificate">
+                    <CertificateIcon className="mr-1 inline h-4 w-4 align-text-bottom" />
+                    Sertifikat Keaslian (Opsional)
+                  </AuthLabel>
+                  <AuthInput
+                    id="certificate"
+                    type="file"
+                    name="certificate"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Format: PDF, JPG, PNG (Max 5MB)
+                  </p>
+                </div>
                 <div className="flex justify-end gap-4">
                   <AuthButtonLink href="/seller/dashboard">
                     Kembali

@@ -8,7 +8,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
-import { getAuctionImage } from '@/lib/utils';
+import { getAuctionImage, getProductCertificate } from '@/lib/utils';
 import WeightDimensionFields from '@/components/weight-dimension-fields';
 
 export default function SellerEditAuctionPage() {
@@ -17,6 +17,7 @@ export default function SellerEditAuctionPage() {
     name: auction.name || '',
     description: auction.description || '',
     image: null,
+    certificate: null,
     weight: auction.weight ?? 1000,
     length: auction.length ?? '',
     width: auction.width ?? '',
@@ -93,6 +94,35 @@ export default function SellerEditAuctionPage() {
               />
               <p className="mt-1 text-xs text-gray-500">
                 Kosongkan jika tidak ingin mengganti foto.
+              </p>
+            </div>
+
+            <div>
+              <AuthLabel htmlFor="certificate">
+                Sertifikat Keaslian (Opsional)
+              </AuthLabel>
+              {auction.certificate && (
+                <p className="mb-1 text-xs text-gray-500">
+                  Sudah ada sertifikat terlampir.{' '}
+                  <a
+                    href={getProductCertificate(auction)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-[#53685B] underline"
+                  >
+                    Lihat
+                  </a>
+                </p>
+              )}
+              <AuthInput
+                id="certificate"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setData('certificate', e.target.files[0])}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Format: PDF, JPG, PNG (Max 5MB). Kosongkan jika tidak ingin
+                mengganti.
               </p>
             </div>
 

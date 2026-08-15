@@ -40,6 +40,9 @@ class Auction extends Model
         'name',
         'description',
         'image',
+        // Bukti keaslian, sama seperti pada produk. Pada lelang justru paling
+        // menentukan: penawar mengangkat harga tanpa pernah memegang barangnya.
+        'certificate',
         // Dipakai menghitung ongkir pesanan pemenang, sama seperti pada produk.
         'weight',
         'length',

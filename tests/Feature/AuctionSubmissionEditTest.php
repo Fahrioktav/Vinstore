@@ -7,6 +7,8 @@ use App\Models\AuctionBid;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -86,7 +88,7 @@ class AuctionSubmissionEditTest extends TestCase
                 'sale_type' => 'lelang',
                 'name' => 'Keris Jawa',
                 'description' => 'Keris antik bertuah',
-                'image' => \Illuminate\Http\UploadedFile::fake()->image('keris.jpg'),
+                'image' => UploadedFile::fake()->image('keris.jpg'),
                 'weight' => 2500,
                 'starting_price' => 1500000,
                 'min_increment' => 100000,
@@ -105,6 +107,123 @@ class AuctionSubmissionEditTest extends TestCase
         // Tidak ada baris produk yang ikut terbuat: lelang tetap entitasnya
         // sendiri, yang digabung hanya formnya.
         $this->assertSame(0, \App\Models\Product::where('name', 'Keris Jawa')->count());
+    }
+
+    /**
+     * Sertifikat keaslian barang lelang.
+     *
+     * Pada lelang justru di sinilah bukti keaslian paling menentukan: penawar
+     * mengangkat harga tanpa pernah memegang barangnya, dan validator memutuskan
+     * hanya dari foto, deskripsi, dan berkas ini.
+     */
+    public function test_pengajuan_lelang_dapat_dilampiri_sertifikat(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->seller)
+            ->post('/seller/auctions', $this->payloadLelang([
+                'certificate' => UploadedFile::fake()->create('sertifikat.pdf', 100, 'application/pdf'),
+            ]))
+            ->assertRedirect(route('seller.dashboard'));
+
+        $auction = Auction::where('name', 'Keris Bersertifikat')->firstOrFail();
+
+        $this->assertNotNull($auction->certificate);
+        Storage::disk('public')->assertExists($auction->certificate);
+    }
+
+    public function test_sertifikat_tetap_opsional(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->seller)
+            ->post('/seller/auctions', $this->payloadLelang())
+            ->assertRedirect(route('seller.dashboard'));
+
+        $this->assertNull(
+            Auction::where('name', 'Keris Bersertifikat')->firstOrFail()->certificate
+        );
+    }
+
+    public function test_berkas_sertifikat_yang_tidak_didukung_ditolak(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->seller)
+            ->post('/seller/auctions', $this->payloadLelang([
+                'certificate' => UploadedFile::fake()->create('sertifikat.exe', 10),
+            ]))
+            ->assertSessionHasErrors('certificate');
+
+        $this->assertSame(0, Auction::where('name', 'Keris Bersertifikat')->count());
+    }
+
+    public function test_mengedit_tanpa_mengunggah_sertifikat_mempertahankan_yang_lama(): void
+    {
+        Storage::fake('public');
+
+        $auction = $this->makeAuction(Auction::STATUS_DRAFT);
+        $auction->forceFill(['certificate' => 'certificates/lama.pdf'])->save();
+
+        $this->actingAs($this->seller)
+            ->put('/seller/auctions/'.$auction->public_id, [
+                'name' => 'Guci Ming (revisi)',
+                'description' => 'Deskripsi sudah diperbaiki',
+                'weight' => 2500,
+                'starting_price' => 1200000,
+                'min_increment' => 50000,
+                'starts_at' => now()->addDay()->format('Y-m-d\TH:i'),
+                'ends_at' => now()->addDays(4)->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('seller.dashboard'));
+
+        $this->assertSame('certificates/lama.pdf', $auction->fresh()->certificate);
+    }
+
+    /**
+     * Barangnya sama, jadi sertifikat ikut terbawa saat lelang diajukan ulang.
+     */
+    public function test_pengajuan_ulang_membawa_sertifikat_lelang_lama(): void
+    {
+        Storage::fake('public');
+
+        $auction = $this->makeAuction(Auction::STATUS_APPROVED);
+        $auction->forceFill([
+            'status' => 'ended',
+            'certificate' => 'certificates/lama.pdf',
+        ])->save();
+
+        $this->actingAs($this->seller)
+            ->post('/seller/auctions/'.$auction->public_id.'/relist', [
+                'name' => 'Guci Ming',
+                'description' => 'Guci antik',
+                'weight' => 2500,
+                'starting_price' => 1000000,
+                'min_increment' => 50000,
+                'starts_at' => now()->addDay()->format('Y-m-d\TH:i'),
+                'ends_at' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('seller.dashboard'));
+
+        $baru = Auction::where('id', '!=', $auction->id)->latest('id')->firstOrFail();
+
+        $this->assertSame('certificates/lama.pdf', $baru->certificate);
+        // Lelang lama masih memakai berkas yang sama, jadi tidak boleh dihapus.
+        $this->assertSame('certificates/lama.pdf', $auction->fresh()->certificate);
+    }
+
+    private function payloadLelang(array $override = []): array
+    {
+        return array_merge([
+            'name' => 'Keris Bersertifikat',
+            'description' => 'Keris antik bertuah',
+            'image' => UploadedFile::fake()->image('keris.jpg'),
+            'weight' => 2500,
+            'starting_price' => 1500000,
+            'min_increment' => 100000,
+            'starts_at' => now()->addHour()->format('Y-m-d\TH:i'),
+            'ends_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
+        ], $override);
     }
 
     public function test_seller_bisa_membuka_form_edit_lelang_yang_baru_diajukan(): void

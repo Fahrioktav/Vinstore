@@ -2,7 +2,7 @@ import { Form, Link, usePage, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { NotificationIcon } from '@/components/icons';
-import { formatIDR, getAuctionImage } from '@/lib/utils';
+import { formatIDR, getAuctionImage, getProductCertificate } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
 import { toast } from 'sonner';
 
@@ -137,6 +137,26 @@ export default function AuctionShow() {
             <p className="mt-4 whitespace-pre-line text-gray-600">
               {auction.description}
             </p>
+
+            {initialAuction.certificate && (
+              <div className="mt-6 rounded-lg border-2 border-green-200 bg-green-50 p-4">
+                <p className="font-semibold text-green-800">
+                  Barang Bersertifikat
+                </p>
+                <p className="mt-1 text-sm text-green-700">
+                  Keasliannya dilengkapi sertifikat dan sudah diperiksa
+                  validator.
+                </p>
+                <a
+                  href={getProductCertificate(initialAuction)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-sm font-semibold text-blue-600 underline hover:text-blue-800"
+                >
+                  Lihat Sertifikat
+                </a>
+              </div>
+            )}
           </div>
         </div>
 

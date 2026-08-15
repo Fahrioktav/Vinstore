@@ -102,6 +102,7 @@ class AuctionController extends Controller
         Auction::create(array_merge($this->auctionAttributes($validated), [
             'store_id' => $store->id,
             'image' => $imagePath,
+            'certificate' => $this->storeCertificate($request),
             'current_price' => $validated['starting_price'],
             'approval_status' => 'pending_validator',
             'status' => 'pending',
@@ -130,6 +131,7 @@ class AuctionController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'image' => ($imageRequired ? 'required' : 'nullable').'|image|mimes:jpg,jpeg,png|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             // Berat dan dimensi dipakai menghitung ongkir pesanan pemenang,
             // persis seperti pada produk biasa.
             'weight' => 'required|integer|min:1|max:500000',
@@ -150,6 +152,41 @@ class AuctionController extends Controller
             'ends_at.after' => 'Waktu selesai harus setelah waktu mulai.',
             'weight.required' => 'Berat barang wajib diisi agar ongkir pemenang bisa dihitung.',
         ];
+    }
+
+    /**
+     * Simpan berkas sertifikat bila ada, dan kembalikan jalurnya.
+     *
+     * Null berarti seller tidak mengunggah apa pun kali ini — bukan berarti ia
+     * ingin sertifikat lamanya dihapus.
+     */
+    private function storeCertificate(Request $request): ?string
+    {
+        if (! $request->hasFile('certificate')) {
+            return null;
+        }
+
+        $certificate = $request->file('certificate');
+
+        return $certificate->storeAs(
+            'certificates',
+            time().'_auction_'.$certificate->getClientOriginalName(),
+            'public'
+        );
+    }
+
+    /**
+     * Hapus berkas sertifikat sebuah lelang dari disk, bila ada.
+     *
+     * Sengaja tidak dipakai di relist(): lelang lama masih memakai berkas yang
+     * sama, dan menghapusnya akan mengosongkan sertifikat lelang yang sudah
+     * berjalan.
+     */
+    private function deleteCertificate(Auction $auction): void
+    {
+        if ($auction->certificate && Storage::disk('public')->exists($auction->certificate)) {
+            Storage::disk('public')->delete($auction->certificate);
+        }
     }
 
     /**
@@ -207,6 +244,12 @@ class AuctionController extends Controller
             $auction->image = $image->storeAs('auctions', $imageName, 'public');
         }
 
+        // Sertifikat lama dipertahankan bila seller tidak mengunggah yang baru.
+        if ($newCertificate = $this->storeCertificate($request)) {
+            $this->deleteCertificate($auction);
+            $auction->certificate = $newCertificate;
+        }
+
         $auction->fill(array_merge($this->auctionAttributes($validated), [
             'current_price' => $validated['starting_price'],
             'approval_status' => 'pending_validator',
@@ -230,6 +273,8 @@ class AuctionController extends Controller
         if ($auction->image && Storage::disk('public')->exists($auction->image)) {
             Storage::disk('public')->delete($auction->image);
         }
+
+        $this->deleteCertificate($auction);
 
         $auction->delete();
 
@@ -296,9 +341,15 @@ class AuctionController extends Controller
             $imagePath = $image->storeAs('auctions', $imageName, 'public');
         }
 
+        // Barangnya sama, jadi sertifikat lelang lama ikut terbawa kecuali
+        // seller mengunggah yang baru. Berkas lamanya TIDAK dihapus: lelang
+        // lama masih ada dan tetap merujuk ke sana.
+        $certificatePath = $this->storeCertificate($request) ?? $auction->certificate;
+
         Auction::create(array_merge($this->auctionAttributes($validated), [
             'store_id' => Auth::user()->store->id,
             'image' => $imagePath,
+            'certificate' => $certificatePath,
             'current_price' => $validated['starting_price'],
             'approval_status' => 'pending_validator',
             'status' => 'pending',
