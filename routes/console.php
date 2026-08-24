@@ -27,7 +27,12 @@ Artisan::command('auctions:finish', function () {
     $this->info('Auction statuses synchronized.');
 })->purpose('Activate due auctions and finish expired auctions');
 
-Schedule::command('auctions:finish')->everyMinute();
+// `withoutOverlapping()` karena penutupan lelang kini ikut menanyakan status
+// jaminan ke Midtrans. Satu kali jalan yang tertahan jaringan bisa melewati
+// satu menit, dan tanpa penjagaan ini jalan berikutnya dimulai sebelum yang
+// sebelumnya selesai — penumpukan proses, lalu lelang yang tutup terlambat
+// sementara penawaran masih diterima (temuan V8-05).
+Schedule::command('auctions:finish')->everyMinute()->withoutOverlapping();
 
 Artisan::command('tebak-harga:finish', function () {
     app(\App\Services\PriceGuessService::class)->sync();

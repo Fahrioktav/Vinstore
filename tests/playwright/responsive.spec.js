@@ -108,13 +108,13 @@ test.describe('Tampilan ponsel 360px', () => {
 
     await toggle.click();
 
-    await expect(page.getByRole('button', { name: 'Tutup menu' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Tutup menu' })
+    ).toBeVisible();
 
     // Tautan menu desktop ada di DOM tetapi disembunyikan di ponsel; yang
     // diperiksa harus tautan yang benar-benar terlihat.
-    await expect(
-      page.locator('nav a[href="/products"]:visible')
-    ).toBeVisible();
+    await expect(page.locator('nav a[href="/products"]:visible')).toBeVisible();
   });
 
   test('tabel riwayat pesanan dapat digulir mendatar, bukan terpotong', async ({

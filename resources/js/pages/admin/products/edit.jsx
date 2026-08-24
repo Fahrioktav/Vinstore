@@ -3,6 +3,7 @@ import { useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { getProductImage } from '@/lib/utils';
 import { ProductIcon, SaveIcon } from '@/components/icons';
+import CurrencyInput from '@/components/currency-input';
 
 export default function EditProduct() {
   const { product, errors: serverErrors } = usePage().props;
@@ -79,13 +80,12 @@ export default function EditProduct() {
                 <label className="mb-2 block text-sm font-semibold">
                   Harga
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
                   value={data.price}
-                  onChange={(e) => setData('price', e.target.value)}
+                  onChange={(nilai) => setData('price', nilai)}
+                  min={0}
                   className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
                   required
-                  min="0"
                 />
                 {errors.price && (
                   <p className="mt-1 text-xs text-red-500">{errors.price}</p>

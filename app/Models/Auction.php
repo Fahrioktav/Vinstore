@@ -127,6 +127,41 @@ class Auction extends Model
         return $query->where('approval_status', 'approved');
     }
 
+    /**
+     * Lelang yang penawarannya sedang dibuka.
+     *
+     * Jendela waktunya ikut diperiksa, tidak hanya kolom `status`. Kolom itu
+     * baru berpindah ke `ended` ketika penjadwal menjalankan `auctions:finish`,
+     * dan penjadwal adalah proses terpisah yang bisa saja sedang tidak berjalan.
+     * Tanpa pemeriksaan waktu, lelang yang sudah lewat tenggat masih akan
+     * tersaring sebagai "Berlangsung" — sama persis dengan aturan isActive().
+     */
+    public function scopeOngoing($query)
+    {
+        return $query->where('status', 'active')
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>', now());
+    }
+
+    /**
+     * Lelang yang masa penawarannya sudah habis.
+     *
+     * Termasuk yang tenggatnya sudah lewat tetapi kolom `status`-nya belum
+     * sempat dipindahkan penjadwal — alasannya sama dengan scopeOngoing().
+     * `cancelled` sengaja tidak ikut: lelang yang dibatalkan tidak pernah
+     * benar-benar selesai, dan tidak punya pemenang untuk ditampilkan.
+     */
+    public function scopeFinished($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('status', 'ended')
+                ->orWhere(function ($query) {
+                    $query->whereIn('status', ['scheduled', 'active'])
+                        ->where('ends_at', '<=', now());
+                });
+        });
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);
@@ -186,6 +221,17 @@ class Auction extends Model
      */
     public function finishNow(): void
     {
+        // Jaminan yang uangnya sudah diterima Midtrans tetapi kabarnya belum
+        // sampai harus diselaraskan lebih dulu. Bila tidak, jaminan pemenang
+        // ikut ditandai `expired` beberapa baris di bawah: uang mukanya hilang
+        // dari tagihan dan pemiliknya kehilangan jalur pengembalian.
+        //
+        // Sengaja DI LUAR transaksi — panggilan HTTP tidak boleh dilakukan
+        // sambil memegang kunci baris.
+        AuctionDeposit::syncFromMidtrans(
+            $this->deposits()->where('status', AuctionDeposit::STATUS_PENDING)->get()
+        );
+
         DB::transaction(function () {
             $auction = self::whereKey($this->getKey())->lockForUpdate()->first();
 

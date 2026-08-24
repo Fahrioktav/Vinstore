@@ -38,7 +38,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/auth/google/callback'),
     ],
 
     'midtrans' => [
@@ -57,6 +57,13 @@ return [
         'snap_js_url' => env('MIDTRANS_IS_PRODUCTION', false)
             ? 'https://app.midtrans.com/snap/snap.js'
             : 'https://app.sandbox.midtrans.com/snap/snap.js',
+        // Batas waktu panggilan ke Midtrans, dalam detik. Yang menunggu jawaban
+        // Midtrans bukan proses latar melainkan permintaan halaman yang sedang
+        // dibuka pengguna, jadi menunggu lama sama saja dengan halaman macet.
+        // Tanpa nilai ini yang berlaku adalah bawaan Guzzle yang jauh lebih
+        // panjang (temuan V8-04).
+        'timeout' => (int) env('MIDTRANS_TIMEOUT', 5),
+        'connect_timeout' => (int) env('MIDTRANS_CONNECT_TIMEOUT', 3),
     ],
 
 ];

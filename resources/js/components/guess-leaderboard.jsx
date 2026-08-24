@@ -7,9 +7,10 @@ import { ListIcon, WinnerIcon } from '@/components/icons';
  * Tampilannya berbeda menurut status, dan bedanya disengaja (lihat
  * PriceGuessService::leaderboard()):
  *
- * - Selama periode berjalan: urut waktu, terbaru di atas. Nominalnya terbuka
- *   seperti bid lelang, tetapi TANPA peringkat — mengurutkan menurut kedekatan
- *   sama saja dengan memberi tahu semua orang di mana harga diskonnya.
+ * - Selama periode berjalan: urut waktu, terbaru di atas, tanpa peringkat, dan
+ *   nominal tebakan peserta lain ditutup — hanya tebakan sendiri yang terbuka.
+ *   Dua tebakan yang mengapit sudah cukup untuk menyimpulkan letak harga
+ *   diskonnya, sehingga membukanya menguntungkan yang menebak paling akhir.
  * - Setelah selesai: urut kedekatan, lengkap dengan peringkat dan pemenang.
  */
 export default function GuessLeaderboard({ entries = [], status }) {
@@ -47,7 +48,7 @@ export default function GuessLeaderboard({ entries = [], status }) {
       <p className="mb-3 text-xs text-gray-500">
         {finished
           ? 'Diurutkan dari tebakan yang paling mendekati harga diskon.'
-          : 'Diurutkan dari yang terbaru. Peringkat baru ditampilkan setelah sesi selesai, agar tidak ada yang bisa menebak dari urutannya.'}
+          : 'Diurutkan dari yang terbaru. Nominal tebakan peserta lain dan peringkatnya baru dibuka setelah sesi selesai, agar tidak ada yang bisa menebak dari tebakan orang lain.'}
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -97,7 +98,16 @@ export default function GuessLeaderboard({ entries = [], status }) {
                     )}
                   </td>
                   <td className="px-3 py-2 text-right font-semibold">
-                    {formatIDR(entry.amount)}
+                    {entry.amount === null || entry.amount === undefined ? (
+                      <span
+                        className="text-gray-400"
+                        title="Nominal tebakan peserta lain dibuka setelah sesi selesai"
+                      >
+                        ???
+                      </span>
+                    ) : (
+                      formatIDR(entry.amount)
+                    )}
                   </td>
                   {finished && (
                     <td className="px-3 py-2 text-right text-xs text-gray-500">

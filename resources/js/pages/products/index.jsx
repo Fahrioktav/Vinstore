@@ -4,6 +4,7 @@ import { useParams } from '@/lib/utils';
 import ProductCard from '@/components/product-card';
 import SearchInput from '@/components/search-input';
 import { useState } from 'react';
+import CurrencyInput from '@/components/currency-input';
 
 export default function ProductsPage() {
   const { paginatedProducts, showSearch, categories, filters } =
@@ -176,11 +177,9 @@ function FilterInput({ label, value, onChange }) {
       <span className="mb-1 block text-sm font-semibold text-gray-700">
         {label}
       </span>
-      <input
-        type="number"
+      <CurrencyInput
         value={value}
-        min="0"
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         className="w-full rounded-lg border border-gray-300 px-3 py-2"
       />
     </label>

@@ -305,4 +305,125 @@ class TebakHargaPemenangTest extends TestCase
         // Peringkat tetap tampil: itulah gunanya papan hasil.
         $this->assertSame(1, $papan[0]['rank']);
     }
+
+    /**
+     * Nominal tebakan peserta lain tidak boleh terlihat selama sesi berjalan
+     * (temuan V9-03).
+     *
+     * Yang menentukan pemenang adalah kedekatan pada harga diskon, jadi dua
+     * tebakan yang mengapit sudah cukup untuk menyimpulkan jawabannya ada di
+     * antara keduanya. Membukanya berarti memberi keuntungan kepada yang
+     * menebak paling akhir — persis kebalikan dari yang dijanjikan halamannya.
+     */
+    public function test_nominal_tebakan_peserta_lain_ditutup_selama_sesi_berjalan(): void
+    {
+        $produk = $this->produk([
+            'guess_starts_at' => now()->subHour(),
+            'guess_ends_at' => now()->addDays(3),
+        ]);
+
+        $pertama = $this->makeUser('pertama');
+        $kedua = $this->makeUser('kedua');
+        $pengintip = $this->makeUser('pengintip');
+
+        $this->tebak($produk, $pertama, 790_000, menitLalu: 60);
+        $this->tebak($produk, $kedua, 810_000, menitLalu: 5);
+
+        $papan = app(PriceGuessService::class)->leaderboard($produk->fresh(), $pengintip);
+
+        $this->assertCount(2, $papan, 'Peserta lain tetap terlihat ikut serta.');
+
+        foreach ($papan as $baris) {
+            $this->assertNull($baris['amount'], 'Nominal tebakan bocor selama sesi berjalan.');
+        }
+    }
+
+    public function test_peserta_tetap_melihat_tebakannya_sendiri(): void
+    {
+        $produk = $this->produk([
+            'guess_starts_at' => now()->subHour(),
+            'guess_ends_at' => now()->addDays(3),
+        ]);
+
+        $saya = $this->makeUser('saya');
+        $lain = $this->makeUser('lain');
+
+        $this->tebak($produk, $saya, 790_000, menitLalu: 60);
+        $this->tebak($produk, $lain, 810_000, menitLalu: 5);
+
+        $papan = collect(app(PriceGuessService::class)->leaderboard($produk->fresh(), $saya));
+
+        $milikSaya = $papan->firstWhere('is_mine', true);
+        $milikOrangLain = $papan->firstWhere('is_mine', false);
+
+        $this->assertSame(790_000.0, $milikSaya['amount']);
+        $this->assertNull($milikOrangLain['amount']);
+    }
+
+    /**
+     * Pengunjung yang belum login pun tidak boleh melihatnya — kalau tidak,
+     * cukup membuka halaman lewat jendela penyamaran untuk mengintip.
+     */
+    public function test_pengunjung_anonim_tidak_melihat_nominal_tebakan(): void
+    {
+        $produk = $this->produk([
+            'guess_starts_at' => now()->subHour(),
+            'guess_ends_at' => now()->addDays(3),
+        ]);
+
+        $this->tebak($produk, $this->makeUser('penebak'), 790_000);
+
+        $papan = app(PriceGuessService::class)->leaderboard($produk->fresh(), null);
+
+        $this->assertNull($papan[0]['amount']);
+    }
+
+    public function test_nominal_tebakan_dibuka_setelah_sesi_selesai(): void
+    {
+        $produk = $this->produk();
+
+        $menang = $this->makeUser('menang');
+        $kalah = $this->makeUser('kalah');
+
+        $this->tebak($produk, $menang, 795_000, menitLalu: 60);
+        $this->tebak($produk, $kalah, 770_000, menitLalu: 5);
+
+        app(PriceGuessService::class)->finalize($produk);
+        $produk->refresh();
+
+        // Dilihat oleh yang kalah: nominalnya terbuka, sebab sesinya sudah
+        // ditutup dan tidak ada lagi yang bisa dimanfaatkan darinya.
+        $papan = app(PriceGuessService::class)->leaderboard($produk, $kalah);
+
+        foreach ($papan as $baris) {
+            $this->assertNotNull($baris['amount']);
+        }
+    }
+
+    /**
+     * Halaman produk mengambil papannya lewat controller; kebocoran akan tetap
+     * terjadi bila penyaringannya hanya dipasang di komponen React, karena props
+     * yang sampai ke peramban dapat dibaca siapa pun lewat tab Network.
+     */
+    public function test_halaman_produk_tidak_mengirim_nominal_tebakan_orang_lain(): void
+    {
+        $produk = $this->produk([
+            'guess_starts_at' => now()->subHour(),
+            'guess_ends_at' => now()->addDays(3),
+        ]);
+
+        $this->tebak($produk, $this->makeUser('penebaklain'), 790_000);
+
+        $props = $this->actingAs($this->makeUser('pembuka'))
+            ->get('/products/'.$produk->public_id)
+            ->viewData('page')['props'];
+
+        $papan = $props['tebakHarga']['leaderboard'];
+
+        $this->assertCount(1, $papan);
+        $this->assertNull($papan[0]['amount']);
+
+        // Harga diskonnya sendiri tetap tersamar seperti sebelumnya.
+        $this->assertArrayNotHasKey('guess_discount_price', $props['product']);
+    }
 }

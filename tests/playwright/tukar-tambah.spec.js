@@ -1,54 +1,166 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './helpers.js';
+import { buatProduk, loginAs, namaUji, setujuiProduk } from './helpers.js';
+
+/**
+ * Pengujian black box tukar tambah antar seller.
+ *
+ * Kedua produk dibuat dengan harga sama supaya tidak muncul selisih uang —
+ * alur pembayaran selisih lewat Midtrans di luar cakupan pengujian ini karena
+ * memerlukan layanan pembayaran sungguhan.
+ */
+test.describe.configure({ mode: 'serial' });
 
 test.describe('Fitur Tukar Tambah Seller-to-Seller', () => {
+  let produkA; // milik sellerA, ditawarkan
+  let produkB; // milik sellerB, diinginkan
 
-  test('TC-BA-01 & TC-BA-02: Alur Lengkap Pengajuan dan Penerimaan Tukar Tambah', async ({ browser }) => {
-    // Skenario Multi-Aktor menggunakan 2 Browser Context Berbeda secara Paralel
-    
-    // ----------------------------------------------------
-    // AKTORKU 1: SELLER A (Pengaju Tukar Tambah)
-    // ----------------------------------------------------
-    const contextA = await browser.newContext();
-    const pageA = await contextA.newPage();
-    
-    await loginAs(pageA, 'sellera@example.com', '/seller/dashboard');
-    
-    // Masuk Dashboard Tukar Tambah
-    await pageA.goto('/seller/tukar-tambah');
-    
-    // Ajukan Tukar tambah untuk produk milik Seller B
-    const kerisCard = pageA.locator('div:has(h3:has-text("Keris Pusaka Omyang Jimbe"))').first();
-    await kerisCard.getByRole('button', { name: 'Ajukan Tukar Tambah' }).first().click();
-    await pageA.getByRole('combobox').selectOption({ index: 0 }); // Barang milik Seller A
-    await pageA.getByRole('spinbutton').fill('500000'); // Tawarkan uang tambahan
-    await pageA.getByPlaceholder('Sampaikan pesan untuk seller...').fill('Tukar dengan katana milik saya ditambah uang tunai.');
-    await pageA.getByRole('button', { name: 'Kirim Pengajuan' }).click();
-    
-    // Validasi status pengajuan tukar tambah keluar
-    await pageA.getByRole('button', { name: /Permintaan Saya/ }).click();
-    await expect(pageA.locator('text=Keris Pusaka Omyang Jimbe')).toBeVisible();
-    
-    // ----------------------------------------------------
-    // AKTORKU 2: SELLER B (Penerima Tukar Tambah)
-    // ----------------------------------------------------
-    const contextB = await browser.newContext();
-    const pageB = await contextB.newPage();
-    
-    await loginAs(pageB, 'sellerb@example.com', '/seller/dashboard');
-    
-    // Masuk Halaman Tukar tambah untuk memproses pengajuan masuk
-    await pageB.goto('/seller/tukar-tambah');
-    await pageB.getByRole('button', { name: /Permintaan Masuk/ }).click();
-    await expect(pageB.locator('text=Pedang Katana Kuno')).toBeVisible(); // Pengajuan dari Seller A
-    
-    // Terima Tukar Tambah
-    await pageB.getByRole('button', { name: 'Setujui' }).click();
-    
-    // Hasil yang diharapkan: Pengajuan selesai dan status berubah menjadi disetujui (kepemilikan bertukar)
-    await expect(pageB.locator('text=Tukar tambah disetujui').first()).toBeVisible({ timeout: 20000 });
-    
-    await contextA.close();
-    await contextB.close();
+  test.setTimeout(300000);
+
+  test.beforeAll(async ({ browser }) => {
+    // Produk milik Seller A
+    const ctxA = await browser.newContext();
+    const halA = await ctxA.newPage();
+
+    await loginAs(halA, 'sellerA');
+    produkA = await buatProduk(halA, {
+      nama: namaUji('Katana Tukar'),
+      harga: '5000000',
+      stok: '1',
+      kategori: 'Senjata',
+      tukarTambah: true,
+    });
+    await ctxA.close();
+
+    // Produk milik Seller B
+    const ctxB = await browser.newContext();
+    const halB = await ctxB.newPage();
+
+    await loginAs(halB, 'sellerB');
+    produkB = await buatProduk(halB, {
+      nama: namaUji('Keris Tukar'),
+      harga: '5000000',
+      stok: '1',
+      kategori: 'Senjata',
+      tukarTambah: true,
+    });
+    await ctxB.close();
+
+    await setujuiProduk(browser, produkA);
+    await setujuiProduk(browser, produkB);
+  });
+
+  test('TC-TT-01: Seller hanya melihat produk tukar tambah milik seller lain', async ({
+    page,
+  }) => {
+    await loginAs(page, 'sellerA');
+    await page.goto('/seller/tukar-tambah');
+
+    // Produk seller lain yang membuka tukar tambah muncul sebagai penawaran.
+    await expect(page.locator(`h3:has-text("${produkB}")`).first()).toBeVisible(
+      {
+        timeout: 20000,
+      }
+    );
+
+    // Produknya sendiri tidak ikut ditawarkan kepada dirinya sendiri.
+    await expect(page.locator(`h3:has-text("${produkA}")`)).toHaveCount(0);
+  });
+
+  test('TC-TT-02: Seller A dapat mengajukan tukar tambah ke produk seller B', async ({
+    page,
+  }) => {
+    await loginAs(page, 'sellerA');
+    await page.goto('/seller/tukar-tambah');
+
+    const kartuTarget = page
+      .locator('div')
+      .filter({ has: page.locator(`h3:has-text("${produkB}")`) })
+      .last();
+
+    await kartuTarget
+      .getByRole('button', { name: 'Ajukan Tukar Tambah' })
+      .first()
+      .click();
+
+    // Pilih produk sendiri yang ditawarkan. Nilai option adalah public_id,
+    // jadi dibaca dulu dari teksnya.
+    const opsi = page.locator('option').filter({ hasText: produkA }).first();
+    const nilai = await opsi.getAttribute('value');
+    await page.locator('select').last().selectOption(nilai);
+
+    await page
+      .getByPlaceholder('Sampaikan pesan untuk seller...')
+      .fill('Pengajuan tukar tambah otomatis dari Playwright.');
+    await page.getByRole('button', { name: 'Kirim Pengajuan' }).click();
+
+    // Hasil yang diharapkan: pengajuan tercatat di tab "Permintaan Saya".
+    await page.getByRole('button', { name: /Permintaan Saya/ }).click();
+    await expect(page.locator(`text=${produkB}`).first()).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
+  test('TC-TT-03: Pengajuan muncul di Permintaan Masuk milik seller B', async ({
+    page,
+  }) => {
+    await loginAs(page, 'sellerB');
+    await page.goto('/seller/tukar-tambah');
+    await page.getByRole('button', { name: /Permintaan Masuk/ }).click();
+
+    await expect(page.locator(`text=${produkA}`).first()).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
+  test('TC-TT-04: Seller B menyetujui dan tukar tambah masuk tahap pengiriman', async ({
+    page,
+  }) => {
+    await loginAs(page, 'sellerB');
+    await page.goto('/seller/tukar-tambah');
+    await page.getByRole('button', { name: /Permintaan Masuk/ }).click();
+
+    await page.getByRole('button', { name: 'Setujui' }).first().click();
+
+    // Hasil yang diharapkan: pengajuan disetujui. Karena kedua produk berharga
+    // sama, tidak ada selisih yang harus dibayar dan prosesnya langsung
+    // berlanjut ke tahap pengiriman.
+    await expect(
+      page.locator('text=Tukar tambah disetujui').first()
+    ).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
+  test('TC-TT-05: Produk yang sedang ditukar tidak dapat dibeli pembeli biasa', async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+
+    await loginAs(page, 'pembeli1');
+    await page.goto(`/products?q=${encodeURIComponent(produkB)}`);
+
+    // Produk yang terkunci tetap tampil di katalog — yang diblokir adalah
+    // pembeliannya, dan pembeli diberi tahu alasannya.
+    await page.locator(`text=${produkB}`).first().click();
+    await page.getByRole('button', { name: 'Masukkan Keranjang' }).click();
+
+    // Hasil yang diharapkan: penolakan dengan alasan tukar tambah.
+    await expect(
+      page.locator('text=sedang dalam proses tukar tambah').first()
+    ).toBeVisible({ timeout: 20000 });
+
+    await ctx.close();
+  });
+
+  test('TC-TT-06: Produk yang terkunci tidak lagi ditawarkan di daftar tukar tambah', async ({
+    page,
+  }) => {
+    await loginAs(page, 'sellerA');
+    await page.goto('/seller/tukar-tambah');
+
+    // scopeTradeInEnabled mengecualikan produk yang locked_for_trade_in_id-nya
+    // terisi, jadi produk yang sedang ditukar tidak bisa ditawar ulang.
+    await expect(page.locator(`h3:has-text("${produkB}")`)).toHaveCount(0);
   });
 });

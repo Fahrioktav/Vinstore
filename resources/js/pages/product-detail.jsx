@@ -7,6 +7,7 @@ import {
   getProductImage,
   storageMedia,
 } from '@/lib/utils';
+import CurrencyInput from '@/components/currency-input';
 import {
   BadgeIcon,
   TradeInIcon,
@@ -430,10 +431,10 @@ function TebakHargaSection({ product, tebakHarga }) {
                   <label className="block text-sm font-semibold text-gray-700">
                     Tebak harga diskon produk ini (hanya bisa sekali)
                   </label>
-                  <input
-                    type="number"
+                  <CurrencyInput
+                    id="amount"
                     name="amount"
-                    min="1"
+                    min={1}
                     placeholder="Masukkan tebakan harga Anda"
                     className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
                     required

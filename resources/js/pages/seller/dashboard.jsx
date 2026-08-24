@@ -650,9 +650,11 @@ function OrderRow({ order, bankPrefill }) {
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
 
-    // Jika status diubah ke Processing atau On The Way, pastikan ada nomor resi
+    // Status pengiriman apa pun menuntut nomor resi — termasuk "Delivered",
+    // yang dulu justru satu-satunya yang melewatinya. Lihat aturan yang sama di
+    // Order::STATUSES_REQUIRING_TRACKING (temuan V9-01).
     if (
-      (newStatus === 'Processing' || newStatus === 'On The Way') &&
+      ['Processing', 'On The Way', 'Delivered'].includes(newStatus) &&
       !order.tracking_number
     ) {
       setPendingStatus(newStatus);
@@ -1007,11 +1009,16 @@ function OrderRow({ order, bankPrefill }) {
             disabled={isUpdating}
             className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColors[currentStatus] || 'bg-gray-100 text-gray-700'} ${isUpdating ? 'opacity-50' : ''}`}
           >
-            <option value="Waiting">Waiting</option>
-            <option value="Processing">Processing</option>
-            <option value="On The Way">On The Way</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Cancelled">Cancelled</option>
+            {/* Status sekarang selalu ada sebagai nilai terpilih; sisanya
+                hanya perpindahan yang memang sah dari keadaan ini. Daftarnya
+                datang dari server (Order::SELLER_STATUS_TRANSITIONS) supaya
+                aturannya tidak ditulis dua kali. */}
+            <option value={currentStatus}>{currentStatus}</option>
+            {(order.allowed_statuses ?? []).map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
           </select>
           {order.tracking_number && (
             <div className="mt-2 flex items-center gap-2">

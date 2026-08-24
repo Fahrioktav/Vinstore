@@ -186,10 +186,17 @@ class PriceGuessService
      *
      * Aturan tampilnya berbeda menurut status, dan bedanya disengaja:
      *
-     * - SELAMA PERIODE BERJALAN: daftar diurutkan waktu, terbaru di atas. Nominal
-     *   tebakan tetap terbuka seperti riwayat bid pada lelang, TETAPI peringkat
-     *   dan selisihnya tidak ditampilkan — mengurutkan menurut kedekatan sama
-     *   saja dengan memberi tahu semua orang di mana kira-kira harga diskonnya.
+     * - SELAMA PERIODE BERJALAN: daftar diurutkan waktu, terbaru di atas, dan
+     *   NOMINAL TEBAKAN PESERTA LAIN DISEMBUNYIKAN — hanya tebakan milik peminta
+     *   sendiri yang terbuka. Peringkat dan selisihnya juga tidak ditampilkan.
+     *
+     *   Ini bukan sekadar kehati-hatian. Yang menentukan pemenang adalah
+     *   kedekatan pada harga diskon, jadi dua tebakan yang mengapit sudah cukup
+     *   untuk menyimpulkan jawabannya ada di antara keduanya — dan makin ramai
+     *   pesertanya, makin sempit kisarannya. Membuka nominalnya berarti memberi
+     *   keuntungan kepada yang menebak paling akhir, padahal halamannya sendiri
+     *   menganjurkan sebaliknya: "menebak lebih dulu menguntungkan". Peserta
+     *   yang menuruti anjuran itu justru yang paling dirugikan (temuan V9-03).
      *
      * - SETELAH SESI SELESAI: daftar diurutkan menurut kedekatan, lengkap dengan
      *   peringkat. Selisih dalam rupiah hanya ikut ditampilkan bila viewer
@@ -212,13 +219,17 @@ class PriceGuessService
                 ->get();
 
         return $guesses->values()->map(function (PriceGuess $guess, int $index) use ($product, $finished, $maySeeDiscount, $viewer) {
+            $milikSendiri = $viewer !== null && $guess->user_id === $viewer->id;
+
             return [
                 'public_id' => $guess->public_id,
-                'amount' => (float) $guess->amount,
+                // Null berarti "belum boleh dilihat", bukan "tidak ada".
+                // Halamannya menampilkannya sebagai ??? — lihat GuessLeaderboard.
+                'amount' => $finished || $milikSendiri ? (float) $guess->amount : null,
                 'created_at' => $guess->created_at,
                 'username' => $guess->user?->username ?? 'Pengguna',
                 'user_public_id' => $guess->user?->public_id,
-                'is_mine' => $viewer !== null && $guess->user_id === $viewer->id,
+                'is_mine' => $milikSendiri,
                 'is_winner' => $product->guess_winner_id !== null
                     && $guess->user_id === $product->guess_winner_id,
                 // Peringkat baru bermakna setelah sesinya selesai; selama

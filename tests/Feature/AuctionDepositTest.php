@@ -36,6 +36,15 @@ class AuctionDepositTest extends TestCase
 
     private User $penawarLain;
 
+    /**
+     * Jawaban Midtrans atas penanyaan status transaksi, dipasang per pengujian.
+     * Bawaannya "belum dibayar" supaya jalur normal tidak ikut berubah.
+     */
+    private array $jawabanStatusMidtrans = [
+        'transaction_status' => 'pending',
+        'fraud_status' => 'accept',
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -43,6 +52,9 @@ class AuctionDepositTest extends TestCase
         config()->set('services.midtrans.server_key', self::SERVER_KEY);
 
         Http::fake([
+            // Penanyaan status transaksi (penyelarasan saat webhook tak sampai).
+            '*/status' => fn () => Http::response($this->jawabanStatusMidtrans),
+            // Pembuatan transaksi Snap.
             '*' => Http::response([
                 'token' => 'snap-token-palsu',
                 'redirect_url' => 'https://example.test/snap',
@@ -734,5 +746,153 @@ class AuctionDepositTest extends TestCase
             AuctionDeposit::STATUS_APPLIED,
             AuctionDeposit::where('user_id', $this->penawar->id)->firstOrFail()->status
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Penyelarasan langsung ke Midtrans
+    // ------------------------------------------------------------------
+
+    /**
+     * Webhook Midtrans tidak selalu sampai — di komputer pengembang alamat
+     * lokalnya memang tidak bisa dihubungi Midtrans sama sekali. Jaminan yang
+     * uangnya sudah benar-benar diterima harus tetap terbaca lunas.
+     */
+    private function midtransMenjawabStatus(string $transactionStatus = 'settlement'): void
+    {
+        $this->jawabanStatusMidtrans = [
+            'transaction_status' => $transactionStatus,
+            'fraud_status' => 'accept',
+            'transaction_id' => 'trx-sinkron',
+            'gross_amount' => '200000.00',
+        ];
+    }
+
+    private function depositBelumTersinkron(Auction $auction): AuctionDeposit
+    {
+        $this->actingAs($this->penawar)->post('/auctions/'.$auction->public_id.'/deposit');
+
+        $deposit = AuctionDeposit::where('auction_id', $auction->id)->firstOrFail();
+
+        $this->assertSame(AuctionDeposit::STATUS_PENDING, $deposit->status);
+
+        return $deposit;
+    }
+
+    public function test_halaman_lelang_menyelaraskan_deposit_yang_webhooknya_tidak_sampai(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositBelumTersinkron($auction);
+
+        $this->midtransMenjawabStatus();
+
+        $this->actingAs($this->penawar)
+            ->get('/auctions/'.$auction->public_id)
+            ->assertOk();
+
+        $deposit->refresh();
+
+        $this->assertSame(AuctionDeposit::STATUS_PAID, $deposit->status);
+        $this->assertNotNull($deposit->paid_at);
+    }
+
+    public function test_deposit_yang_sudah_dibayar_tidak_diminta_bayar_lagi(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositBelumTersinkron($auction);
+
+        $this->midtransMenjawabStatus();
+
+        $this->actingAs($this->penawar)
+            ->post('/auctions/'.$auction->public_id.'/deposit')
+            ->assertSessionHas('success')
+            ->assertSessionMissing('snap_token');
+
+        $this->assertSame(AuctionDeposit::STATUS_PAID, $deposit->fresh()->status);
+        $this->assertSame(1, AuctionDeposit::where('auction_id', $auction->id)->count());
+    }
+
+    public function test_penawaran_diterima_setelah_deposit_diselaraskan(): void
+    {
+        $auction = $this->lelang();
+        $this->depositBelumTersinkron($auction);
+
+        $this->midtransMenjawabStatus();
+
+        $this->actingAs($this->penawar)
+            ->post('/auctions/'.$auction->public_id.'/bid', ['amount' => 2_100_000])
+            ->assertSessionHas('success');
+
+        $this->assertSame('2100000.00', $auction->fresh()->current_price);
+    }
+
+    /**
+     * Penutupan lelang menandai jaminan `pending` menjadi `expired`. Jaminan
+     * yang uangnya sudah diterima Midtrans tidak boleh ikut terbawa: pemiliknya
+     * akan kehilangan uang muka sekaligus jalur pengembaliannya.
+     */
+    public function test_penutupan_lelang_tidak_menghanguskan_deposit_yang_uangnya_sudah_masuk(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositBelumTersinkron($auction);
+
+        $this->midtransMenjawabStatus();
+
+        $auction->update(['ends_at' => now()->subMinute()]);
+        Artisan::call('auctions:finish');
+
+        $deposit->refresh()->load('auction');
+
+        $this->assertSame(AuctionDeposit::STATUS_PAID, $deposit->status);
+        $this->assertTrue($deposit->canRequestRefund());
+    }
+
+    /**
+     * Transaksi Snap kedaluwarsa dalam hitungan jam. Jaminan yang sudah lama
+     * mati tidak perlu ditanyakan lagi setiap kali halaman dibuka.
+     */
+    public function test_deposit_lama_tidak_ditanyakan_lagi_ke_midtrans(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositBelumTersinkron($auction);
+
+        $deposit->forceFill(['updated_at' => now()->subDays(3)])->save();
+
+        $this->midtransMenjawabStatus();
+
+        $this->actingAs($this->penawar)
+            ->get('/auctions/'.$auction->public_id)
+            ->assertOk();
+
+        $this->assertSame(AuctionDeposit::STATUS_PENDING, $deposit->fresh()->status);
+    }
+
+    /**
+     * Transaksi Snap mati dalam hitungan menit untuk QRIS. Selama lelangnya
+     * masih berjalan, pembeli harus tetap bisa mencoba membayar lagi — bukan
+     * kehilangan kesempatan ikut lelang itu sama sekali.
+     */
+    public function test_deposit_yang_transaksinya_kedaluwarsa_bisa_dicoba_lagi(): void
+    {
+        $auction = $this->lelang();
+        $deposit = $this->depositBelumTersinkron($auction);
+        $referensiLama = $deposit->payment_reference;
+
+        $this->midtransMenjawabStatus('expire');
+
+        $this->actingAs($this->penawar)
+            ->post('/auctions/'.$auction->public_id.'/deposit')
+            ->assertSessionHas('snap_token', 'snap-token-palsu');
+
+        $deposit->refresh();
+
+        $this->assertSame(AuctionDeposit::STATUS_PENDING, $deposit->status);
+        $this->assertNotSame($referensiLama, $deposit->payment_reference);
+        $this->assertSame(1, AuctionDeposit::where('auction_id', $auction->id)->count());
+
+        // Referensi barunya yang kini dikenali webhook.
+        $this->postJson('/midtrans/notification', $this->webhookPayload($deposit->payment_reference, 200_000))
+            ->assertOk();
+
+        $this->assertSame(AuctionDeposit::STATUS_PAID, $deposit->fresh()->status);
     }
 }

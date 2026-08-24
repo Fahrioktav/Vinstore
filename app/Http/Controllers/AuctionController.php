@@ -16,32 +16,65 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Throwable;
 
 class AuctionController extends Controller
 {
-    public function index()
+    /** Pilihan penyaringan daftar lelang menurut jalannya lelang. */
+    private const STATUS_FILTERS = ['ongoing', 'finished'];
+
+    public function index(Request $request)
     {
+        // Penyaringan dilakukan SETELAH status diselaraskan. Kalau dibalik,
+        // lelang yang baru saja lewat tenggatnya masih tersaring sebagai
+        // "Berlangsung" pada permintaan ini dan baru pindah pada permintaan
+        // berikutnya.
         $this->finalizeExpiredAuctions();
         $this->activateApprovedAuctions();
 
+        $status = $request->query('status');
+
+        if (! in_array($status, self::STATUS_FILTERS, true)) {
+            $status = null;
+        }
+
         $auctions = Auction::visible()
+            ->when($status === 'ongoing', fn ($query) => $query->ongoing())
+            ->when($status === 'finished', fn ($query) => $query->finished())
             ->with(['store', 'winner'])
             ->latest()
             ->get();
 
-        return Inertia::render('auctions/index', compact('auctions'));
+        // Jumlah per pilihan dihitung di server supaya tab tetap menampilkan
+        // angka yang benar walau daftarnya sedang tersaring.
+        $counts = [
+            'all' => Auction::visible()->count(),
+            'ongoing' => Auction::visible()->ongoing()->count(),
+            'finished' => Auction::visible()->finished()->count(),
+        ];
+
+        return Inertia::render('auctions/index', [
+            'auctions' => $auctions,
+            'counts' => $counts,
+            'filters' => ['status' => $status],
+        ]);
     }
 
     public function show(Auction $auction)
     {
+        $user = Auth::user();
+
+        // Diselaraskan SEBELUM lelangnya ditutup: jaminan yang uangnya sudah
+        // masuk tetapi kabarnya belum sampai akan ikut ditandai `expired` oleh
+        // penutupan lelang, dan pemiliknya kehilangan haknya atas uang itu.
+        AuctionDeposit::syncFromMidtrans([$auction->depositOf($user)]);
+
         $this->finalizeExpiredAuctions();
         $this->activateApprovedAuctions();
 
         $auction->refresh();
-
-        $user = Auth::user();
         $canPreview = $user && (
             $user->role === 'admin'
             || ($user->role === 'seller' && $user->store && $auction->store_id === $user->store->id)
@@ -94,9 +127,7 @@ class AuctionController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time().'_auction_'.$image->getClientOriginalName();
-            $imagePath = $image->storeAs('auctions', $imageName, 'public');
+            $imagePath = $request->file('image')->store('auctions', 'public');
         }
 
         Auction::create(array_merge($this->auctionAttributes($validated), [
@@ -159,6 +190,15 @@ class AuctionController extends Controller
      *
      * Null berarti seller tidak mengunggah apa pun kali ini — bukan berarti ia
      * ingin sertifikat lamanya dihapus.
+     *
+     * Namanya diserahkan kepada `store()` yang mengarangnya secara acak, BUKAN
+     * disusun dari `time()` dan nama berkas asal. Keduanya tidak menjamin
+     * keunikan: `time()` hanya berubah tiap detik dan nama asal cenderung
+     * seragam ("sertifikat.pdf"), sehingga dua seller yang menyimpan pada detik
+     * yang sama menghasilkan jalur yang persis sama — dan yang belakangan
+     * menimpa yang duluan. Untuk sertifikat keaslian akibatnya bukan sekadar
+     * berkas hilang, melainkan satu barang menampilkan bukti keaslian milik
+     * barang lain (temuan V8-01).
      */
     private function storeCertificate(Request $request): ?string
     {
@@ -166,27 +206,75 @@ class AuctionController extends Controller
             return null;
         }
 
-        $certificate = $request->file('certificate');
-
-        return $certificate->storeAs(
-            'certificates',
-            time().'_auction_'.$certificate->getClientOriginalName(),
-            'public'
-        );
+        return $request->file('certificate')->store('certificates', 'public');
     }
 
     /**
      * Hapus berkas sertifikat sebuah lelang dari disk, bila ada.
-     *
-     * Sengaja tidak dipakai di relist(): lelang lama masih memakai berkas yang
-     * sama, dan menghapusnya akan mengosongkan sertifikat lelang yang sudah
-     * berjalan.
      */
     private function deleteCertificate(Auction $auction): void
     {
-        if ($auction->certificate && Storage::disk('public')->exists($auction->certificate)) {
-            Storage::disk('public')->delete($auction->certificate);
+        $this->deleteUploadIfUnused($auction->certificate, $auction);
+    }
+
+    /**
+     * Hapus berkas unggahan, kecuali bila masih ada lelang lain yang merujuknya.
+     *
+     * Relist kini menyalin berkasnya (lihat `relist()`), sehingga lelang baru
+     * tidak lagi berbagi jalur dengan lelang lama. Penjaga ini untuk data yang
+     * TERLANJUR berbagi sebelum perbaikan itu ada — di basis data pengembangan
+     * sempat ada empat lelang yang menunjuk ke satu berkas gambar yang sama.
+     * Tanpa penjaga ini, satu penggantian gambar pada salah satunya
+     * mengosongkan gambar keempat-empatnya (temuan V8-02).
+     */
+    private function deleteUploadIfUnused(?string $path, Auction $except): void
+    {
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return;
         }
+
+        $masihDipakai = Auction::where('id', '!=', $except->id)
+            ->where(fn ($query) => $query->where('image', $path)->orWhere('certificate', $path))
+            ->exists();
+
+        if ($masihDipakai) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
+    }
+
+    /**
+     * Salin berkas unggahan ke jalur baru miliknya sendiri.
+     *
+     * Mengembalikan jalur asalnya bila berkasnya sudah tidak ada di disk —
+     * lelang lama pun sudah menampilkan tautan mati, dan mengosongkan kolomnya
+     * di sini tidak memperbaiki apa pun.
+     */
+    private function copyUpload(?string $path, string $folder): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            return $path;
+        }
+
+        $ekstensi = pathinfo($path, PATHINFO_EXTENSION);
+        $salinan = $folder.'/'.Str::random(40).($ekstensi ? '.'.$ekstensi : '');
+
+        try {
+            $disk->copy($path, $salinan);
+        } catch (Throwable $e) {
+            report($e);
+
+            return $path;
+        }
+
+        return $salinan;
     }
 
     /**
@@ -235,13 +323,9 @@ class AuctionController extends Controller
         );
 
         if ($request->hasFile('image')) {
-            if ($auction->image && Storage::disk('public')->exists($auction->image)) {
-                Storage::disk('public')->delete($auction->image);
-            }
+            $this->deleteUploadIfUnused($auction->image, $auction);
 
-            $image = $request->file('image');
-            $imageName = time().'_auction_'.$image->getClientOriginalName();
-            $auction->image = $image->storeAs('auctions', $imageName, 'public');
+            $auction->image = $request->file('image')->store('auctions', 'public');
         }
 
         // Sertifikat lama dipertahankan bila seller tidak mengunggah yang baru.
@@ -270,10 +354,7 @@ class AuctionController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Lelang hanya bisa dihapus sebelum berjalan dan belum memiliki bid.');
         }
 
-        if ($auction->image && Storage::disk('public')->exists($auction->image)) {
-            Storage::disk('public')->delete($auction->image);
-        }
-
+        $this->deleteUploadIfUnused($auction->image, $auction);
         $this->deleteCertificate($auction);
 
         $auction->delete();
@@ -333,18 +414,17 @@ class AuctionController extends Controller
             $this->auctionMessages()
         );
 
-        $imagePath = $auction->image;
+        // Barangnya sama, jadi gambar dan sertifikat lelang lama ikut terbawa
+        // kecuali seller mengunggah yang baru. Yang terbawa adalah SALINANNYA,
+        // bukan jalur yang sama: dua lelang yang berbagi satu berkas berarti
+        // penggantian gambar atau sertifikat pada salah satunya menghapus milik
+        // yang lain, padahal kolomnya masih menunjuk ke sana (temuan V8-02).
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('auctions', 'public')
+            : $this->copyUpload($auction->image, 'auctions');
 
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time().'_auction_'.$image->getClientOriginalName();
-            $imagePath = $image->storeAs('auctions', $imageName, 'public');
-        }
-
-        // Barangnya sama, jadi sertifikat lelang lama ikut terbawa kecuali
-        // seller mengunggah yang baru. Berkas lamanya TIDAK dihapus: lelang
-        // lama masih ada dan tetap merujuk ke sana.
-        $certificatePath = $this->storeCertificate($request) ?? $auction->certificate;
+        $certificatePath = $this->storeCertificate($request)
+            ?? $this->copyUpload($auction->certificate, 'certificates');
 
         Auction::create(array_merge($this->auctionAttributes($validated), [
             'store_id' => Auth::user()->store->id,
@@ -371,6 +451,9 @@ class AuctionController extends Controller
         // keduanya berada dalam satu transaksi, sehingga penutupan lelang yang
         // dilakukan di sini ikut dibatalkan begitu penawarannya ditolak — dan
         // memang selalu ditolak, karena lelangnya baru saja ditutup (V6-06).
+        // Sebelum penyegaran status, dengan alasan yang sama seperti di show().
+        AuctionDeposit::syncFromMidtrans([$auction->depositOf($user)]);
+
         $this->refreshAuctionStatus($auction);
         $auction->refresh();
 
@@ -736,8 +819,47 @@ class AuctionController extends Controller
 
         $existing = $auction->depositOf($user);
 
+        // Tanpa ini, jaminan yang webhooknya tidak sampai tetap `pending` dan
+        // pembelinya disuruh membayar untuk kedua kalinya.
+        AuctionDeposit::syncFromMidtrans([$existing]);
+
         if ($existing && $existing->isActive()) {
             return back()->with('success', 'Deposit Anda sudah aktif. Silakan langsung menawar.');
+        }
+
+        // Transaksi Snap yang sudah mati tidak bisa dibuka lagi, dan Midtrans
+        // menolak `order_id` yang sama dipakai dua kali. Selama lelangnya masih
+        // berjalan pembeli harus tetap bisa mencoba lagi — QRIS saja mati dalam
+        // lima belas menit — jadi jaminannya dibuka kembali dengan referensi
+        // pembayaran yang baru. Aman dilakukan di sini: penyelarasan di atas
+        // sudah menaikkan jaminan yang uangnya ternyata masuk menjadi `paid`,
+        // dan jaminan yang sudah `paid` tidak pernah sampai ke baris ini.
+        //
+        // Dikerjakan di dalam transaksi dengan barisnya dikunci. Dua permintaan
+        // yang beririsan — tombol tertekan dua kali, atau dua tab — sama-sama
+        // membaca status `expired`, sama-sama merotasi, dan yang belakangan
+        // menimpa referensi milik yang duluan; transaksi Snap yang pertama lalu
+        // menjadi yatim (temuan V8-06). Imbuhannya acak, bukan `time()`, karena
+        // dua rotasi dalam detik yang sama menghasilkan referensi kembar yang
+        // ditolak kunci unik sebagai HTTP 500.
+        if ($existing && $existing->status === AuctionDeposit::STATUS_EXPIRED) {
+            DB::transaction(function () use ($existing) {
+                $locked = AuctionDeposit::whereKey($existing->getKey())->lockForUpdate()->firstOrFail();
+
+                if ($locked->status !== AuctionDeposit::STATUS_EXPIRED) {
+                    return;
+                }
+
+                $locked->forceFill([
+                    'status' => AuctionDeposit::STATUS_PENDING,
+                    'payment_reference' => $locked->public_id.'-'.Str::lower(Str::random(6)),
+                    'snap_token' => null,
+                    'snap_redirect_url' => null,
+                    'midtrans_transaction_id' => null,
+                ])->save();
+            });
+
+            $existing->refresh();
         }
 
         if ($existing && $existing->status !== AuctionDeposit::STATUS_PENDING) {
@@ -803,13 +925,18 @@ class AuctionController extends Controller
         $deposits = AuctionDeposit::with(['auction.store', 'reviewer'])
             ->where('user_id', Auth::id())
             ->latest('id')
-            ->get()
-            ->each(function (AuctionDeposit $deposit) {
-                // Dihitung di server agar halaman tidak perlu mengulang
-                // aturannya sendiri dan berisiko berbeda.
-                $deposit->setAttribute('can_request_refund', $deposit->canRequestRefund());
-                $deposit->setAttribute('refund_block_reason', $deposit->refundBlockReason());
-            });
+            ->get();
+
+        // Jaminan yang sebenarnya sudah lunas harus terbaca lunas di sini juga,
+        // karena dari halaman inilah pengembalian diajukan.
+        AuctionDeposit::syncFromMidtrans($deposits);
+
+        $deposits->each(function (AuctionDeposit $deposit) {
+            // Dihitung di server agar halaman tidak perlu mengulang
+            // aturannya sendiri dan berisiko berbeda.
+            $deposit->setAttribute('can_request_refund', $deposit->canRequestRefund());
+            $deposit->setAttribute('refund_block_reason', $deposit->refundBlockReason());
+        });
 
         return Inertia::render('deposits/index', compact('deposits'));
     }

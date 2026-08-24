@@ -65,11 +65,9 @@ class AdminProductController extends Controller
             if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);
             }
-            // Simpan foto baru
-            $image = $request->file('image');
-            $imageName = time().'_'.$image->getClientOriginalName();
-            $imagePath = $image->storeAs('products', $imageName, 'public');
-            $product->image = $imagePath;
+            // Simpan foto baru. Namanya diacak `store()`; nama susunan `time()`
+            // + nama berkas asal bisa bertabrakan antar unggahan (temuan V8-01).
+            $product->image = $request->file('image')->store('products', 'public');
         }
 
         $product->save();

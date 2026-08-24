@@ -22,6 +22,11 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Penawaran lelang menyiarkan event lewat Reverb. Di lingkungan tes
+             servernya tidak ada, sehingga tiap bid menunggu koneksi gagal
+             beberapa detik sebelum ditangkap try/catch. Driver null membuat
+             suite tidak menyentuh jaringan sama sekali. -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <!-- Reverse geocoding memanggil layanan luar (Nominatim). Dimatikan di
              lingkungan tes supaya suite tidak bergantung pada jaringan. -->

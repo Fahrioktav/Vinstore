@@ -9,8 +9,24 @@ const statusLabel = {
   cancelled: 'Dibatalkan',
 };
 
+// Nilai `status` di URL, bukan nilai kolom `status` lelang. Keduanya sengaja
+// dibedakan: "berlangsung" dan "selesai" adalah pertanyaan pembeli, sedangkan
+// kolomnya menyimpan keadaan teknis (scheduled/active/ended/cancelled) yang
+// pemetaannya diurus scope di App\Models\Auction.
+const tabs = [
+  { value: null, label: 'Semua', countKey: 'all' },
+  { value: 'ongoing', label: 'Sedang Berlangsung', countKey: 'ongoing' },
+  { value: 'finished', label: 'Sudah Selesai', countKey: 'finished' },
+];
+
+const emptyMessage = {
+  ongoing: 'Belum ada lelang yang sedang berlangsung saat ini.',
+  finished: 'Belum ada lelang yang sudah selesai.',
+};
+
 export default function AuctionsIndex() {
-  const { auctions } = usePage().props;
+  const { auctions, counts, filters } = usePage().props;
+  const activeStatus = filters?.status ?? null;
 
   return (
     <section className="px-4 py-8 sm:px-6 sm:py-10 md:px-16">
@@ -22,9 +38,39 @@ export default function AuctionsIndex() {
         </div>
       </div>
 
+      <div className="mb-8 flex flex-wrap gap-2">
+        {tabs.map((tab) => {
+          const isActive = activeStatus === tab.value;
+
+          return (
+            <Link
+              key={tab.label}
+              href={tab.value ? `/auctions?status=${tab.value}` : '/auctions'}
+              preserveScroll
+              className={`group rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isActive
+                  ? 'bg-[#53685B] text-white shadow-md'
+                  : 'bg-white text-[#2F3E46] shadow-sm hover:bg-[#E9E19E] hover:shadow-md'
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`ml-2 rounded-full px-2 py-0.5 text-xs transition ${
+                  isActive
+                    ? 'bg-white/20'
+                    : 'bg-[#53685B]/10 text-[#53685B] group-hover:bg-white/70 group-hover:text-[#2F3E46]'
+                }`}
+              >
+                {counts?.[tab.countKey] ?? 0}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
       {auctions.length === 0 ? (
         <div className="rounded-lg bg-white p-8 text-center text-gray-500">
-          Belum ada lelang yang tersedia.
+          {emptyMessage[activeStatus] || 'Belum ada lelang yang tersedia.'}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-3">

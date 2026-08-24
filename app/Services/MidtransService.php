@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -47,11 +48,8 @@ class MidtransService
             $payload['item_details'] = $items;
         }
 
-        return Http::withHeaders([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-            'Authorization' => $this->authorizationHeader(),
-        ])->post(config('services.midtrans.snap_url'), self::sanitize($payload))
+        return $this->client()
+            ->post(config('services.midtrans.snap_url'), self::sanitize($payload))
             ->throw()
             ->json();
     }
@@ -113,11 +111,8 @@ class MidtransService
             throw new RuntimeException('MIDTRANS_SERVER_KEY belum diatur di file .env.');
         }
 
-        return Http::withHeaders([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-            'Authorization' => $this->authorizationHeader(),
-        ])->get(config('services.midtrans.api_url').'/v2/'.rawurlencode($paymentReference).'/status')
+        return $this->client()
+            ->get(config('services.midtrans.api_url').'/v2/'.rawurlencode($paymentReference).'/status')
             ->throw()
             ->json();
     }
@@ -156,6 +151,26 @@ class MidtransService
             'refund', 'partial_refund' => 'refunded',
             default => 'pending',
         };
+    }
+
+    /**
+     * Klien HTTP ke Midtrans, lengkap dengan batas waktunya.
+     *
+     * Batas waktu ini bukan hiasan. Penyelarasan status pembayaran dipanggil
+     * dari permintaan halaman — halaman lelang, halaman deposit, halaman
+     * pesanan — sehingga Midtrans yang lambat berarti halaman yang lambat.
+     * Tanpa `timeout()` yang berlaku adalah bawaan Guzzle, dan pengguna
+     * menatap layar kosong selama itu (temuan V8-04).
+     */
+    private function client(): PendingRequest
+    {
+        return Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Authorization' => $this->authorizationHeader(),
+        ])
+            ->timeout((int) config('services.midtrans.timeout', 5))
+            ->connectTimeout((int) config('services.midtrans.connect_timeout', 3));
     }
 
     private function authorizationHeader(): string

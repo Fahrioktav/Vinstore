@@ -7,17 +7,20 @@ const { test } = require('@playwright/test');
 const path = require('path');
 
 const BASE_URL = 'http://localhost:8000';
-const SCREENSHOT_DIR = path.join(__dirname, '../../public/screenshots/laporan-skripsi');
+const SCREENSHOT_DIR = path.join(
+  __dirname,
+  '../../public/screenshots/laporan-skripsi'
+);
 
 async function takeScreenshot(page, name, fullPage = true) {
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1500);
-  
+
   await page.screenshot({
     path: path.join(SCREENSHOT_DIR, `${name}.png`),
     fullPage: fullPage,
   });
-  
+
   console.log(`✓ ${name}.png`);
 }
 

@@ -106,13 +106,26 @@ Route::middleware(['role:guestOnly'])->group(function () {
     Route::get('/register', fn () => Inertia::render('auth/register', [
         'heroText' => 'Halo!, Selamat Datang di VINSTORE',
     ]))->name('register.form');
-    Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
+    Route::post('/register', [RegisterController::class, 'store'])
+        ->middleware('throttle:20,1')
+        ->name('register.submit');
 
     // Login
     Route::get('/login', fn () => Inertia::render('auth/login', [
         'heroText' => 'Selamat Datang Kembali!',
     ]))->name('login.form');
-    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    // Penghitung per akun ada di LoginController — itu yang menahan penebakan
+    // password. Yang di sini jaring pengaman per IP, untuk penyerang yang
+    // mencoba BANYAK akun sekaligus supaya penghitung per akun tak pernah
+    // tersentuh (temuan V9-02).
+    //
+    // Batasnya sengaja longgar: satu jaringan bersama — wifi kampus saat sidang,
+    // misalnya — bisa berisi banyak orang yang masuk hampir bersamaan, dan
+    // mengunci mereka lebih merugikan daripada menahan penyerang yang toh sudah
+    // tertahan penghitung per akun.
+    Route::post('/login', [LoginController::class, 'login'])
+        ->middleware('throttle:60,1')
+        ->name('login.submit');
 
     // Google OAuth
     Route::get('/auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
@@ -120,7 +133,9 @@ Route::middleware(['role:guestOnly'])->group(function () {
 
     // Forgot Password
     Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
 
     // Reset Password
     Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');

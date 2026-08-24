@@ -1,9 +1,10 @@
 import { Form, Link, usePage, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MainLayout from '@/layouts/main-layout';
 import { NotificationIcon } from '@/components/icons';
 import { formatIDR, getAuctionImage, getProductCertificate } from '@/lib/utils';
 import { openSnapPayment } from '@/lib/midtrans';
+import CurrencyInput from '@/components/currency-input';
 import { toast } from 'sonner';
 
 export default function AuctionShow() {
@@ -17,6 +18,24 @@ export default function AuctionShow() {
   const minimumBid =
     Number(auction.current_price || auction.starting_price) +
     Number(auction.min_increment);
+
+  // Nominal penawaran mengikuti minimum yang berlaku, dan minimum itu berubah
+  // sendiri saat pembeli lain menawar lewat siaran WebSocket. Isian yang tidak
+  // ikut berubah membuat pembeli mengirim angka yang sudah kedaluwarsa lalu
+  // ditolak server tanpa ia tahu sebabnya (temuan V8-08).
+  //
+  // Yang sudah diketik pembeli tidak diganggu — kecuali angkanya kini di bawah
+  // minimum yang baru, karena angka itu memang sudah tidak berguna lagi.
+  const [bidAmount, setBidAmount] = useState(String(minimumBid));
+  const bidDisunting = useRef(false);
+
+  useEffect(() => {
+    if (!bidDisunting.current || Number(bidAmount || 0) < minimumBid) {
+      setBidAmount(String(minimumBid));
+      bidDisunting.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minimumBid]);
   const isWinner =
     user && auction.winner && user.public_id === auction.winner.public_id;
 
@@ -33,10 +52,23 @@ export default function AuctionShow() {
 
   // Handle snap_token untuk pembayaran lelang maupun deposit.
   // Menunggu library Snap siap agar popup tidak gagal muncul diam-diam.
+  //
+  // Popup dibuka sekali untuk setiap JAWABAN SERVER yang membawa snap_token,
+  // bukan sekali untuk setiap nilai token. Bedanya terasa persis saat pembeli
+  // menutup popup lalu menekan bayar lagi: tagihannya sama, jadi tokennya juga
+  // sama, dan effect yang bergantung pada nilai token tidak pernah berjalan
+  // ulang — tombolnya seolah mati. Objek `flash` selalu baru pada tiap jawaban
+  // server, jadi itulah penandanya. Muat ulang sebagian (router.reload di
+  // bawah) tidak mengirim ulang flash, sehingga popup juga tidak terbuka
+  // sendiri setelah pembayaran selesai.
+  const snapFlashRef = useRef(null);
+
   useEffect(() => {
-    if (!flash?.snap_token) {
+    if (!flash?.snap_token || snapFlashRef.current === flash) {
       return;
     }
+
+    snapFlashRef.current = flash;
 
     const isDeposit = flash.snap_context === 'deposit';
 
@@ -74,7 +106,7 @@ export default function AuctionShow() {
     }).catch((error) => {
       toast.error(error.message);
     });
-  }, [flash?.snap_token]);
+  }, [flash]);
 
   // WebSocket real-time listener
   useEffect(() => {
@@ -234,11 +266,15 @@ export default function AuctionShow() {
                       <label className="block text-sm font-semibold text-gray-700">
                         Ajukan penawaran
                       </label>
-                      <input
-                        type="number"
+                      <CurrencyInput
+                        id="amount"
                         name="amount"
+                        value={bidAmount}
+                        onChange={(nilai) => {
+                          bidDisunting.current = true;
+                          setBidAmount(nilai);
+                        }}
                         min={minimumBid}
-                        defaultValue={minimumBid}
                         className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-[#53685B] focus:ring-2 focus:ring-[#53685B]"
                         required
                       />

@@ -136,13 +136,7 @@ class ProductController extends Controller
             'name' => 'required',
             'stock' => 'required|integer',
             'price' => 'required|numeric',
-            // Berat dalam gram; dipakai menghitung biaya berat di checkout.
-            // Opsional agar produk lama tetap bisa disunting; yang kosong
-            // memakai berat default dari config/marketplace.php.
             'weight' => 'nullable|integer|min:1|max:500000',
-            // Dimensi paket dalam cm, untuk menghitung berat volumetrik.
-            // Boleh kosong: yang kosong berarti biaya beratnya murni dari
-            // berat asli, bukan mendadak ditagih lebih mahal.
             'length' => 'nullable|integer|min:1|max:500',
             'width' => 'nullable|integer|min:1|max:500',
             'height' => 'nullable|integer|min:1|max:500',
@@ -156,10 +150,6 @@ class ProductController extends Controller
             'is_trade_in_enabled' => 'nullable|boolean',
             'sale_type' => ['nullable', Rule::in([Product::SALE_TYPE_NORMAL, Product::SALE_TYPE_TEBAK_HARGA])],
             'guess_discount_price' => 'nullable|required_if:sale_type,tebak_harga|numeric|min:1|lt:price',
-            // Pembandingnya awal menit berjalan, bukan 'now': input
-            // datetime-local tidak mengirim detik, sehingga menit yang
-            // sedang berjalan selalu terbaca sedikit di masa lalu dan
-            // ditolak tanpa alasan yang masuk akal (temuan V6-08).
             'guess_starts_at' => ['nullable', 'required_if:sale_type,tebak_harga', 'date', 'after_or_equal:'.now()->startOfMinute()->format('Y-m-d H:i:s')],
             'guess_ends_at' => 'nullable|required_if:sale_type,tebak_harga|date|after:guess_starts_at',
         ]);
@@ -170,29 +160,27 @@ class ProductController extends Controller
         $galleryPaths = [];
         $videoPath = null;
 
+        // Nama berkasnya diserahkan kepada `store()` yang mengarangnya secara
+        // acak. Nama susunan `time()` + nama berkas asal tidak menjamin
+        // keunikan: dua seller yang menyimpan "foto.jpg" pada detik yang sama
+        // menghasilkan jalur identik, dan yang belakangan menimpa yang duluan
+        // tanpa memberi tahu siapa pun (temuan V8-01).
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time().'_'.$image->getClientOriginalName();
-            $imagePath = $image->storeAs('products', $imageName, 'public');
+            $imagePath = $request->file('image')->store('products', 'public');
         }
 
         if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $index => $galleryImage) {
-                $galleryName = time().'_'.$index.'_'.$galleryImage->getClientOriginalName();
-                $galleryPaths[] = $galleryImage->storeAs('products', $galleryName, 'public');
+            foreach ($request->file('images') as $galleryImage) {
+                $galleryPaths[] = $galleryImage->store('products', 'public');
             }
         }
 
         if ($request->hasFile('video')) {
-            $video = $request->file('video');
-            $videoName = time().'_video_'.$video->getClientOriginalName();
-            $videoPath = $video->storeAs('product-videos', $videoName, 'public');
+            $videoPath = $request->file('video')->store('product-videos', 'public');
         }
 
         if ($request->hasFile('certificate')) {
-            $certificate = $request->file('certificate');
-            $certificateName = time().'_certificate_'.$certificate->getClientOriginalName();
-            $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
+            $certificatePath = $request->file('certificate')->store('certificates', 'public');
         }
 
         $saleType = $request->input('sale_type', Product::SALE_TYPE_NORMAL);
@@ -297,10 +285,7 @@ class ProductController extends Controller
                 Storage::disk('public')->delete($product->image);
             }
             // Upload gambar baru
-            $image = $request->file('image');
-            $imageName = time().'_'.$image->getClientOriginalName();
-            $imagePath = $image->storeAs('products', $imageName, 'public');
-            $product->image = $imagePath;
+            $product->image = $request->file('image')->store('products', 'public');
         }
 
         // Update galeri foto tambahan jika seller mengunggah yang baru
@@ -312,9 +297,8 @@ class ProductController extends Controller
                 }
             }
             $galleryPaths = [];
-            foreach ($request->file('images') as $index => $galleryImage) {
-                $galleryName = time().'_'.$index.'_'.$galleryImage->getClientOriginalName();
-                $galleryPaths[] = $galleryImage->storeAs('products', $galleryName, 'public');
+            foreach ($request->file('images') as $galleryImage) {
+                $galleryPaths[] = $galleryImage->store('products', 'public');
             }
             $product->images = $galleryPaths;
         }
@@ -324,9 +308,7 @@ class ProductController extends Controller
             if ($product->video && Storage::disk('public')->exists($product->video)) {
                 Storage::disk('public')->delete($product->video);
             }
-            $video = $request->file('video');
-            $videoName = time().'_video_'.$video->getClientOriginalName();
-            $product->video = $video->storeAs('product-videos', $videoName, 'public');
+            $product->video = $request->file('video')->store('product-videos', 'public');
         }
 
         // Update sertifikat jika ada sertifikat baru
@@ -335,11 +317,8 @@ class ProductController extends Controller
             if ($product->certificate && Storage::disk('public')->exists($product->certificate)) {
                 Storage::disk('public')->delete($product->certificate);
             }
-            // Upload gambar baru
-            $certificate = $request->file('certificate');
-            $certificateName = time().'_certificate_'.$certificate->getClientOriginalName();
-            $certificatePath = $certificate->storeAs('certificates', $certificateName, 'public');
-            $product->certificate = $certificatePath;
+            // Upload sertifikat baru
+            $product->certificate = $request->file('certificate')->store('certificates', 'public');
         }
 
         $saleType = $request->input('sale_type', Product::SALE_TYPE_NORMAL);

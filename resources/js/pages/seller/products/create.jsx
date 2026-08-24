@@ -9,6 +9,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import CurrencyInput from '@/components/currency-input';
 import { CertificateIcon, VideoIcon } from '@/components/icons';
 
 /**
@@ -117,13 +118,11 @@ export default function SellerCreateProductPage() {
                           ? 'Harga Normal (tetap terlihat)'
                           : 'Harga'}
                       </AuthLabel>
-                      <AuthInput
+                      <CurrencyInput
                         id="price"
-                        type="number"
-                        // step="0.01"
                         name="price"
+                        min={0}
                         required
-                        min="0"
                         defaultValue="0"
                       />
                     </div>
@@ -139,11 +138,10 @@ export default function SellerCreateProductPage() {
                     </div>
                     <div>
                       <AuthLabel htmlFor="starting_price">Harga Awal</AuthLabel>
-                      <AuthInput
+                      <CurrencyInput
                         id="starting_price"
-                        type="number"
                         name="starting_price"
-                        min="1000"
+                        min={1000}
                         required={isLelang}
                       />
                       <p className="mt-1 text-xs text-gray-500">
@@ -155,11 +153,10 @@ export default function SellerCreateProductPage() {
                       <AuthLabel htmlFor="min_increment">
                         Minimal Kenaikan Bid
                       </AuthLabel>
-                      <AuthInput
+                      <CurrencyInput
                         id="min_increment"
-                        type="number"
                         name="min_increment"
-                        min="1000"
+                        min={1000}
                         required={isLelang}
                       />
                     </div>
@@ -249,12 +246,11 @@ export default function SellerCreateProductPage() {
                       <AuthLabel htmlFor="guess_discount_price">
                         Harga Diskon (yang ditebak)
                       </AuthLabel>
-                      <AuthInput
+                      <CurrencyInput
                         id="guess_discount_price"
-                        type="number"
                         name="guess_discount_price"
-                        placeholder="Contoh: 800000"
-                        min="1"
+                        placeholder="Contoh: 800.000"
+                        min={1}
                         required={isTebakHarga}
                       />
                       <p className="mt-1 text-xs text-gray-500">

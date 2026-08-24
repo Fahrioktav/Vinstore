@@ -82,9 +82,42 @@ class Order extends Model
      * Kolom turunan yang selalu ikut saat pesanan diserialisasi ke Inertia,
      * supaya frontend tidak perlu tahu apakah produknya masih ada atau tidak.
      */
+    /**
+     * Perpindahan status yang boleh dilakukan SELLER, dari status saat ini.
+     *
+     * Sebelum ada peta ini, aturannya hanya "salah satu dari lima nilai yang
+     * dikenal", sehingga pesanan bisa melompat dari `Waiting` langsung ke
+     * `Delivered` — dan `Delivered` justru satu-satunya status pengiriman yang
+     * tidak menuntut nomor resi. Lompatan itu menyalakan `delivered_at`, memulai
+     * masa sanggah pembeli, dan membuat pesanan sah diajukan pencairannya:
+     * uang keluar sebelum barangnya bergerak (temuan V9-01).
+     *
+     * `Completed` tidak ada di sini dengan sengaja. Ia milik pembeli lewat
+     * confirmReceipt(), atau penjadwal setelah masa sanggah lewat.
+     */
+    const SELLER_STATUS_TRANSITIONS = [
+        'Waiting' => ['Processing', 'Cancelled'],
+        'Processing' => ['On The Way', 'Cancelled'],
+        'On The Way' => ['Delivered', 'Cancelled'],
+        'Delivered' => [],
+        'Completed' => [],
+        'Cancelled' => [],
+    ];
+
+    /**
+     * Status yang menuntut nomor resi. Barang yang sudah bergerak harus
+     * meninggalkan jejak yang bisa dicek admin saat sengketa — termasuk
+     * `Delivered`, yang dulu justru melewatinya.
+     */
+    const STATUSES_REQUIRING_TRACKING = ['Processing', 'On The Way', 'Delivered'];
+
     protected $appends = [
         'display_item_name',
         'display_store_name',
+        // Pilihan status yang boleh dipilih seller dari keadaan sekarang.
+        // Dikirim dari server supaya dropdown di dashboard tidak perlu
+        // mengulang aturannya sendiri dan berisiko berbeda.
+        'allowed_statuses',
         // Dashboard seller menampilkan total tagihan pembeli; tanpa angka ini
         // seller mengira seluruhnya menjadi haknya.
         'seller_payout_amount',
@@ -543,6 +576,44 @@ class Order extends Model
      * dibayar, yang dananya sudah pernah dicairkan, yang sedang disengketakan,
      * atau yang pengajuannya masih menggantung.
      */
+    /**
+     * @return list<string>
+     */
+    public function getAllowedStatusesAttribute(): array
+    {
+        return self::SELLER_STATUS_TRANSITIONS[$this->status] ?? [];
+    }
+
+    public function sellerMaySetStatus(string $status): bool
+    {
+        // Mengirim ulang status yang sama bukan perpindahan; dibiarkan lewat
+        // supaya penyimpanan nomor resi tidak ikut tertolak.
+        if ($status === $this->status) {
+            return true;
+        }
+
+        return in_array($status, $this->allowed_statuses, true);
+    }
+
+    /**
+     * Alasan perpindahan status ditolak, untuk ditampilkan ke seller.
+     */
+    public function statusTransitionBlockReason(string $status): string
+    {
+        if ($this->allowed_statuses === []) {
+            return 'Status pesanan ini sudah tidak dapat diubah lagi.';
+        }
+
+        return 'Status pesanan harus berurutan. Dari "'.$this->status.'" hanya bisa menjadi: '
+            .implode(' atau ', $this->allowed_statuses).'.';
+    }
+
+    public function needsTrackingNumberFor(string $status): bool
+    {
+        return in_array($status, self::STATUSES_REQUIRING_TRACKING, true)
+            && blank($this->tracking_number);
+    }
+
     public function canRequestPayout(): bool
     {
         return $this->payment_status === 'paid'

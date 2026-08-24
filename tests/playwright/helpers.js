@@ -176,14 +176,14 @@ export async function buatProduk(page, opsi = {}) {
   await page.selectOption('select[name="sale_type"]', tipe);
   await page.fill('input[name="name"]', nama);
   await page.fill('input[name="stock"]', String(stok));
-  await page.fill('input[name="price"]', String(harga));
+  await page.fill('input#price', String(harga));
   await page.selectOption('select[name="category"]', kategori);
   await page.fill('textarea[name="description"]', deskripsi);
   await page.setInputFiles('input[name="image"]', 'tests/fixtures/koin.jpg');
 
   if (tipe === 'tebak_harga') {
     await page.fill(
-      'input[name="guess_discount_price"]',
+      'input#guess_discount_price',
       String(hargaDiskon ?? Math.floor(Number(harga) * 0.8))
     );
     await page.fill(
@@ -234,8 +234,8 @@ export async function buatLelang(page, opsi = {}) {
   await page.fill('textarea[name="description"]', deskripsi);
   // Berat wajib sejak pesanan lelang ikut menagih ongkir.
   await page.fill('input[name="weight"]', String(berat));
-  await page.fill('input[name="starting_price"]', String(hargaAwal));
-  await page.fill('input[name="min_increment"]', String(kelipatan));
+  await page.fill('input#starting_price', String(hargaAwal));
+  await page.fill('input#min_increment', String(kelipatan));
   await page.fill('input[name="starts_at"]', mulai);
   await page.fill('input[name="ends_at"]', selesai);
   await page.setInputFiles('input[name="image"]', 'tests/fixtures/guci.jpg');
@@ -301,16 +301,22 @@ export async function tungguLelangAktif(page, nama, batasMs = 180000) {
 
     if (await tautan.count()) {
       await tautan.click();
-      // Menunggu form bid muncul sekaligus menunggu navigasinya selesai;
+      // Menunggu isi halaman muncul sekaligus menunggu navigasinya selesai;
       // mengecek visibilitas tanpa menunggu akan selalu false tepat setelah
       // klik dan membuat perulangan ini tidak pernah berhasil.
-      const adaFormBid = await page
-        .locator('input[name="amount"]')
+      //
+      // Yang ditunggu bukan hanya form penawaran: pada lelang bernilai tinggi
+      // form itu memang sengaja tidak muncul sampai depositnya dibayar, dan
+      // menunggunya berarti menunggu sesuatu yang tidak akan pernah datang.
+      // Tombol bayar deposit sama sahihnya sebagai tanda lelang sudah aktif.
+      const halamanSiap = await page
+        .locator('input#amount, button:has-text("Bayar Deposit")')
+        .first()
         .waitFor({ state: 'visible', timeout: 8000 })
         .then(() => true)
         .catch(() => false);
 
-      if (adaFormBid) {
+      if (halamanSiap) {
         return;
       }
     }
@@ -340,7 +346,7 @@ export async function bukaTebakHargaAktif(page, nama, batasMs = 180000) {
       await tautan.click();
 
       const adaFormTebakan = await page
-        .locator('input[name="amount"]')
+        .locator('input#amount')
         .waitFor({ state: 'visible', timeout: 8000 })
         .then(() => true)
         .catch(() => false);

@@ -8,6 +8,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import CurrencyInput from '@/components/currency-input';
 import { getAuctionImage, getProductCertificate } from '@/lib/utils';
 import WeightDimensionFields from '@/components/weight-dimension-fields';
 
@@ -134,12 +135,11 @@ export default function SellerEditAuctionPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <AuthLabel htmlFor="starting_price">Harga Awal</AuthLabel>
-                <AuthInput
+                <CurrencyInput
                   id="starting_price"
-                  type="number"
-                  min="1000"
                   value={data.starting_price}
-                  onChange={(e) => setData('starting_price', e.target.value)}
+                  onChange={(nilai) => setData('starting_price', nilai)}
+                  min={1000}
                   required
                 />
               </div>
@@ -147,12 +147,11 @@ export default function SellerEditAuctionPage() {
                 <AuthLabel htmlFor="min_increment">
                   Minimal Kenaikan Bid
                 </AuthLabel>
-                <AuthInput
+                <CurrencyInput
                   id="min_increment"
-                  type="number"
-                  min="1000"
                   value={data.min_increment}
-                  onChange={(e) => setData('min_increment', e.target.value)}
+                  onChange={(nilai) => setData('min_increment', nilai)}
+                  min={1000}
                   required
                 />
               </div>

@@ -25,3 +25,25 @@ docs/
 
 # Arsip build lokal (128 MB) — jangan pernah di-commit
 app.zip
+
+# Arsip dan dump lokal. vinstore.sql memuat isi basis data pengembangan —
+# termasuk akun pengguna beserta kata sandinya yang sudah di-hash — dan tidak
+# boleh pernah sampai ke repositori publik.
+*.zip
+*.sql
+
+# Dokumen skripsi dan hasil analisis. Bukan bagian dari kode aplikasi, dan
+# sengaja dipisahkan agar riwayat repositori tetap berisi kode saja.
+analisis-*.md
+hasil-pengujian-*.md
+plan-perbaikan-*.md
+presentasi-*.md
+presentasi-assets/
+class-diagram/
+erd/
+
+# Keluaran mentah Playwright — dibangkitkan ulang setiap kali suite dijalankan.
+# playwright-report/ sengaja TIDAK diabaikan: berkasnya sudah terlanjur
+# terlacak, dan mengabaikannya tanpa melepas pelacakannya hanya menghasilkan
+# keadaan setengah jalan yang membingungkan.
+/test-results

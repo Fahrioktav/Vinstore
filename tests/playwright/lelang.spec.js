@@ -69,8 +69,8 @@ test.describe('Fitur Lelang', () => {
     await page.fill('input[name="name"]', nama);
     await page.fill('textarea[name="description"]', 'Uji validasi tanggal.');
     await page.fill('input[name="weight"]', '2000');
-    await page.fill('input[name="starting_price"]', '5000000');
-    await page.fill('input[name="min_increment"]', '100000');
+    await page.fill('input#starting_price', '5000000');
+    await page.fill('input#min_increment', '100000');
     await page.fill('input[name="starts_at"]', waktuLokal(60 * 24));
     await page.fill('input[name="ends_at"]', waktuLokal(60)); // lebih awal dari mulai
     await page.setInputFiles('input[name="image"]', 'tests/fixtures/guci.jpg');
@@ -89,7 +89,7 @@ test.describe('Fitur Lelang', () => {
     await tungguLelangAktif(page, namaLelangAktif);
 
     // Harga awal 900.000 + kelipatan 50.000 -> minimum 950.000
-    await page.fill('input[name="amount"]', '960000');
+    await page.fill('input#amount', '960000');
     await page.getByRole('button', { name: 'Tombol ajukan penawaran' }).click();
 
     // Pesan sukses muncul dua kali (toast dan banner di dalam halaman),
@@ -117,7 +117,7 @@ test.describe('Fitur Lelang', () => {
     await tungguLelangAktif(page, namaLelangAktif);
 
     // Harga tertinggi sekarang 960.000, minimum berikutnya 1.010.000.
-    await page.fill('input[name="amount"]', '980000');
+    await page.fill('input#amount', '980000');
     await page.getByRole('button', { name: 'Tombol ajukan penawaran' }).click();
 
     await page.reload();
@@ -191,7 +191,7 @@ test.describe('Fitur Lelang', () => {
     ).toBeVisible();
 
     // Form penawaran belum tersedia sebelum jaminannya dibayar.
-    await expect(halPembeli.locator('input[name="amount"]')).toHaveCount(0);
+    await expect(halPembeli.locator('input#amount')).toHaveCount(0);
 
     await ctxPembeli.close();
   });

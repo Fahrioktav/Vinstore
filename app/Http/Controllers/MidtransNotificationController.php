@@ -8,6 +8,7 @@ use App\Models\PlatformRevenue;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class MidtransNotificationController extends Controller
 {
@@ -35,7 +36,7 @@ class MidtransNotificationController extends Controller
             // milik deposit lelang. Depositnya memakai endpoint webhook yang
             // sama supaya hanya ada satu Payment Notification URL yang perlu
             // didaftarkan di dashboard Midtrans.
-            return $this->handleDepositNotification($paymentReference, $paymentStatus, $isFailure, $payload);
+            return $this->handleDepositNotification($paymentReference, $paymentStatus, $payload);
         }
 
         foreach ($orders as $order) {
@@ -112,66 +113,55 @@ class MidtransNotificationController extends Controller
     /**
      * Notifikasi pembayaran uang jaminan lelang.
      *
-     * Yang boleh menerima kabar pelunasan bukan hanya jaminan `pending`, tetapi
-     * juga yang sudah telanjur ditandai `expired`.
-     *
-     * Alasannya: `expired` dipasang oleh penutupan lelang atas jaminan yang saat
-     * itu belum dibayar — dan "belum dibayar pada detik itu" tidak sama dengan
-     * "tidak akan pernah dibayar". Pembeli yang memilih virtual account bisa saja
-     * sudah menekan bayar semenit sebelum lelangnya tutup. Menolak uangnya
-     * membuat jaminan bernilai `expired` padahal dananya benar-benar diterima,
-     * dan pemiliknya kehilangan jalur pengembalian sama sekali (temuan V7-01).
-     *
-     * Pemilik jaminan semacam itu pasti kalah — untuk menawar ia harus punya
-     * jaminan yang sudah aktif — jadi menaikkannya ke `paid` selalu berujung ke
-     * jalur pengembalian, tidak pernah ke uang muka.
-     *
-     * Status selebihnya (`applied`, `refunded`, `forfeited`) sudah milik alur
-     * lelang dan tidak boleh ditarik mundur oleh notifikasi yang terlambat.
+     * Aturan perpindahan statusnya sendiri ada di
+     * AuctionDeposit::applyPaymentStatus(), dipakai bersama dengan
+     * penyelarasan langsung ke Midtrans.
      */
     private function handleDepositNotification(
         ?string $paymentReference,
         ?string $paymentStatus,
-        bool $isFailure,
         array $payload
     ) {
         $deposit = AuctionDeposit::where('payment_reference', $paymentReference)->first();
 
+        // Jaminan yang transaksinya pernah mati dibuka kembali dengan referensi
+        // baru berimbuhan (`DEP12345678-a1b2c3`), sehingga notifikasi atas
+        // referensi LAMA tidak lagi cocok dengan kolomnya. Referensi lama itu
+        // sama dengan public_id jaminannya, jadi masih bisa ditemukan — dan
+        // harus, karena uangnya nyata (temuan V8-03).
+        if (! $deposit && $paymentReference) {
+            $deposit = AuctionDeposit::where('public_id', Str::before($paymentReference, '-'))->first();
+        }
+
         if (! $deposit) {
-            return response()->json(['message' => 'Order tidak ditemukan.'], 404);
+            return $this->unknownReference($paymentReference, $payload);
         }
 
-        $deposit->midtrans_transaction_id = $payload['transaction_id'] ?? $deposit->midtrans_transaction_id;
-
-        $menungguPelunasan = in_array($deposit->status, [
-            AuctionDeposit::STATUS_PENDING,
-            AuctionDeposit::STATUS_EXPIRED,
-        ], true);
-
-        if ($paymentStatus === 'paid' && $menungguPelunasan) {
-            $terlambat = $deposit->status === AuctionDeposit::STATUS_EXPIRED;
-
-            $deposit->status = AuctionDeposit::STATUS_PAID;
-            $deposit->paid_at = now();
-
-            if ($terlambat) {
-                Log::info('Deposit lelang lunas setelah lelangnya tutup; masuk jalur pengembalian.', [
-                    'deposit_public_id' => $deposit->public_id,
-                    'gross_amount' => $payload['gross_amount'] ?? null,
-                ]);
-            }
-        } elseif ($isFailure && $deposit->status === AuctionDeposit::STATUS_PENDING) {
-            $deposit->status = AuctionDeposit::STATUS_EXPIRED;
-        } elseif ($paymentStatus === 'paid') {
-            Log::warning('Pembayaran deposit lelang datang atas jaminan yang sudah tidak menunggu bayaran.', [
-                'deposit_public_id' => $deposit->public_id,
-                'status' => $deposit->status,
-                'gross_amount' => $payload['gross_amount'] ?? null,
-            ]);
-        }
-
-        $deposit->save();
+        $deposit->applyPaymentStatus($paymentStatus, $payload);
 
         return response()->json(['message' => 'Notification processed.']);
+    }
+
+    /**
+     * Notifikasi bertanda tangan sah atas referensi yang tidak dikenali siapa pun.
+     *
+     * Tanda tangannya sudah diverifikasi sebelum sampai ke sini — artinya
+     * notifikasi ini benar-benar dari Midtrans dan uangnya benar-benar bergerak.
+     * Menjawab 404 lalu melupakannya berarti dana yang tidak dikenali tidak
+     * meninggalkan jejak apa pun di sisi aplikasi, dan satu-satunya cara
+     * mengetahuinya adalah mencocokkan manual di dashboard Midtrans
+     * (temuan V8-03).
+     */
+    private function unknownReference(?string $paymentReference, array $payload)
+    {
+        Log::warning('Notifikasi Midtrans atas referensi yang tidak dikenal; dana perlu dicek manual.', [
+            'payment_reference' => $paymentReference,
+            'transaction_id' => $payload['transaction_id'] ?? null,
+            'transaction_status' => $payload['transaction_status'] ?? null,
+            'gross_amount' => $payload['gross_amount'] ?? null,
+            'payment_type' => $payload['payment_type'] ?? null,
+        ]);
+
+        return response()->json(['message' => 'Order tidak ditemukan.'], 404);
     }
 }

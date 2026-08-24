@@ -70,27 +70,34 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        // Validasi tracking_number wajib jika status Processing atau On The Way
-        $rules = [
-            'status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled',
-            'tracking_number' => 'nullable|string|max:100',
-        ];
-
-        // Jika status diubah menjadi Processing atau On The Way, tracking_number wajib diisi
-        if (in_array($request->status, ['Processing', 'On The Way'])) {
-            $rules['tracking_number'] = 'required|string|max:100';
-        }
-
-        $request->validate($rules, [
-            'tracking_number.required' => 'Nomor resi wajib diisi saat status Processing atau On The Way.',
-        ]);
-
         $order = Order::where('public_id', $id)->firstOrFail();
 
         $store = Auth::user()->store;
 
         if (! $store || $order->store_id !== $store->id) {
             abort(403, 'Anda tidak memiliki akses untuk mengupdate order ini.');
+        }
+
+        $request->validate([
+            'status' => 'required|in:Waiting,Processing,On The Way,Delivered,Cancelled',
+            'tracking_number' => 'nullable|string|max:100',
+        ]);
+
+        // Status harus berurutan. Tanpa ini pesanan bisa melompat dari `Waiting`
+        // langsung ke `Delivered`, dan lompatan itu sudah cukup untuk membuka
+        // pengajuan pencairan atas barang yang tidak pernah dikirim (V9-01).
+        if (! $order->sellerMaySetStatus($request->status)) {
+            return back()->with('error', $order->statusTransitionBlockReason($request->status));
+        }
+
+        // Nomor resi kini juga dituntut oleh `Delivered` — dulu justru satu-satunya
+        // status pengiriman yang melewatinya. Yang sudah punya resi tidak diminta
+        // mengetikkannya lagi.
+        if ($order->needsTrackingNumberFor($request->status) && blank($request->tracking_number)) {
+            return back()->with(
+                'error',
+                'Nomor resi wajib diisi sebelum status pesanan diubah menjadi "'.$request->status.'".'
+            );
         }
 
         // Update status dan tracking number sekaligus

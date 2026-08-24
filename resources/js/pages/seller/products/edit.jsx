@@ -9,6 +9,7 @@ import {
   AuthLabel,
   AuthTextArea,
 } from '@/components/auth/auth-layout';
+import CurrencyInput from '@/components/currency-input';
 import { CertificateIcon, VideoIcon } from '@/components/icons';
 import { getProductCertificate, getProductImage } from '@/lib/utils';
 
@@ -92,11 +93,11 @@ export default function SellerEditProductPage() {
                 <AuthLabel htmlFor="price">
                   {isTebakHarga ? 'Harga Normal (tetap terlihat)' : 'Harga'}
                 </AuthLabel>
-                <AuthInput
+                <CurrencyInput
                   id="price"
-                  type="number"
                   name="price"
                   defaultValue={product.price}
+                  min={0}
                   required
                 />
               </div>
@@ -170,12 +171,11 @@ export default function SellerEditProductPage() {
                   <AuthLabel htmlFor="guess_discount_price">
                     Harga Diskon (yang ditebak)
                   </AuthLabel>
-                  <AuthInput
+                  <CurrencyInput
                     id="guess_discount_price"
-                    type="number"
                     name="guess_discount_price"
-                    min="1"
                     defaultValue={product.guess_discount_price ?? ''}
+                    min={1}
                     required={isTebakHarga}
                   />
                   <p className="mt-1 text-xs text-gray-500">
