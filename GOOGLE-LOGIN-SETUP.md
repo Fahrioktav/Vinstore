@@ -150,16 +150,20 @@ Melepas tautannya juga dari halaman Profil, dan **ditolak bila akun itu belum pu
 
 ### Forgot Password Flow:
 ```
-User -> Klik "Lupa Password?"
-     -> MAIL_MAILER sungguhan   -> /forgot-password -> email berisi link reset
-     -> MAIL_MAILER = log/array -> /contact (admin membuatkan link resetnya)
-     -> User klik link
-     -> Masukkan password baru
-     -> Password di-update
-     -> Redirect ke login
+Tautan "Lupa Password?" di halaman login SENGAJA DISEMBUNYIKAN
+selama MAIL_MAILER masih 'log'.
+
+Pemulihan ditempuh lewat admin:
+  Pengguna menghubungi admin (mis. lewat halaman /contact)
+  -> Admin: Kelola User -> "Tautan Reset Password"
+  -> Tautan sekali pakai ditampilkan sekali untuk disalin
+  -> Pengguna membuka tautan -> masukkan password baru
+  -> Redirect ke login
 ```
 
-Tujuan tautannya ditentukan server. Selama mailer-nya `log` atau `array`, email reset hanya ditulis ke `storage/logs` dan tidak pernah sampai ke siapa pun, jadi pengguna diarahkan ke halaman Kontak — admin lalu membuatkan tautan sekali pakai lewat **Kelola User → Tautan Reset Password**. Begitu SMTP disetel, halaman lupa password kembali sendiri tanpa perubahan kode (temuan V11-03).
+Tautan itu memakai token bawaan Laravel — masa berlaku, sifat sekali-pakai, dan seluruh penjagaannya sama dengan yang biasa dikirim lewat surel. Admin tidak pernah mengetahui password barunya.
+
+Untuk mengembalikan alur surel: arahkan `MAIL_MAILER` ke SMTP sungguhan, lalu hidupkan kembali `<Link href="/forgot-password">` di `resources/js/pages/auth/login.jsx`. Route `password.request` dan `password.email` masih terdaftar (temuan V11-03).
 
 ---
 

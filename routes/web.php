@@ -125,13 +125,6 @@ Route::middleware(['role:guestOnly'])->group(function () {
     // Login
     Route::get('/login', fn () => Inertia::render('auth/login', [
         'heroText' => 'Selamat Datang Kembali!',
-        // Apakah pemulihan password lewat surel benar-benar sampai ke penerima.
-        // Selama mailer-nya `log` atau `array`, tautannya hanya ditulis ke
-        // berkas log dan halaman "lupa password" menjadi janji kosong; pengguna
-        // diarahkan ke halaman Kontak sebagai gantinya. Begitu MAIL_MAILER
-        // diarahkan ke SMTP sungguhan, tautannya kembali sendiri tanpa
-        // perubahan kode (temuan V11-03).
-        'passwordResetByEmail' => ! in_array(config('mail.default'), ['log', 'array'], true),
     ]))->name('login.form');
     // Penghitung per akun ada di LoginController — itu yang menahan penebakan
     // password. Yang di sini jaring pengaman per IP, untuk penyerang yang
