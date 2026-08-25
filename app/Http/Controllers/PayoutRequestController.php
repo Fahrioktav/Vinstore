@@ -62,7 +62,8 @@ class PayoutRequestController extends Controller
                     'order_id' => $locked->id,
                     'store_id' => $store->id,
                     // Bukan `price`: total tagihan mengandung ongkir dan biaya
-                    // layanan yang bukan hak seller. Lihat Order::sellerPayoutAmount().
+                    // layanan — satu-satunya komponen yang bukan hak seller.
+                    // Lihat Order::sellerPayoutAmount().
                     'amount' => $locked->sellerPayoutAmount(),
                     'bank_name' => $validated['bank_name'],
                     'account_number' => $validated['account_number'],

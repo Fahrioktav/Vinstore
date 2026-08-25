@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import {
   CartIcon,
+  ChatIcon,
   CloseIcon,
   HelpIcon,
   LogoutIcon,
@@ -45,16 +46,25 @@ const links = {
 // mengikuti kelas Tailwind di tempat ia dirender.
 const baseMenus = [{ label: 'Profil', href: '/profile', icon: ProfileIcon }];
 const bantuanUser = { label: 'Bantuan', href: '/bantuan', icon: HelpIcon };
+// Chat ke penjual, dibedakan dari "Bantuan" yang menuju admin. Seller punya
+// dua entri: sebagai pembeli (/chat) dan sebagai penjual (/seller/chat).
+const chatPembeli = { label: 'Chat Penjual', href: '/chat', icon: ChatIcon };
 const menus = {
   default: [
     ...baseMenus,
+    chatPembeli,
     bantuanUser,
     { label: 'Keranjang', href: '/cart', icon: CartIcon },
     // Deposit lelang jarang dibuka — hanya saat pembeli mengikuti lelang
     // bernilai tinggi — jadi tempatnya di dropdown profil, bukan navbar utama.
     { label: 'Deposit Lelang', href: '/deposit-lelang', icon: MoneyIcon },
   ],
-  seller: [...baseMenus, bantuanUser],
+  seller: [
+    ...baseMenus,
+    { label: 'Chat Pembeli', href: '/seller/chat', icon: ChatIcon },
+    chatPembeli,
+    bantuanUser,
+  ],
   admin: baseMenus,
   validator: [...baseMenus, bantuanUser],
 };

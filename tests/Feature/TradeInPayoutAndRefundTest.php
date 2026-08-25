@@ -495,27 +495,34 @@ class TradeInPayoutAndRefundTest extends TestCase
     }
 
     /**
-     * Kalau KEDUA pihak belum mengirim, tidak ada yang boleh melapor — keduanya
-     * sama-sama lalai.
+     * Kalau KEDUA pihak belum mengirim sampai tenggat, siapa pun di antara
+     * keduanya boleh membawanya ke admin.
      *
-     * Dulu partyMissingShipment() selalu mengembalikan 'requester' lebih dulu,
-     * sehingga responder yang juga belum mengirim tetap lolos pengecekan dan
-     * bisa melaporkan requester.
+     * Aturannya sempat kebalikan dari ini: karena pelapor wajib sudah mengirim
+     * barangnya sendiri, keadaan "keduanya sama-sama diam" berarti tidak ada
+     * satu pun yang boleh melapor. Tidak ada pula penjadwal yang menyentuh
+     * tahap saling kirim, sehingga dua produk milik dua toko berbeda terkunci
+     * selamanya justru karena tidak ada yang bergerak — jalan buntu yang tidak
+     * disengaja.
+     *
+     * Yang tetap dijaga adalah maksud aslinya: pihak yang lalai tidak boleh
+     * melaporkan pihak yang taat. Test tepat di atas membuktikannya masih
+     * berlaku.
      */
-    public function test_tidak_ada_yang_bisa_melapor_bila_keduanya_belum_kirim(): void
+    public function test_keduanya_belum_kirim_maka_siapa_pun_boleh_melapor(): void
     {
         $tradeIn = $this->overdueTradeIn();
 
-        $this->assertFalse($tradeIn->canReportStalledBy($this->requesterStore));
-        $this->assertFalse($tradeIn->canReportStalledBy($this->responderStore));
+        $this->assertTrue($tradeIn->canReportStalledBy($this->requesterStore));
+        $this->assertTrue($tradeIn->canReportStalledBy($this->responderStore));
 
         $this->actingAs($this->responderUser)
             ->post('/seller/tukar-tambah/'.$tradeIn->public_id.'/report', [
-                'reason' => 'Pengaju belum mengirim, padahal saya juga belum mengirim.',
+                'reason' => 'Kami berdua tidak jadi melanjutkan tukar tambah ini.',
             ])
-            ->assertSessionHas('error');
+            ->assertSessionHas('success');
 
-        $this->assertSame(0, RefundRequest::count());
+        $this->assertSame(1, RefundRequest::count());
     }
 
     /**

@@ -40,8 +40,8 @@ An Indonesian **antique/vintage goods marketplace** (`Vinstore` = vintage store)
 
 ### Trading modes
 
-1. **Jual beli (normal)** — cart → checkout → Midtrans Snap → seller ships → buyer confirms → seller balance released.
-2. **Lelang (auction)** — timed bidding, live via WebSocket. `auctions:finish` closes expired auctions, picks the highest bid, and auto-creates an unpaid `Order` for the winner.
+1. **Jual beli (normal)** — cart → checkout → Midtrans Snap → seller ships → buyer confirms → seller balance released. **Money split:** the seller receives item value + packaging + shipping + weight fee (they pack and take the parcel to the courier themselves); the **service fee is the marketplace's only revenue**. See `Order::sellerPayoutAmount()` — the buyer's bill must always divide exactly into those two parts.
+2. **Lelang (auction)** — timed bidding. `auctions:finish` closes expired auctions, picks the highest bid, and auto-creates an unpaid `Order` for the winner. Bids are **not** pushed live to the browser in the current build — see "Things that will bite you".
 3. **Tukar tambah (trade-in)** — seller-to-seller product swap, optionally with `additional_cash` settled through a separate Midtrans webhook. Products are exchanged only after payment settles. Named `TradeIn*` in code; the feature was called "barter" until the cash-difference flow made that term inaccurate.
 4. **Tebak harga (price guessing)** — the real price is hidden; buyers submit **one final guess**. Closest guess wins a 24-hour exclusive right to buy. Lifecycle: `scheduled → active → ended → public`.
 
@@ -63,7 +63,7 @@ composer run dev
 php artisan serve                    # http://localhost:8000
 npm run dev                          # Vite dev server
 php artisan queue:listen --tries=1   # queue worker (DB-backed)
-php artisan reverb:start             # WebSocket server (required for auctions + support chat)
+php artisan reverb:start             # WebSocket server (required for support chat)
 php artisan schedule:work            # auctions:finish + tebak-harga:finish, every minute
 
 # Database
@@ -182,7 +182,8 @@ Both must call `isValidSignature()` before acting. `mapPaymentStatus()` translat
 
 ## Things that will bite you
 
-- **Reverb must be running** for auction bidding and support chat to work end-to-end. It is a separate process from `composer run dev`.
+- **Reverb must be running** for support chat to work end-to-end. It is a separate process from `composer run dev`.
+- **Auction bidding is not live.** `AuctionBidPlaced` broadcasts on `auction.{numeric id}`, but `Auction` hides `id` (the `public_id` convention), so the listener in `auctions/show.jsx` bails on its first line and the frontend has no legal way to reach that channel. Placing a bid works — it is a normal form POST; only the automatic refresh is missing, and the page says so. Reviving it needs the channel keyed by `public_id` *and* a leading dot in `.listen('.auction.bid.placed')`, because the event uses a custom `broadcastAs()`.
 - **The scheduler must be running** or auctions never close and tebak harga never resolves. Several controllers defensively call `PriceGuessService::sync()` on read for this reason.
 - **`/` redirects by role.** Admins, sellers, and validators never see the home page. Test buyer-facing changes as a `user`.
 - **Playwright runs `workers: 1`, `fullyParallel: false`** deliberately — the specs share one database and are order-sensitive. Do not parallelise them.

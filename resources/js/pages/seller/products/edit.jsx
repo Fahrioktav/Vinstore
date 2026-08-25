@@ -85,6 +85,7 @@ export default function SellerEditProductPage() {
                   type="number"
                   name="stock"
                   defaultValue={product.stock}
+                  min="0"
                   required
                 />
               </div>
@@ -97,7 +98,7 @@ export default function SellerEditProductPage() {
                   id="price"
                   name="price"
                   defaultValue={product.price}
-                  min={0}
+                  min={1}
                   required
                 />
               </div>
@@ -369,7 +370,7 @@ export default function SellerEditProductPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
-                    <CertificateIcon />
+                    <CertificateIcon className="h-5 w-5 shrink-0" />
                     Lihat Sertifikat Saat Ini
                   </a>
                 </div>

@@ -25,7 +25,13 @@ const paymentStyles = {
   Unknown: 'bg-gray-500/30 text-gray-200',
 };
 
+// Sejak pesanan lunas boleh diajukan refund di status mana pun (temuan
+// V10-01), daftarnya ikut memuat alasan yang muncul SEBELUM barang sampai.
+// Tanpa itu pembeli yang batal membeli harus memilih "Lainnya" untuk keadaan
+// yang justru paling sering terjadi.
 const refundReasons = [
+  'Saya ingin membatalkan pesanan',
+  'Penjual tidak kunjung mengirim barang',
   'Barang rusak saat diterima',
   'Barang tidak sesuai deskripsi',
   'Barang tidak lengkap',
@@ -269,7 +275,11 @@ export default function OrderPage() {
                             mengikat, dan membatalkannya sendiri akan membuat
                             deposit pemenang tersangkut tanpa pemilik. Yang tidak
                             jadi membayar cukup membiarkan tenggatnya lewat. */}
+                        {/* Pesanan yang sudah dibayar tidak lagi menampilkan
+                            tombol batal: jalur keluarnya adalah pengajuan
+                            refund di sebelahnya. */}
                         {['Waiting', 'On The Way'].includes(order.status) &&
+                        order.payment_status !== 'paid' &&
                         !order.auction ? (
                           <button
                             type="button"
@@ -281,8 +291,12 @@ export default function OrderPage() {
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
+                        {/* Tanpa syarat status. Pesanan lunas yang belum
+                            dikirim pun berhak meminta uangnya kembali —
+                            itulah jalan keluar yang menggantikan tombol
+                            batal (temuan V10-01). */}
                         {order.payment_status === 'paid' &&
-                          ['Delivered', 'Completed'].includes(order.status) &&
+                          !order.seller_released_at &&
                           !order.refund_request && (
                             <button
                               type="button"
@@ -292,6 +306,18 @@ export default function OrderPage() {
                               Ajukan Refund
                             </button>
                           )}
+                        {/* Tanpa syarat status. Pertanyaan tentang pesanan
+                            justru paling sering muncul saat barangnya belum
+                            sampai — membatasinya ke pesanan yang sudah selesai
+                            menutup chat tepat ketika ia paling dibutuhkan.
+                            Pesanan yang tokonya sudah hilang ditolak server
+                            dengan pesan yang jelas. */}
+                        <Link
+                          href={`/chat/pesanan/${order.public_id}`}
+                          className="text-xs font-semibold text-[#E9E19E] transition hover:text-white"
+                        >
+                          Chat Penjual
+                        </Link>
                       </div>
                     </td>
                   </tr>

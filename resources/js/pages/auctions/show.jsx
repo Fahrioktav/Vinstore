@@ -15,6 +15,18 @@ export default function AuctionShow() {
   const [bids, setBids] = useState(initialAuction.bids || []);
   const [showNewBidNotification, setShowNewBidNotification] = useState(false);
 
+  // Props yang datang dari server harus menimpa state lokal.
+  //
+  // Tanpa ini, `useState(initialAuction)` hanya membaca props SEKALI: setelah
+  // menawar, server mengirim harga dan riwayat bid yang sudah diperbarui,
+  // tetapi halaman tetap menampilkan angka lama. Pembeli membaca "Penawaran
+  // berhasil diajukan" tepat di atas harga yang tidak berubah dan daftar bid
+  // yang masih kosong — tampak seperti gagal padahal berhasil.
+  useEffect(() => {
+    setAuction(initialAuction);
+    setBids(initialAuction.bids || []);
+  }, [initialAuction]);
+
   const minimumBid =
     Number(auction.current_price || auction.starting_price) +
     Number(auction.min_increment);
@@ -108,7 +120,21 @@ export default function AuctionShow() {
     });
   }, [flash]);
 
-  // WebSocket real-time listener
+  // Pendengar penawaran lewat WebSocket — BELUM AKTIF.
+  //
+  // Blok ini tidak pernah berjalan, dan penyebabnya bukan Reverb yang mati.
+  // Penjagaan di bawah menuntut `auction.id`, sedangkan model Auction
+  // menyembunyikan `id` sesuai konvensi `public_id` — nilainya selalu
+  // `undefined`, jadi blok ini berhenti di baris pertamanya untuk semua orang.
+  // Backend pun menyiarkan ke kanal `auction.{id numerik}`, alamat yang tidak
+  // punya cara sah untuk didatangi dari sisi peramban.
+  //
+  // Karena itu halaman ini TIDAK menjanjikan penawaran yang bergerak sendiri:
+  // penawaran terbaru muncul setelah halaman dimuat ulang, dan itulah yang
+  // tertulis di panelnya. Menghidupkannya kelak menuntut dua hal sekaligus —
+  // menyiarkan ke kanal ber-`public_id`, dan menulis `.listen('.nama.event')`
+  // dengan titik di depan karena event-nya memakai broadcastAs() kustom
+  // (temuan V10-03).
   useEffect(() => {
     if (!window.Echo || !auction.id) return;
 
@@ -194,7 +220,6 @@ export default function AuctionShow() {
 
         <aside className="space-y-6">
           <div className="rounded-lg bg-white p-6 shadow-md">
-            {/* Real-time notification */}
             {showNewBidNotification && (
               <div className="mb-4 flex animate-pulse items-center gap-2 rounded border-l-4 border-blue-500 bg-blue-50 px-4 py-3 text-sm text-blue-700">
                 <NotificationIcon className="h-4 w-4" />
@@ -286,7 +311,7 @@ export default function AuctionShow() {
                         disabled={processing}
                         className="w-full rounded-lg bg-[#B77C4C] px-5 py-3 font-semibold text-white transition hover:bg-[#8d5e39] disabled:opacity-50"
                       >
-                        Tombol ajukan penawaran
+                        {processing ? 'Mengirim...' : 'Ajukan Penawaran'}
                       </button>
                     </>
                   )}
@@ -320,9 +345,14 @@ export default function AuctionShow() {
           </div>
 
           <div className="rounded-lg bg-white p-6 shadow-md">
-            <h2 className="mb-4 text-lg font-bold text-[#53685B]">
+            <h2 className="mb-2 text-lg font-bold text-[#53685B]">
               Riwayat Bid
             </h2>
+            {/* Dikatakan apa adanya. Daftar ini adalah keadaan saat halaman
+                dimuat, bukan siaran langsung. */}
+            <p className="mb-4 text-xs text-gray-500">
+              Muat ulang halaman untuk melihat penawaran terbaru.
+            </p>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full min-w-[20rem] text-sm">
                 <thead className="bg-[#53685B] text-white">

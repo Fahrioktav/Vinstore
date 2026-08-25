@@ -59,7 +59,13 @@ class SellerDashboardController extends Controller
         // Ringkasan dana, dihitung dari pesanan — bukan dari saldo tersimpan,
         // karena dana kini langsung ditransfer ke rekening seller saat
         // pencairan disetujui dan tidak pernah singgah di saldo toko.
-        $readyToRequest = $orders->filter->can_request_payout->sum('price');
+        // Yang dijumlahkan adalah HAK SELLER, bukan tagihan pembeli. Keduanya
+        // berbeda sebesar biaya layanan marketplace, sehingga memakai `price`
+        // membuat kartu ini menjanjikan angka yang lebih besar daripada yang
+        // benar-benar cair — dan baris pesanan di bawahnya, yang memang memakai
+        // `seller_payout_amount`, terlihat bertentangan dengannya.
+        $readyToRequest = $orders->filter->can_request_payout
+            ->sum(fn ($order) => $order->sellerPayoutAmount());
 
         $pendingPayoutAmount = PayoutRequest::where('store_id', $store->id)
             ->pending()
@@ -69,17 +75,19 @@ class SellerDashboardController extends Controller
             ->where('status', PayoutRequest::STATUS_APPROVED)
             ->sum('amount');
 
-        // Hitung total income (hanya order yang sudah selesai/delivered)
-        $totalIncome = Order::where('store_id', $store->id)
+        // Pendapatan seller = jumlah HAK SELLER atas pesanan yang sudah sampai,
+        // bukan jumlah tagihan pembelinya. Biaya layanan marketplace tidak
+        // pernah menjadi pendapatan seller, jadi ia tidak boleh ikut terhitung
+        // di sini (sebelumnya kedua angka ini memakai `price`).
+        $pesananSelesai = Order::where('store_id', $store->id)
             ->whereIn('status', ['Delivered', 'Completed'])
-            ->sum('price');
+            ->get();
 
-        // Income bulan ini
-        $monthlyIncome = Order::where('store_id', $store->id)
-            ->whereIn('status', ['Delivered', 'Completed'])
-            ->whereYear('created_at', date('Y'))
-            ->whereMonth('created_at', date('m'))
-            ->sum('price');
+        $totalIncome = $pesananSelesai->sum(fn ($order) => $order->sellerPayoutAmount());
+
+        $monthlyIncome = $pesananSelesai
+            ->filter(fn ($order) => $order->created_at?->isSameMonth(now()))
+            ->sum(fn ($order) => $order->sellerPayoutAmount());
 
         // Catatan: grafik pendapatan bulanan dan "Top 5 Produk Terlaris" sudah
         // dihapus dari dashboard, berikut kedua kueri yang menyiapkan datanya —

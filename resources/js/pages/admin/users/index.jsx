@@ -6,12 +6,13 @@ import {
   BlockedIcon,
   EditIcon,
   EmptyStateIcon,
+  LockIcon,
   SuccessIcon,
 } from '@/components/icons';
 import { confirmDialog, promptDialog } from '@/lib/dialog';
 
 export default function AdminUsers() {
-  const { users, success } = usePage().props;
+  const { users, success, flash } = usePage().props;
 
   // Akun tidak pernah dihapus, hanya dinonaktifkan — menghapusnya ikut
   // memusnahkan seluruh riwayat pesanannya (temuan V4-12).
@@ -50,6 +51,28 @@ export default function AdminUsers() {
     });
   };
 
+  // Pemulihan password lewat surel belum hidup (MAIL_MAILER masih 'log').
+  // Pengguna yang terkunci di luar melapor lewat halaman Kontak, lalu admin
+  // membuatkan tautan sekali pakai ini dan menyampaikannya kembali — lewat
+  // balasan kontak, telepon, atau apa pun yang identitasnya sudah dipastikan
+  // (temuan V11-03).
+  const buatTautanReset = async (user) => {
+    const ok = await confirmDialog({
+      title: `Buat tautan reset password untuk ${user.username}?`,
+      description:
+        'Pastikan lebih dulu bahwa yang meminta memang pemilik akun ini. Tautannya sekali pakai dan hanya ditampilkan satu kali di halaman ini.',
+      confirmLabel: 'Buat tautan',
+    });
+
+    if (!ok) return;
+
+    router.post(
+      `/admin/users/${user.public_id}/reset-link`,
+      {},
+      { preserveScroll: true }
+    );
+  };
+
   return (
     <>
       <Head title="Kelola User" />
@@ -60,6 +83,22 @@ export default function AdminUsers() {
               <SuccessIcon className="h-5 w-5 shrink-0" />
               {success}
             </p>
+          </div>
+        )}
+
+        {flash?.passwordResetLink && (
+          <div className="mb-6 rounded-lg border-l-4 border-amber-500 bg-amber-50 px-4 py-3 shadow-sm">
+            <p className="font-semibold text-amber-900">
+              Tautan reset password untuk {flash.passwordResetFor}
+            </p>
+            <p className="mt-1 text-xs text-amber-800">
+              Salin dan sampaikan kepada pemilik akun. Tautan ini sekali pakai,
+              punya masa berlaku, dan tidak akan ditampilkan lagi setelah
+              halaman ini dimuat ulang.
+            </p>
+            <code className="mt-2 block overflow-x-auto rounded bg-white px-3 py-2 text-xs break-all text-gray-800">
+              {flash.passwordResetLink}
+            </code>
           </div>
         )}
 
@@ -120,6 +159,11 @@ export default function AdminUsers() {
                                 label: 'Edit',
                                 icon: <EditIcon />,
                                 href: `/admin/users/${user.public_id}/edit`,
+                              },
+                              {
+                                label: 'Tautan Reset Password',
+                                icon: <LockIcon />,
+                                onClick: () => buatTautanReset(user),
                               },
                               user.deactivated_at
                                 ? {

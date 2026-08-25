@@ -80,7 +80,7 @@ export default function StoreEditPage() {
               <label htmlFor="photo-upload" className="group cursor-pointer">
                 <div className="transform rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm transition-all hover:scale-105">
                   <div className="flex items-center gap-3">
-                    <CameraIcon />
+                    <CameraIcon className="h-6 w-6 text-[#53685B]" />
                     <span className="font-semibold text-[#53685B] transition-colors group-hover:text-[#3c4a3e]">
                       Ubah Foto Toko
                     </span>
@@ -123,7 +123,7 @@ export default function StoreEditPage() {
               />
               {errors?.store_name && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                  <ErrorIcon />
+                  <ErrorIcon className="h-4 w-4 shrink-0" />
                   {errors.store_name}
                 </p>
               )}
@@ -147,7 +147,7 @@ export default function StoreEditPage() {
                 />
                 {errors?.category && (
                   <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                    <ErrorIcon />
+                    <ErrorIcon className="h-4 w-4 shrink-0" />
                     {errors.category}
                   </p>
                 )}
@@ -170,7 +170,7 @@ export default function StoreEditPage() {
                 />
                 {errors?.location && (
                   <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                    <ErrorIcon />
+                    <ErrorIcon className="h-4 w-4 shrink-0" />
                     {errors.location}
                   </p>
                 )}
@@ -194,7 +194,7 @@ export default function StoreEditPage() {
               />
               {errors?.description && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                  <ErrorIcon />
+                  <ErrorIcon className="h-4 w-4 shrink-0" />
                   {errors.description}
                 </p>
               )}
@@ -216,7 +216,7 @@ export default function StoreEditPage() {
               />
               {(errors?.latitude || errors?.longitude) && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-red-500">
-                  <ErrorIcon />
+                  <ErrorIcon className="h-4 w-4 shrink-0" />
                   {errors.latitude || errors.longitude}
                 </p>
               )}
@@ -237,12 +237,12 @@ export default function StoreEditPage() {
               >
                 {processing ? (
                   <span className="flex items-center justify-center gap-2">
-                    <SpinnerIcon />
+                    <SpinnerIcon className="h-5 w-5" />
                     Menyimpan...
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    <CheckIcon />
+                    <CheckIcon className="h-5 w-5" />
                     Simpan Perubahan
                   </span>
                 )}

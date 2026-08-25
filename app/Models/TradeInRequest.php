@@ -65,6 +65,7 @@ class TradeInRequest extends Model
         'payment_status',
         'shipping_started_at',
         'payment_reference',
+        'payment_due_at',
         'snap_token',
         'midtrans_transaction_id',
         'paid_at',
@@ -90,6 +91,7 @@ class TradeInRequest extends Model
         'additional_cash' => 'decimal:2',
         'responded_at' => 'datetime',
         'shipping_started_at' => 'datetime',
+        'payment_due_at' => 'datetime',
         'paid_at' => 'datetime',
         'requester_shipped_at' => 'datetime',
         'requester_received_at' => 'datetime',
@@ -372,6 +374,217 @@ class TradeInRequest extends Model
             : $this->requestedProduct;
     }
 
+    /* ================ Tenggat pembayaran selisih ================ */
+
+    /**
+     * Berapa jam pembayar punya waktu melunasi selisih sejak tukar tambah
+     * disetujui.
+     *
+     * Disamakan dengan masa berlaku transaksi Snap Midtrans supaya tombol bayar
+     * dan tenggat sistem habis bersamaan — tidak ada jendela di mana tombolnya
+     * masih hidup tetapi tokennya sudah mati.
+     */
+    public const PAYMENT_DEADLINE_HOURS = 24;
+
+    /**
+     * Tukar tambah yang sudah disetujui tetapi selisihnya belum dibayar.
+     * Di tahap inilah kedua produk terkunci tanpa satu pun barang bergerak.
+     */
+    public function isAwaitingPayment(): bool
+    {
+        return $this->status === self::STATUS_ACCEPTED
+            && $this->payment_status === self::PAYMENT_PENDING;
+    }
+
+    public function paymentDeadlineAt(): ?\Illuminate\Support\Carbon
+    {
+        return $this->payment_due_at?->copy();
+    }
+
+    public function isPaymentOverdue(): bool
+    {
+        $deadline = $this->paymentDeadlineAt();
+
+        return $this->isAwaitingPayment()
+            && $deadline !== null
+            && now()->greaterThan($deadline);
+    }
+
+    /**
+     * Bolehkah toko ini membatalkan tukar tambah yang menunggu pembayaran?
+     *
+     * Pembayarnya boleh kapan saja — dialah yang menanggung, dan memaksanya
+     * menunggu tenggat hanya menahan barang orang lain tanpa guna. Pihak lawan
+     * boleh setelah tenggat lewat: sampai titik itu ia terikat pada
+     * persetujuannya sendiri, sesudahnya ia berhak atas produknya kembali.
+     *
+     * Inilah jalan keluar yang dulu tidak ada. Sebelumnya `cancel()` dan
+     * `reject()` hanya menerima status `pending` — yaitu sebelum produknya
+     * terkunci — sehingga tukar tambah yang sudah disetujui tidak punya pintu
+     * keluar sama sekali (temuan V2-01).
+     */
+    public function canCancelUnpaidBy(?Store $store): bool
+    {
+        if (! $this->isAwaitingPayment() || $this->roleOfStore($store) === null) {
+            return false;
+        }
+
+        return $this->isPayer($store) || $this->isPaymentOverdue();
+    }
+
+    /**
+     * Alasan tombol batal belum boleh ditekan, untuk pihak yang menunggu.
+     */
+    public function cancelBlockReasonFor(?Store $store): ?string
+    {
+        if (! $this->isAwaitingPayment() || $this->roleOfStore($store) === null) {
+            return null;
+        }
+
+        if ($this->canCancelUnpaidBy($store)) {
+            return null;
+        }
+
+        $deadline = $this->paymentDeadlineAt()?->translatedFormat('d M Y H:i');
+
+        return 'Menunggu '.$this->payerLabel().' membayar selisih. Anda dapat membatalkan tukar tambah ini setelah '
+            .($deadline ?? 'tenggat terlampaui').'.';
+    }
+
+    /**
+     * Batalkan tukar tambah yang selisihnya tidak kunjung dibayar, lalu buka
+     * kunci kedua produk.
+     *
+     * Idempoten: yang sudah tidak lagi menunggu pembayaran dilewati begitu saja,
+     * sehingga penjadwal dan tombol manual boleh berlomba tanpa akibat.
+     */
+    public function cancelUnpaid(?string $catatan = null): bool
+    {
+        if (! $this->isAwaitingPayment()) {
+            return false;
+        }
+
+        $berhasil = false;
+
+        DB::transaction(function () use (&$berhasil, $catatan) {
+            $locked = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $locked || ! $locked->isAwaitingPayment()) {
+                return;
+            }
+
+            $locked->forceFill([
+                'status' => self::STATUS_CANCELLED,
+                'payment_status' => self::PAYMENT_EXPIRED,
+                'note' => $catatan ?? $locked->note,
+            ])->save();
+
+            $locked->releaseProductLocks();
+
+            $berhasil = true;
+        });
+
+        $this->refresh();
+
+        return $berhasil;
+    }
+
+    /**
+     * Buka kunci kedua produk yang ditahan tukar tambah ini.
+     *
+     * Tinggal di model, bukan di controller, karena yang membutuhkannya lebih
+     * dari satu: pembatalan manual, penjadwal tenggat, dan persetujuan
+     * pengembalian dana oleh admin.
+     */
+    public function releaseProductLocks(): void
+    {
+        Product::where('locked_for_trade_in_id', $this->id)
+            ->update(['locked_for_trade_in_id' => null]);
+    }
+
+    /**
+     * Tanyakan keadaan pembayaran selisih langsung ke Midtrans, lalu terapkan
+     * bila ternyata sudah lunas.
+     *
+     * Webhook tetap jalur utamanya, tetapi ia tidak pernah sampai di lingkungan
+     * lokal dan di produksi pun bisa gagal terkirim. Tanpa penyelarasan ini,
+     * uang yang benar-benar sudah diterima tetap tercatat menunggu — dan
+     * tenggat pembayaran akan membatalkan tukar tambah yang sebenarnya lunas.
+     *
+     * Polanya sama dengan AuctionDeposit::syncFromMidtrans().
+     */
+    public function syncPaymentFromMidtrans(): void
+    {
+        if ($this->payment_status === self::PAYMENT_PAID || empty($this->payment_reference)) {
+            return;
+        }
+
+        $midtrans = app(\App\Services\MidtransService::class);
+        $status = $midtrans->getTransactionStatus($this->payment_reference);
+
+        $paymentStatus = $midtrans->mapPaymentStatus(
+            $status['transaction_status'] ?? null,
+            $status['fraud_status'] ?? null
+        );
+
+        if ($paymentStatus !== 'paid') {
+            return;
+        }
+
+        DB::transaction(function () use ($status) {
+            $locked = self::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->payment_status === self::PAYMENT_PAID) {
+                return;
+            }
+
+            $locked->forceFill([
+                'payment_status' => self::PAYMENT_PAID,
+                'midtrans_transaction_id' => $status['transaction_id'] ?? null,
+                'paid_at' => now(),
+            ])->save();
+
+            // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
+            // Tukar tambah masuk tahap saling kirim barang lebih dulu.
+            $locked->startShipping();
+        });
+
+        $this->refresh();
+    }
+
+    /**
+     * Masuk tahap saling kirim barang. Dipanggil setelah tukar tambah disetujui
+     * tanpa selisih uang, atau setelah selisihnya lunas.
+     */
+    public function startShipping(): void
+    {
+        if ($this->status === self::STATUS_SHIPPING || $this->isCompleted()) {
+            return;
+        }
+
+        // Titik awal tenggat pengiriman: dari sini kedua seller punya
+        // SHIPPING_DEADLINE_DAYS hari untuk mengisi resi.
+        $this->forceFill([
+            'status' => self::STATUS_SHIPPING,
+            'shipping_started_at' => now(),
+        ])->save();
+    }
+
+    public function getPaymentDeadlineAtAttribute(): ?string
+    {
+        return $this->paymentDeadlineAt()?->toIso8601String();
+    }
+
+    public function getCanCancelUnpaidAttribute(): bool
+    {
+        return $this->canCancelUnpaidBy(Auth::user()?->store);
+    }
+
+    public function getCancelBlockReasonAttribute(): ?string
+    {
+        return $this->cancelBlockReasonFor(Auth::user()?->store);
+    }
+
     /* ==================== Tenggat pengiriman ==================== */
 
     /**
@@ -426,18 +639,33 @@ class TradeInRequest extends Model
             return false;
         }
 
-        // Pelapor harus sudah mengirim barangnya sendiri. Memeriksa
-        // partyMissingShipment() saja tidak cukup: fungsi itu mengembalikan
-        // 'requester' lebih dulu, sehingga saat KEDUA pihak belum mengirim,
-        // responder yang sama-sama lalai ikut lolos.
-        if ($this->{$role.'_shipped_at'} === null) {
+        $counterpart = $role === 'requester' ? 'responder' : 'requester';
+        $sayaKirim = $this->{$role.'_shipped_at'} !== null;
+        $lawanKirim = $this->{$counterpart.'_shipped_at'} !== null;
+
+        // Yang lalai tidak boleh melaporkan yang taat: selama pihak lawan sudah
+        // mengirim, pelapor harus lebih dulu memenuhi kewajibannya sendiri.
+        //
+        // Tetapi ketika KEDUA pihak sama-sama tidak mengirim sampai tenggat,
+        // tidak ada yang taat untuk dilindungi — dan aturan lama membuat
+        // keduanya sama-sama terkunci: tidak ada yang boleh melapor, tidak ada
+        // penjadwal yang menyentuh tahap ini, sehingga dua produk membeku
+        // selamanya karena kedua pemiliknya sama-sama diam. Dalam keadaan itu
+        // siapa pun di antara keduanya boleh membawanya ke admin, yang bisa
+        // melihat bahwa memang tidak ada resi sama sekali.
+
+        // Keduanya sudah mengirim: tidak ada yang perlu dilaporkan.
+        if ($sayaKirim && $lawanKirim) {
             return false;
         }
 
-        $counterpart = $role === 'requester' ? 'responder' : 'requester';
+        // Pihak lawan sudah mengirim dan pelapor belum: yang lalai justru
+        // pelapornya sendiri.
+        if ($lawanKirim && ! $sayaKirim) {
+            return false;
+        }
 
-        return $this->{$counterpart.'_shipped_at'} === null
-            && ! $this->hasPendingRefund()
+        return ! $this->hasPendingRefund()
             && ! $this->hasApprovedRefund();
     }
 
@@ -472,7 +700,9 @@ class TradeInRequest extends Model
         // yang menunggu.
         if (! $iShipped) {
             if ($this->isShippingOverdue()) {
-                return 'Tenggat pengiriman sudah lewat. Segera isi nomor resi sebelum pihak lawan melaporkan tukar tambah ini.';
+                return $theyShipped
+                    ? 'Tenggat pengiriman sudah lewat. Segera isi nomor resi sebelum pihak lawan melaporkan tukar tambah ini.'
+                    : 'Tenggat pengiriman sudah lewat dan kedua pihak belum mengirim. Isi nomor resi, atau laporkan ke admin agar tukar tambah ini dibatalkan dan produk Anda kembali dapat dijual.';
             }
 
             return 'Anda belum mengisi nomor resi. Batas waktunya '.($deadline ?? '-').'.';

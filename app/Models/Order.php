@@ -47,6 +47,7 @@ class Order extends Model
         'paid_at',
         'stock_restored_at',
         'stock_committed_at',
+        'stock_returned_at',
         'seller_released_at',
         'delivered_at',
         'completed_at',
@@ -58,6 +59,7 @@ class Order extends Model
         'paid_at' => 'datetime',
         'stock_restored_at' => 'datetime',
         'stock_committed_at' => 'datetime',
+        'stock_returned_at' => 'datetime',
         'seller_released_at' => 'datetime',
         'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -103,6 +105,16 @@ class Order extends Model
         'Completed' => [],
         'Cancelled' => [],
     ];
+
+    /**
+     * Seluruh status pesanan yang sah.
+     *
+     * Dipakai panel admin sebagai daftar putih. Sebelumnya validasinya hanya
+     * `required`, sehingga status apa pun — termasuk salah ketik — bisa masuk
+     * ke kolom itu dan membuat pesanan tidak lagi cocok dengan satu pun
+     * penyaring di aplikasi (temuan S-12).
+     */
+    const STATUSES = ['Waiting', 'Processing', 'On The Way', 'Delivered', 'Completed', 'Cancelled'];
 
     /**
      * Status yang menuntut nomor resi. Barang yang sudah bergerak harus
@@ -178,9 +190,16 @@ class Order extends Model
         return $this->belongsTo(Auction::class);
     }
 
+    /**
+     * Pengajuan refund TERBARU untuk pesanan ini.
+     *
+     * `latestOfMany()` karena pengajuan yang ditolak tidak lagi mengunci
+     * pesanan: satu pesanan bisa punya lebih dari satu baris, dan yang harus
+     * dibaca kartu pesanan adalah yang paling akhir — bukan yang paling lama.
+     */
     public function refundRequest()
     {
-        return $this->hasOne(RefundRequest::class);
+        return $this->hasOne(RefundRequest::class)->latestOfMany();
     }
 
     // Relasi ke user (customer)
@@ -429,6 +448,52 @@ class Order extends Model
         $this->refresh();
     }
 
+    /**
+     * Kembalikan stok yang sudah dipotong ke seller.
+     *
+     * Dipanggil ketika pengembalian dana disetujui atas pesanan yang barangnya
+     * belum pernah berpindah tangan. Tanpa ini, unit yang batal terjual hilang
+     * dari etalase selamanya: uangnya kembali ke pembeli, tetapi barangnya
+     * tetap tercatat terjual dan seller harus menyadarinya sendiri lalu
+     * membetulkan stok dengan tangan.
+     *
+     * Idempoten lewat `stock_returned_at`, dengan pola yang sama seperti
+     * `commitReservedStock()`.
+     */
+    public function returnCommittedStock(): void
+    {
+        if ($this->stock_committed_at === null || $this->stock_returned_at !== null) {
+            return;
+        }
+
+        DB::transaction(function () {
+            $order = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $order || $order->stock_committed_at === null || $order->stock_returned_at !== null) {
+                return;
+            }
+
+            if ($order->product_id !== null) {
+                $product = Product::whereKey($order->product_id)->lockForUpdate()->first();
+
+                if ($product) {
+                    // Hanya `stock` yang naik. Reservasinya sudah dilepas saat
+                    // pemotongan, jadi menambahnya kembali di sini akan menahan
+                    // unit yang justru baru saja dibebaskan.
+                    $product->forceFill([
+                        'stock' => (int) $product->stock + (int) $order->quantity,
+                    ])->save();
+                }
+            }
+
+            $order->forceFill([
+                'stock_returned_at' => now(),
+            ])->save();
+        });
+
+        $this->refresh();
+    }
+
     public function payoutRequests()
     {
         return $this->hasMany(PayoutRequest::class);
@@ -474,22 +539,33 @@ class Order extends Model
     /**
      * Nominal yang menjadi hak seller atas pesanan ini.
      *
-     * Pembagian tagihan:
-     *  - nilai barang + biaya pengemasan -> seller (sellerlah yang mengemas)
-     *  - ongkir + biaya berat            -> biaya pengiriman, bukan hak seller
-     *  - biaya layanan                   -> pendapatan marketplace (dompet admin)
+     * Pembagian tagihan mengikuti SIAPA YANG MENGERJAKAN:
+     *  - nilai barang     -> seller
+     *  - biaya pengemasan -> seller (sellerlah yang mengemas)
+     *  - ongkir & biaya berat -> seller (sellerlah yang mengantar ke kurir dan
+     *    membayar di gerai; aplikasi ini tidak punya integrasi kurir maupun
+     *    penjemputan, dan nomor resi diisi seller dengan tangan)
+     *  - biaya layanan    -> satu-satunya pendapatan marketplace (dompet admin)
      *
-     * Sebelumnya pencairan memakai `price` (total tagihan) apa adanya, sehingga
-     * seller ikut menerima ongkir DAN biaya layanan — biaya layanan yang sama
-     * yang dicatat sebagai pendapatan platform. Uang yang sama dibayarkan dua
-     * kali.
+     * Ongkir sempat tidak menjadi hak siapa pun: ia dikurangkan dari hak seller,
+     * tetapi juga tidak pernah dicatat sebagai pendapatan platform — mengendap
+     * di rekening Midtrans marketplace tanpa asal-usul, sementara sellerlah yang
+     * menalanginya di gerai kurir. Sekarang uangnya mengikuti pekerjaannya.
+     *
+     * Sebelumnya lagi, pencairan memakai `price` (total tagihan) apa adanya,
+     * sehingga seller ikut menerima biaya layanan — biaya yang sama yang dicatat
+     * sebagai pendapatan platform. Uang yang sama dibayarkan dua kali. Itulah
+     * satu-satunya komponen yang memang bukan hak seller, dan ia tetap bukan.
      *
      * Pesanan lelang tidak punya komponen biaya (semuanya 0), jadi nilainya
      * tetap sama dengan harga menang.
      */
     public function sellerPayoutAmount(): int
     {
-        return $this->item_subtotal + (int) $this->packaging_fee;
+        return $this->item_subtotal
+            + (int) $this->packaging_fee
+            + (int) $this->shipping_cost
+            + (int) $this->weight_fee;
     }
 
     public function getSellerPayoutAmountAttribute(): int

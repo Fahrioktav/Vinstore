@@ -48,6 +48,11 @@ class HandleInertiaRequests extends Middleware
                 // pembayaran selesai: pesanan lelang menuju daftar pesanan,
                 // sedangkan deposit cukup memuat ulang halaman lelangnya.
                 'snap_context' => fn () => $request->session()->get('snap_context'),
+                // Tautan reset password yang dibuatkan admin. Ditampilkan
+                // sekali di panel admin untuk disalin, tidak pernah disimpan
+                // (temuan V11-03).
+                'passwordResetLink' => fn () => $request->session()->get('passwordResetLink'),
+                'passwordResetFor' => fn () => $request->session()->get('passwordResetFor'),
             ],
         ]);
     }

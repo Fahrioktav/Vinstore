@@ -127,6 +127,14 @@ class ProductController extends Controller
         return Inertia::render('product-detail', [
             'product' => $product,
             'tebakHarga' => $tebakHarga,
+            // Dihitung di server dengan sengaja. Menentukannya di halaman
+            // menuntut identitas pemilik toko ikut dikirim, dan halaman ini
+            // terbuka untuk umum — surel serta alamat seller tidak ada
+            // urusannya dengan sebuah tombol.
+            'canChatSeller' => $viewer !== null
+                && in_array($viewer->role, ['user', 'seller'], true)
+                && $product->store !== null
+                && $product->store->user_id !== $viewer->id,
         ]);
     }
 
@@ -134,8 +142,13 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'stock' => 'required|integer',
-            'price' => 'required|numeric',
+            // Batas bawahnya ditulis eksplisit. Tanpa `min`, `numeric` menerima
+            // angka negatif: harga -50000 lolos sampai ke keranjang, ikut
+            // dijumlahkan ke `gross_amount`, dan Midtrans menolak seluruh
+            // transaksinya — pembeli hanya melihat checkout yang gagal tanpa
+            // sebab. Stok boleh 0 (barangnya habis), harga tidak (temuan V10-06).
+            'stock' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:1',
             'weight' => 'nullable|integer|min:1|max:500000',
             'length' => 'nullable|integer|min:1|max:500',
             'width' => 'nullable|integer|min:1|max:500',
@@ -227,8 +240,13 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'stock' => 'required|integer',
-            'price' => 'required|numeric',
+            // Batas bawahnya ditulis eksplisit. Tanpa `min`, `numeric` menerima
+            // angka negatif: harga -50000 lolos sampai ke keranjang, ikut
+            // dijumlahkan ke `gross_amount`, dan Midtrans menolak seluruh
+            // transaksinya — pembeli hanya melihat checkout yang gagal tanpa
+            // sebab. Stok boleh 0 (barangnya habis), harga tidak (temuan V10-06).
+            'stock' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:1',
             // Berat dalam gram; dipakai menghitung biaya berat di checkout.
             // Opsional agar produk lama tetap bisa disunting; yang kosong
             // memakai berat default dari config/marketplace.php.
@@ -370,11 +388,18 @@ class ProductController extends Controller
     public function updateStock(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'stock' => 'required|integer',
+            'stock' => 'required|integer|min:0',
+        ], [
+            'stock.min' => 'Stok tidak boleh kurang dari 0.',
+            'stock.integer' => 'Stok harus berupa angka bulat.',
         ]);
 
+        // Yang dikirim ke flash adalah KALIMATNYA, bukan MessageBag-nya.
+        // Toast di main-layout menampilkan apa pun yang diterimanya apa adanya,
+        // dan sebuah MessageBag berakhir sebagai "[object Object]" di layar
+        // (temuan S-04).
         if ($validator->fails()) {
-            return back()->with('error', $validator->errors());
+            return back()->with('error', $validator->errors()->first('stock'));
         }
 
         $product = Product::where('public_id', $id)->firstOrFail();
@@ -402,6 +427,26 @@ class ProductController extends Controller
         // Produk boleh dihapus kapan pun. Riwayat pesanan pembeli TIDAK ikut
         // terhapus: foreign key orders.product_id sudah nullOnDelete dan setiap
         // pesanan menyimpan snapshot nama & harga produknya sendiri.
+        //
+        // Satu pengecualian: sesi tebak harga yang sedang berjalan. Tebakan
+        // peserta ikut terhapus bersama produknya, dan mereka tidak pernah
+        // diberi tahu — kepesertaan seseorang lenyap tanpa kabar. Penjagaannya
+        // sejalan dengan yang sudah berlaku pada penyuntingan: sesi yang sudah
+        // dibuka tidak boleh diubah sepihak oleh sellernya (temuan V11-05).
+        //
+        // `sync()` dipanggil lebih dulu supaya keputusannya memakai status
+        // terbaru, bukan status yang tertinggal karena penjadwal sempat mati.
+        app(PriceGuessService::class)->sync();
+        $product->refresh();
+
+        if ($product->hasRunningGuessSession()) {
+            return back()->with(
+                'error',
+                'Produk ini tidak dapat dihapus karena sesi Tebak Harganya sedang berjalan. '
+                .'Tunggu sampai sesinya selesai — tebakan yang sudah masuk akan ikut terhapus bersama produknya.'
+            );
+        }
+
         $product->delete();
 
         return back()->with('success', 'Produk berhasil dihapus.');

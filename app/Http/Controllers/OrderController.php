@@ -393,15 +393,30 @@ class OrderController extends Controller
             );
         }
 
+        // Pesanan yang uangnya sudah masuk tidak boleh dibatalkan lewat tombol
+        // biasa. Pembatalan hanya mengubah status; ia tidak memindahkan uang
+        // ke mana pun. Sebelum penjagaan ini, pesanan lunas yang dibatalkan
+        // berakhir sebagai `Cancelled` + `paid`: stoknya tidak kembali karena
+        // memang sudah dipotong, dan pengajuan refund ditolak karena dulu
+        // mensyaratkan status `Delivered`/`Completed`. Uang pembeli berhenti di
+        // situ tanpa satu pun jalur pulang di dalam aplikasi (temuan V10-01).
+        //
+        // Jalan keluarnya sekarang bukan tombol ini, melainkan pengajuan
+        // pengembalian dana yang diputus admin — satu pintu yang sama untuk
+        // semua pesanan lunas, di status mana pun ia berada.
+        if ($order->payment_status === 'paid') {
+            return back()->with(
+                'error',
+                'Pesanan yang sudah dibayar tidak dapat dibatalkan sendiri. '
+                .'Ajukan pengembalian dana lewat tombol "Ajukan Refund" agar admin dapat memeriksanya.'
+            );
+        }
+
         $order->status = 'Cancelled';
-        $order->payment_status = $order->payment_status === 'paid'
-            ? $order->payment_status
-            : 'cancelled';
+        $order->payment_status = 'cancelled';
         $order->save();
 
-        if ($order->payment_status !== 'paid') {
-            $order->restoreReservedStock();
-        }
+        $order->restoreReservedStock();
 
         return back()->with('success', 'Pesanan berhasil dibatalkan.');
     }

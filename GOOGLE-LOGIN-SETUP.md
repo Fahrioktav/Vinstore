@@ -126,25 +126,40 @@ Untuk production, gunakan:
 
 ### Google OAuth Flow:
 ```
-User → Klik "Login with Google" 
-    → Redirect ke Google 
-    → User pilih akun 
-    → Google callback 
-    → Cek user di database
-    → Create user baru (jika belum ada)
-    → Login & redirect ke dashboard
+User -> Klik "Login with Google"
+     -> Redirect ke Google
+     -> User pilih akun
+     -> Google callback
+     -> Cari user berdasarkan google_id  (HANYA google_id)
+        ketemu                                   -> login
+        tidak ketemu, email dipakai akun lain    -> DITOLAK
+        tidak ketemu, email belum terdaftar      -> buat akun baru -> login
 ```
+
+**Pencocokan lewat alamat email sudah dihapus** (temuan T-01). Aplikasi ini tidak pernah memverifikasi email saat pendaftaran biasa, sehingga siapa pun bisa mendaftar memakai alamat orang lain — dan ketika pemilik asli alamat itu menekan "Login with Google", ia justru masuk ke akun si pendaftar yang masih memegang passwordnya.
+
+### Menautkan Google ke akun lama:
+```
+User -> Login pakai email & password
+     -> Halaman Profil -> "Hubungkan Akun Google"
+     -> Redirect ke Google -> pilih akun
+     -> google_id disimpan ke akun yang sedang login
+```
+
+Melepas tautannya juga dari halaman Profil, dan **ditolak bila akun itu belum punya password** — akun yang lahir dari Google tidak punya password sama sekali, jadi melepas tautannya berarti mengunci pemiliknya di luar.
 
 ### Forgot Password Flow:
 ```
-User → Klik "Lupa Password?" 
-    → Masukkan email 
-    → Email terkirim dengan link reset 
-    → User klik link 
-    → Masukkan password baru 
-    → Password di-update 
-    → Redirect ke login
+User -> Klik "Lupa Password?"
+     -> MAIL_MAILER sungguhan   -> /forgot-password -> email berisi link reset
+     -> MAIL_MAILER = log/array -> /contact (admin membuatkan link resetnya)
+     -> User klik link
+     -> Masukkan password baru
+     -> Password di-update
+     -> Redirect ke login
 ```
+
+Tujuan tautannya ditentukan server. Selama mailer-nya `log` atau `array`, email reset hanya ditulis ke `storage/logs` dan tidak pernah sampai ke siapa pun, jadi pengguna diarahkan ke halaman Kontak — admin lalu membuatkan tautan sekali pakai lewat **Kelola User → Tautan Reset Password**. Begitu SMTP disetel, halaman lupa password kembali sendiri tanpa perubahan kode (temuan V11-03).
 
 ---
 
@@ -154,6 +169,8 @@ User → Klik "Lupa Password?"
    - Gunakan HTTPS di production
    - Jangan commit credentials ke Git
    - Batasi authorized domains di Google Console
+   - Akun dicocokkan **hanya** lewat `google_id`; jangan pernah menambahkan kembali pencocokan lewat email selama pendaftaran biasa belum memverifikasi alamat email (temuan T-01)
+   - `email_verified` dari Google diperiksa sebelum akun baru dibuat
 
 2. **Password Reset**:
    - Token akan expire setelah 60 menit (default Laravel)

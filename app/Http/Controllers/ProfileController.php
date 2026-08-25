@@ -16,7 +16,14 @@ class ProfileController extends Controller
         $userId = Auth::id();
         $user = User::with('store')->find($userId);
 
-        return Inertia::render('profile/edit', compact('user'));
+        return Inertia::render('profile/edit', [
+            'user' => $user,
+            // Dihitung di server: `google_id` dan `password` keduanya tidak
+            // pernah ikut diserialisasi ke halaman, dan memang tidak boleh.
+            // Yang dibutuhkan halaman hanyalah dua jawaban ya/tidak.
+            'googleLinked' => ! empty($user->google_id),
+            'hasPassword' => ! empty($user->password),
+        ]);
     }
 
     public function update(Request $request)
@@ -24,8 +31,7 @@ class ProfileController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Validasi input
-        $validated = $request->validate([
+        $rules = [
             'username' => 'required|string|max:255|unique:users,username,'.$user->id.',id',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
@@ -34,6 +40,30 @@ class ProfileController extends Controller
             'address' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'password' => 'nullable|string|min:6|confirmed',
+        ];
+
+        // Mengganti password atau alamat surel menuntut pembuktian bahwa yang
+        // duduk di depan layar memang pemilik akunnya, bukan orang yang
+        // kebetulan menemukan sesi yang masih terbuka. Keduanya adalah kunci
+        // masuk: yang satu dipakai login, yang satu dipakai memulihkan akun.
+        // Tanpa penjagaan ini, satu laptop yang ditinggalkan sebentar cukup
+        // untuk mengunci pemiliknya keluar selamanya — dan untuk akun seller,
+        // ikut menguasai ke mana uang pencairan dikirim (temuan V10-02/T-03).
+        //
+        // Akun yang masuk lewat Google saja belum punya password lokal; bagi
+        // mereka penjagaan ini dilewati, sebab meminta password yang tidak
+        // pernah mereka buat sama saja dengan menutup halamannya. Login mereka
+        // tetap bersandar pada `google_id`, bukan pada surel di tabel ini.
+        $memintaGantiPassword = $request->filled('password');
+        $memintaGantiEmail = $request->filled('email') && $request->input('email') !== $user->email;
+
+        if (! empty($user->password) && ($memintaGantiPassword || $memintaGantiEmail)) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        $validated = $request->validate($rules, [
+            'current_password.required' => 'Masukkan password Anda saat ini untuk mengubah email atau password.',
+            'current_password.current_password' => 'Password saat ini tidak cocok.',
         ]);
 
         // Update data user hanya jika field diisi

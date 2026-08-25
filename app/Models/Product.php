@@ -321,6 +321,23 @@ class Product extends Model
     /**
      * Apakah produk ini dijual dengan jenis penjualan Tebak Harga.
      */
+    /**
+     * Sesi tebak harga yang belum tuntas urusannya dengan pesertanya.
+     *
+     * `active` masih menerima tebakan; `ended` sudah punya pemenang yang
+     * sedang memakai hak beli 24 jamnya. Di kedua keadaan itu ada orang lain
+     * yang sudah terlibat, dan produknya tidak boleh lenyap begitu saja
+     * (temuan V11-05).
+     *
+     * `scheduled` sengaja tidak ikut: sesinya belum dibuka, jadi belum ada
+     * tebakan yang bisa hilang.
+     */
+    public function hasRunningGuessSession(): bool
+    {
+        return $this->isTebakHarga()
+            && in_array($this->guess_status, [self::GUESS_ACTIVE, self::GUESS_ENDED], true);
+    }
+
     public function isTebakHarga(): bool
     {
         return $this->sale_type === self::SALE_TYPE_TEBAK_HARGA;

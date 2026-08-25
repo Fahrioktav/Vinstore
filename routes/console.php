@@ -3,9 +3,11 @@
 use App\Models\Auction;
 use App\Models\AuctionDeposit;
 use App\Models\Order;
+use App\Models\TradeInRequest;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -138,6 +140,58 @@ Artisan::command('orders:release-abandoned', function () {
 })->purpose('Lepaskan stok pesanan yang tidak dibayar sampai tenggat');
 
 Schedule::command('orders:release-abandoned')->hourly();
+
+/**
+ * Batalkan tukar tambah yang selisihnya tidak dibayar sampai tenggat.
+ *
+ * Sejak disetujui, kedua produk terkunci dari penjualan. Tanpa perintah ini,
+ * pembayar yang berubah pikiran cukup diam: tukar tambahnya menggantung
+ * selamanya dan dua produk milik dua toko berbeda ikut membeku, tanpa satu pun
+ * pihak yang bisa melepaskannya (temuan V2-01/V3-02/V3-10).
+ *
+ * Sebelum membatalkan, keadaan pembayaran ditanyakan lebih dulu ke Midtrans.
+ * Webhook tidak pernah sampai di localhost dan di produksi pun bisa gagal
+ * terkirim; tanpa penyelarasan itu, tukar tambah yang sebenarnya sudah lunas
+ * ikut dibatalkan dan uangnya tersangkut — persoalan yang sama dengan deposit
+ * lelang pada temuan V7-01.
+ */
+Artisan::command('trade-in:expire', function () {
+    $dibatalkan = 0;
+
+    TradeInRequest::where('status', TradeInRequest::STATUS_ACCEPTED)
+        ->where('payment_status', TradeInRequest::PAYMENT_PENDING)
+        ->whereNotNull('payment_due_at')
+        ->where('payment_due_at', '<=', now())
+        ->each(function (TradeInRequest $tradeIn) use (&$dibatalkan) {
+            try {
+                // Sengaja DI LUAR transaksi: panggilan HTTP tidak boleh
+                // dilakukan sambil memegang kunci baris.
+                $tradeIn->syncPaymentFromMidtrans();
+            } catch (\Throwable $e) {
+                // Transaksi yang metode bayarnya belum pernah dipilih belum ada
+                // di Midtrans dan dijawab 404. Tidak ada yang bisa
+                // diselaraskan; lanjutkan ke pembatalan.
+                Log::warning('Gagal menyelaraskan pembayaran tukar tambah sebelum kedaluwarsa', [
+                    'trade_in_id' => $tradeIn->public_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            $tradeIn->refresh();
+
+            if ($tradeIn->cancelUnpaid()) {
+                $dibatalkan++;
+            }
+        });
+
+    $this->info("Expired {$dibatalkan} unpaid trade-in(s).");
+})->purpose('Batalkan tukar tambah yang selisihnya tidak dibayar sampai tenggat');
+
+// Sejam sekali, sejalan dengan `orders:release-abandoned`. Tenggatnya 24 jam,
+// jadi ketelitian sampai menit tidak menambah apa pun selain panggilan Midtrans
+// yang lebih sering. `withoutOverlapping()` karena perintah ini memanggil
+// jaringan: satu jalan yang tertahan tidak boleh ditimpa jalan berikutnya.
+Schedule::command('trade-in:expire')->hourly()->withoutOverlapping();
 
 // Test command untuk simulasi webhook Midtrans tukar tambah payment
 Artisan::command('test:tukar-tambah-webhook {payment_reference} {status=settlement}', function ($paymentReference, $status) {

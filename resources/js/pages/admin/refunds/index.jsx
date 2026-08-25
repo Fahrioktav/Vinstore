@@ -151,6 +151,25 @@ export default function AdminRefunds() {
                         <td className="px-4 py-3">{storeLabel}</td>
                         <td className="px-4 py-3 font-bold text-[#53685B]">
                           {formatIDR(amount)}
+                          {/* Pesanan lelang diterima marketplace lewat DUA
+                              pembayaran: jaminan yang dibayar sebelum menawar,
+                              dan sisanya saat checkout. Tanpa rinciannya, admin
+                              yang mentransfer balik harus menjumlahkan sendiri
+                              dan mudah hanya mengembalikan yang terlihat di
+                              halaman pesanan (temuan V11-02). */}
+                          {!isTradeIn &&
+                            order?.auction &&
+                            order?.deposit_credit > 0 && (
+                              <p className="mt-1 text-xs font-normal text-gray-500">
+                                Termasuk jaminan lelang{' '}
+                                {formatIDR(order.deposit_credit)} yang sudah
+                                dipakai sebagai uang muka; sisanya{' '}
+                                {formatIDR(
+                                  (order.price || 0) - order.deposit_credit
+                                )}{' '}
+                                dibayar saat checkout.
+                              </p>
+                            )}
                         </td>
                         <td className="px-4 py-3">
                           {/* Bukti objektif untuk memutuskan sengketa tukar tambah:

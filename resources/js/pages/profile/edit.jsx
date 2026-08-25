@@ -1,4 +1,4 @@
-import { useForm, Link, usePage } from '@inertiajs/react';
+import { useForm, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormLayout from '@/layouts/form-layout';
 import {
@@ -12,7 +12,7 @@ import {
 import { getStoreImage, getUserImage } from '@/lib/utils';
 
 export default function EditProfilePage() {
-  const { user, errors } = usePage().props;
+  const { user, errors, googleLinked, hasPassword } = usePage().props;
 
   const [photoPreview, setPhotoPreview] = useState(getUserImage(user));
 
@@ -24,6 +24,7 @@ export default function EditProfilePage() {
     phone: user.phone || '',
     address: user.address || '',
     photo: null,
+    current_password: '',
     password: '',
     password_confirmation: '',
   });
@@ -69,7 +70,7 @@ export default function EditProfilePage() {
                 htmlFor="photo-upload"
                 className="flex cursor-pointer items-center justify-center gap-1 font-semibold text-blue-600 hover:underline"
               >
-                <EditPhotoIcon />
+                <EditPhotoIcon className="h-5 w-5" />
                 Edit Photo
               </label>
               <input
@@ -222,7 +223,33 @@ export default function EditProfilePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold">Password</label>
+              <label className="block text-sm font-semibold">
+                Password Saat Ini
+              </label>
+              <input
+                type="password"
+                name="current_password"
+                value={data.current_password}
+                onChange={(e) => setData('current_password', e.target.value)}
+                className={`w-full rounded-md border px-4 py-2 focus:ring-2 focus:ring-[#E9E19E] ${errors?.current_password ? 'border-red-500' : 'border-gray-400'}`}
+                placeholder="Wajib diisi bila mengubah email atau password"
+                autoComplete="current-password"
+              />
+              {errors?.current_password ? (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.current_password}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-500">
+                  Email dan password hanya dapat diubah setelah password Anda
+                  saat ini dimasukkan.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold">
+                Password Baru
+              </label>
               <input
                 type="password"
                 name="password"
@@ -265,6 +292,62 @@ export default function EditProfilePage() {
                 <p className="mt-1 text-xs text-red-500">{errors.address}</p>
               )}
             </div>
+            {/*
+              Menautkan akun Google dilakukan SENDIRI dari sini, oleh pemilik
+              akun yang sedang masuk. Dulu penautannya terjadi otomatis begitu
+              alamat surelnya cocok — dan karena pendaftaran biasa tidak pernah
+              memverifikasi surel, siapa pun yang mendaftar memakai alamat orang
+              lain akan berbagi akun dengan pemilik alamat itu (temuan T-01).
+            */}
+            <div className="rounded-lg border border-gray-300 bg-white/60 p-4">
+              <p className="text-sm font-semibold">Akun Google</p>
+              {googleLinked ? (
+                <>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Akun ini terhubung ke Google. Anda dapat masuk lewat tombol
+                    &quot;Login dengan Google&quot;.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          'Lepaskan tautan akun Google? Setelah ini Anda hanya bisa masuk memakai email dan password.'
+                        )
+                      ) {
+                        router.delete('/auth/google/link', {
+                          preserveScroll: true,
+                        });
+                      }
+                    }}
+                    className="mt-3 rounded-md border border-red-300 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Lepaskan Tautan Google
+                  </button>
+                  {!hasPassword && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      Akun Anda belum punya password. Buat password lebih dulu
+                      di atas — tanpa itu, melepas tautan Google akan membuat
+                      Anda tidak bisa masuk sama sekali.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Hubungkan akun Google Anda agar lain kali bisa masuk tanpa
+                    mengetik password.
+                  </p>
+                  <a
+                    href="/auth/google/link"
+                    className="mt-3 inline-block rounded-md border border-gray-400 px-4 py-2 text-xs font-semibold text-[#53685B] transition hover:bg-gray-100"
+                  >
+                    Hubungkan Akun Google
+                  </a>
+                </>
+              )}
+            </div>
+
             <div className="pt-4 text-right">
               <button
                 type="submit"

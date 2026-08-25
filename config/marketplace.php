@@ -48,8 +48,12 @@ return [
         ],
 
         // Wilayah yang dipakai bila koordinat toko atau pembeli tidak diketahui.
-        // Sengaja luar Jawa: menebak yang lebih murah berarti marketplace
-        // menombok ongkir tiap kali koordinatnya kosong.
+        //
+        // Sengaja luar Jawa, yaitu yang lebih mahal. Uang ongkir adalah hak
+        // seller — dialah yang mengantar paketnya ke gerai kurir dan membayar
+        // di sana — sehingga menebak yang lebih murah berarti seller menomboki
+        // selisihnya tiap kali koordinatnya kosong. Yang menanggung salah tebak
+        // sebaiknya bukan pihak yang tidak punya kendali atasnya.
         'default_region' => env('SHIPPING_DEFAULT_REGION', 'luar_jawa'),
 
         // Pengali per metode pengiriman.

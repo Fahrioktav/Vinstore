@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AdminOrderController extends Controller
@@ -25,8 +26,27 @@ class AdminOrderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate(['status' => 'required']);
+        // Daftar putih, bukan sekadar `required`. Kolom ini dibaca belasan
+        // penyaring di seluruh aplikasi; satu nilai di luar daftar membuat
+        // pesanannya lenyap dari semua daftar sekaligus — tidak muncul sebagai
+        // aktif, tidak muncul sebagai selesai, dan tidak bisa dikembalikan ke
+        // jalur mana pun (temuan S-12).
+        $request->validate([
+            'status' => ['required', Rule::in(Order::STATUSES)],
+        ], [
+            'status.in' => 'Status pesanan tidak dikenal.',
+        ]);
+
         $order = Order::where('public_id', $id)->firstOrFail();
+
+        // Pesanan yang sudah dikonfirmasi pembeli tidak boleh dimundurkan.
+        // Konfirmasi itulah dasar pencairan dana ke seller; menganulirnya
+        // sesudahnya membuat dua catatan yang saling bertentangan tentang
+        // transaksi yang sama (temuan V2-05).
+        if ($order->status === 'Completed') {
+            return back()->with('error', 'Pesanan yang sudah dikonfirmasi pembeli tidak dapat diubah statusnya.');
+        }
+
         $order->status = $request->status;
         $order->save();
 

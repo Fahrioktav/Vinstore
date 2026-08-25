@@ -85,6 +85,9 @@ class TradeInController extends Controller
             'can_report_stalled',
             'report_block_reason',
             'shipping_deadline_at',
+            'payment_deadline_at',
+            'can_cancel_unpaid',
+            'cancel_block_reason',
         ];
 
         $incomingRequests->each->append($tradeInAttributes);
@@ -234,6 +237,10 @@ class TradeInController extends Controller
                     // Ada pembayaran, set status payment ke pending
                     $tradeIn->payment_status = TradeInRequest::PAYMENT_PENDING;
                     $tradeIn->payment_reference = 'TUKARTAMBAH-'.$tradeIn->public_id.'-'.time();
+                    // Sejak detik ini kedua produk terkunci. Tenggatnya dipasang
+                    // di titik yang sama supaya tidak ada tahap yang menahan
+                    // barang tanpa batas waktu (temuan V2-01/V3-10).
+                    $tradeIn->payment_due_at = now()->addHours(TradeInRequest::PAYMENT_DEADLINE_HOURS);
                     $tradeIn->save();
                 } else {
                     $tradeIn->payment_status = TradeInRequest::PAYMENT_NOT_REQUIRED;
@@ -251,7 +258,7 @@ class TradeInController extends Controller
 
                 // Tanpa pembayaran, tukar tambah langsung masuk tahap saling kirim.
                 if (! $tradeIn->requiresPayment()) {
-                    $this->startShipping($tradeIn);
+                    $tradeIn->startShipping();
                 }
             });
         } catch (\Throwable $e) {
@@ -265,7 +272,13 @@ class TradeInController extends Controller
                 ? 'Tukar tambah disetujui. Karena produk Anda lebih murah, Anda harus membayar selisih '.$selisih.' sebelum barang dikirim.'
                 : 'Tukar tambah disetujui. Pengaju harus membayar selisih '.$selisih.' sebelum barang dikirim.';
 
-            return back()->with('success', $pesan.' Kedua produk sementara dikunci dari penjualan.');
+            $tenggat = $tradeIn->paymentDeadlineAt()?->translatedFormat('d M Y H:i');
+
+            return back()->with(
+                'success',
+                $pesan.' Kedua produk sementara dikunci dari penjualan'
+                .($tenggat ? ', dan tukar tambah ini batal otomatis bila selisihnya belum dibayar sampai '.$tenggat : '').'.'
+            );
         }
 
         return back()->with('success', 'Tukar tambah disetujui. Silakan saling mengirim barang dan isi nomor resinya.');
@@ -318,6 +331,63 @@ class TradeInController extends Controller
     }
 
     /**
+     * Batalkan tukar tambah yang sudah disetujui tetapi selisihnya tidak
+     * kunjung dibayar, lalu lepaskan kunci kedua produk.
+     *
+     * Pembayar boleh membatalkan kapan saja; pihak lawan setelah tenggat lewat.
+     * Sebelum jalur ini ada, tukar tambah yang disetujui tidak punya pintu
+     * keluar sama sekali: `cancel()` dan `reject()` hanya menerima status
+     * `pending`, sementara `unlockProductsForTradeIn()` tidak pernah dipanggil
+     * dari mana pun. Dua produk milik dua toko berbeda membeku selamanya
+     * (temuan V2-01/V3-02).
+     */
+    public function cancelUnpaid(TradeInRequest $tradeIn)
+    {
+        $store = Auth::user()->store;
+
+        if ($tradeIn->roleOfStore($store) === null) {
+            abort(403, 'Anda bukan pihak dalam tukar tambah ini.');
+        }
+
+        // Uang yang sudah telanjur masuk tetapi kabarnya belum sampai harus
+        // ditanyakan lebih dulu. Tanpa ini, pembatalan bisa menghapus tukar
+        // tambah yang sebenarnya sudah dibayar — persoalan yang sama dengan
+        // deposit lelang pada temuan V7-01.
+        try {
+            $tradeIn->syncPaymentFromMidtrans();
+        } catch (\Throwable $e) {
+            Log::warning('Gagal menyelaraskan pembayaran tukar tambah sebelum pembatalan', [
+                'trade_in_id' => $tradeIn->public_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $tradeIn->refresh();
+
+        if ($tradeIn->payment_status === TradeInRequest::PAYMENT_PAID) {
+            return back()->with('error', 'Selisih tukar tambah ini ternyata sudah dibayar. Silakan lanjutkan ke tahap pengiriman.');
+        }
+
+        if (! $tradeIn->canCancelUnpaidBy($store)) {
+            return back()->with(
+                'error',
+                $tradeIn->cancelBlockReasonFor($store)
+                    ?? 'Tukar tambah ini tidak dapat dibatalkan dari keadaannya sekarang.'
+            );
+        }
+
+        $pembatalOlehPembayar = $tradeIn->isPayer($store);
+
+        if (! $tradeIn->cancelUnpaid()) {
+            return back()->with('error', 'Tukar tambah ini sudah berubah keadaan. Muat ulang halaman untuk melihat keadaan terbarunya.');
+        }
+
+        return back()->with('success', $pembatalOlehPembayar
+            ? 'Tukar tambah dibatalkan dan selisihnya tidak jadi ditagih. Kedua produk kembali dapat dijual.'
+            : 'Tukar tambah dibatalkan karena selisihnya tidak dibayar sampai tenggat. Kedua produk kembali dapat dijual.');
+    }
+
+    /**
      * Pembayar selisih melakukan pembayaran additional_cash setelah tukar tambah
      * disetujui. Pembayarnya adalah pihak yang produknya lebih murah — bisa
      * pengaju, bisa juga penerima.
@@ -337,7 +407,7 @@ class TradeInController extends Controller
         // menolaknya, sehingga pembayarannya terlihat macet selamanya.
         if ($tradeIn->snap_token && $tradeIn->payment_status === TradeInRequest::PAYMENT_PENDING) {
             try {
-                $this->syncPaymentFromMidtrans($tradeIn);
+                $tradeIn->syncPaymentFromMidtrans();
                 $tradeIn->refresh();
             } catch (\Throwable $e) {
                 // Midtrans tidak dapat dihubungi bukan alasan untuk memblokir
@@ -456,7 +526,7 @@ class TradeInController extends Controller
         }
 
         try {
-            $this->syncPaymentFromMidtrans($tradeIn);
+            $tradeIn->syncPaymentFromMidtrans();
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -467,54 +537,6 @@ class TradeInController extends Controller
             'payment_status' => $fresh->payment_status,
             'is_paid' => $fresh->payment_status === TradeInRequest::PAYMENT_PAID,
         ]);
-    }
-
-    /**
-     * Tanyakan status transaksi ke Midtrans dan tandai lunas bila memang sudah.
-     *
-     * Dipakai sebagai jaring pengaman ketika webhook tidak sampai — kondisi
-     * yang normal terjadi di localhost. Idempoten dan aman dipanggil berulang:
-     * baris tukar tambah dikunci, dan tukar tambah yang sudah lunas langsung dilewati.
-     */
-    private function syncPaymentFromMidtrans(TradeInRequest $tradeIn): void
-    {
-        if ($tradeIn->payment_status === TradeInRequest::PAYMENT_PAID) {
-            return;
-        }
-
-        if (empty($tradeIn->payment_reference)) {
-            return;
-        }
-
-        $midtransService = app(\App\Services\MidtransService::class);
-        $status = $midtransService->getTransactionStatus($tradeIn->payment_reference);
-
-        $paymentStatus = $midtransService->mapPaymentStatus(
-            $status['transaction_status'] ?? null,
-            $status['fraud_status'] ?? null
-        );
-
-        if ($paymentStatus !== 'paid') {
-            return;
-        }
-
-        DB::transaction(function () use ($tradeIn, $status) {
-            $locked = TradeInRequest::whereKey($tradeIn->getKey())->lockForUpdate()->firstOrFail();
-
-            if ($locked->payment_status === TradeInRequest::PAYMENT_PAID) {
-                return;
-            }
-
-            $locked->forceFill([
-                'payment_status' => TradeInRequest::PAYMENT_PAID,
-                'midtrans_transaction_id' => $status['transaction_id'] ?? null,
-                'paid_at' => now(),
-            ])->save();
-
-            // Pembayaran lunas TIDAK langsung memindahkan kepemilikan.
-            // Tukar tambah masuk tahap saling kirim barang lebih dulu.
-            $this->startShipping($locked);
-        });
     }
 
     /**
@@ -672,33 +694,6 @@ class TradeInController extends Controller
             $product->locked_for_trade_in_id = $tradeIn->id;
             $product->save();
         }
-    }
-
-    /**
-     * Buka kunci kedua produk (tukar tambah batal atau sudah tuntas).
-     */
-    private function unlockProductsForTradeIn(TradeInRequest $tradeIn): void
-    {
-        Product::where('locked_for_trade_in_id', $tradeIn->id)
-            ->update(['locked_for_trade_in_id' => null]);
-    }
-
-    /**
-     * Masuk tahap saling kirim barang. Dipanggil setelah tukar tambah disetujui
-     * (tanpa selisih uang) atau setelah pembayaran selisih lunas.
-     */
-    private function startShipping(TradeInRequest $tradeIn): void
-    {
-        if ($tradeIn->status === TradeInRequest::STATUS_SHIPPING || $tradeIn->isCompleted()) {
-            return;
-        }
-
-        // Titik awal tenggat pengiriman: dari sini kedua seller punya
-        // TradeInRequest::SHIPPING_DEADLINE_DAYS hari untuk mengisi resi.
-        $tradeIn->forceFill([
-            'status' => TradeInRequest::STATUS_SHIPPING,
-            'shipping_started_at' => now(),
-        ])->save();
     }
 
     /**

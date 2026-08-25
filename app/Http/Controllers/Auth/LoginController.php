@@ -99,6 +99,7 @@ class LoginController extends Controller
     {
         return 'Akun Anda dinonaktifkan oleh admin.'
             .($user->deactivation_reason ? ' Alasan: '.$user->deactivation_reason : '')
-            .' Hubungi admin bila menurut Anda ini keliru.';
+            .' Bila menurut Anda ini keliru, sampaikan lewat halaman Kontak di /contact —'
+            .' halaman itu terbuka tanpa perlu masuk.';
     }
 }

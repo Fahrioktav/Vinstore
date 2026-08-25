@@ -824,14 +824,48 @@ function OrderRow({ order, bankPrefill }) {
               </div>
             </div>
 
+            {/* Yang ditampilkan adalah nominal yang BENAR-BENAR cair, bukan
+                total tagihan pembeli. Keduanya berbeda karena biaya layanan
+                bukan hak seller — menampilkan tagihan penuh di sini membuat
+                seller mengira akan menerima lebih dari yang ia terima. */}
             <div className="mb-5 rounded-lg bg-gray-50 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">
                   Nominal yang dicairkan
                 </span>
                 <span className="text-xl font-bold text-[#53685B]">
-                  {formatIDR(order.price)}
+                  {formatIDR(order.seller_payout_amount ?? order.price)}
                 </span>
+              </div>
+              <div className="mt-3 space-y-1 border-t border-gray-200 pt-3 text-xs text-gray-600">
+                <div className="flex justify-between">
+                  <span>Tagihan pembeli</span>
+                  <span>{formatIDR(order.price)}</span>
+                </div>
+                {order.service_fee > 0 && (
+                  <div className="flex justify-between">
+                    <span>Biaya layanan marketplace</span>
+                    <span>- {formatIDR(order.service_fee)}</span>
+                  </div>
+                )}
+                {order.shipping_cost > 0 && (
+                  <div className="flex justify-between">
+                    <span>Termasuk ongkir</span>
+                    <span>{formatIDR(order.shipping_cost)}</span>
+                  </div>
+                )}
+                {order.weight_fee > 0 && (
+                  <div className="flex justify-between">
+                    <span>Termasuk biaya berat</span>
+                    <span>{formatIDR(order.weight_fee)}</span>
+                  </div>
+                )}
+                {order.packaging_fee > 0 && (
+                  <div className="flex justify-between">
+                    <span>Termasuk biaya pengemasan</span>
+                    <span>{formatIDR(order.packaging_fee)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -989,8 +1023,9 @@ function OrderRow({ order, bankPrefill }) {
         <td className="px-4 py-3 font-bold text-[#53685B]">
           {formatIDR(order.price)}
           {/* Total di atas adalah tagihan pembeli. Yang menjadi hak seller
-              lebih kecil: ongkir, biaya berat, dan biaya layanan bukan
-              haknya. */}
+              lebih kecil hanya karena biaya layanan marketplace; ongkir,
+              biaya berat, dan biaya pengemasan seluruhnya ikut cair karena
+              sellerlah yang mengemas dan mengantar ke kurir. */}
           <span className="block text-xs font-normal text-gray-500">
             Anda terima: {formatIDR(order.seller_payout_amount ?? order.price)}
           </span>

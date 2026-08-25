@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MidtransNotificationController;
 use App\Http\Controllers\OrderController;
@@ -95,6 +96,17 @@ Route::post('/midtrans/notification', MidtransNotificationController::class)->na
 // route-nya boleh ikut berubah karena tidak pernah keluar dari aplikasi.
 Route::post('/midtrans/barter/notification', TradeInPaymentNotificationController::class)->name('midtrans.trade-in.notification');
 
+// Callback Google, sengaja DI LUAR grup guestOnly.
+//
+// Alamat ini melayani dua maksud yang berbeda: masuk (pengguna belum login) dan
+// menautkan akun Google ke akun yang sudah ada (pengguna sudah login). Kalau ia
+// ikut dijaga guestOnly, maksud kedua tidak akan pernah sampai — pengguna yang
+// sudah masuk dipantulkan sebelum callback-nya sempat berjalan. Alamatnya juga
+// harus tetap satu, sebab inilah yang terdaftar sebagai Authorized Redirect URI
+// di Google Cloud Console.
+Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])
+    ->name('auth.google.callback');
+
 /*
 |--------------------------------------------------------------------------
 | Guest Only Routes (Yang Udah Login Dilarang Masuk)
@@ -113,6 +125,13 @@ Route::middleware(['role:guestOnly'])->group(function () {
     // Login
     Route::get('/login', fn () => Inertia::render('auth/login', [
         'heroText' => 'Selamat Datang Kembali!',
+        // Apakah pemulihan password lewat surel benar-benar sampai ke penerima.
+        // Selama mailer-nya `log` atau `array`, tautannya hanya ditulis ke
+        // berkas log dan halaman "lupa password" menjadi janji kosong; pengguna
+        // diarahkan ke halaman Kontak sebagai gantinya. Begitu MAIL_MAILER
+        // diarahkan ke SMTP sungguhan, tautannya kembali sendiri tanpa
+        // perubahan kode (temuan V11-03).
+        'passwordResetByEmail' => ! in_array(config('mail.default'), ['log', 'array'], true),
     ]))->name('login.form');
     // Penghitung per akun ada di LoginController — itu yang menahan penebakan
     // password. Yang di sini jaring pengaman per IP, untuk penyerang yang
@@ -127,9 +146,8 @@ Route::middleware(['role:guestOnly'])->group(function () {
         ->middleware('throttle:60,1')
         ->name('login.submit');
 
-    // Google OAuth
+    // Google OAuth — masuk. Callback-nya TIDAK di sini; lihat di bawah.
     Route::get('/auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
-    Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
     // Forgot Password
     Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
@@ -154,6 +172,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
+    // Menautkan akun Google ke akun yang SEDANG login — satu-satunya jalur sah
+    // sejak penautan otomatis berdasarkan kecocokan surel dihentikan (temuan
+    // T-01). Melepas tautan hanya boleh bila akunnya punya password, supaya
+    // tidak ada yang mengunci dirinya sendiri di luar.
+    Route::get('/auth/google/link', [SocialAuthController::class, 'redirectToLinkGoogle'])->name('auth.google.link');
+    Route::delete('/auth/google/link', [SocialAuthController::class, 'unlinkGoogle'])->name('auth.google.unlink');
+
     // Logout
     Route::post('/logout', function () {
         Auth::logout();
@@ -164,8 +189,15 @@ Route::middleware(['auth'])->group(function () {
     })->name('logout');
 });
 
-// Only role = user can access
-Route::middleware(['auth', 'role:user'])->group(function () {
+// Pendaftaran toko.
+//
+// Grupnya `role:user,seller`, bukan `role:user` saja. Seller yang belum punya
+// toko — misalnya karena tokonya dihapus admin, atau perannya diubah manual di
+// database — diarahkan ke sini oleh dashboard seller. Ketika halamannya sendiri
+// menolak peran `seller`, CheckRole memantulkannya kembali ke dashboard, dan
+// keduanya saling melempar tanpa henti (temuan K-05). Yang sudah punya toko
+// tetap ditolak, kali ini oleh StoreController dengan alasan yang bisa dibaca.
+Route::middleware(['auth', 'role:user,seller'])->group(function () {
     // Register Toko
     Route::get('/store/register', [StoreController::class, 'showRegisterForm'])->name('store.register');
     Route::post('/store/register', [StoreController::class, 'register'])->name('store.register.submit');
@@ -174,7 +206,9 @@ Route::middleware(['auth', 'role:user'])->group(function () {
 // Chat bantuan (user/seller/validator -> admin) realtime via WebSocket
 Route::middleware(['auth', 'role:user,seller,validator'])->group(function () {
     Route::get('/bantuan', [SupportController::class, 'userChat'])->name('support.chat');
-    Route::post('/bantuan/messages', [SupportController::class, 'userSend'])->name('support.send');
+    Route::post('/bantuan/messages', [SupportController::class, 'userSend'])
+        ->middleware('throttle:30,1')
+        ->name('support.send');
 });
 
 // Both role user and seller can access
@@ -208,6 +242,30 @@ Route::middleware(['auth', 'role:user,seller'])->group(function () {
 
     // Invoice
     Route::get('/invoice/{id}', [OrderController::class, 'showInvoice'])->name('invoice.show');
+
+    /*
+    | Chat pembeli-penjual.
+    |
+    | Ada di grup `role:user,seller` — bukan hanya `user` — karena seller pun
+    | berbelanja produk biasa, dan sebagai pembeli ia berhak bertanya kepada
+    | toko lain. Rute `chat.show` dan `chat.send` melayani KEDUA sisi: yang
+    | menentukan siapa boleh apa bukan peran penggunanya melainkan kedudukannya
+    | di dalam utas itu, dan itu diputuskan Conversation::isParticipant().
+    |
+    | Dua rute pembuka diletakkan SEBELUM `/chat/{conversation}`; kalau dibalik,
+    | "produk" dan "pesanan" akan terbaca sebagai public_id percakapan.
+    */
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/produk/{product}', [ChatController::class, 'startFromProduct'])->name('chat.start.product');
+    Route::get('/chat/pesanan/{order}', [ChatController::class, 'startFromOrder'])->name('chat.start.order');
+    Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+    // Pembatasan laju: satu utas chat tanpa penjaga dapat dibanjiri secepat
+    // skrip mampu mengirim, dan penerimanya tidak punya cara menghentikannya
+    // (temuan V10-07). Tiga puluh pesan per menit jauh di atas kecepatan
+    // mengetik manusia, jadi percakapan normal tidak akan pernah menyentuhnya.
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'send'])
+        ->middleware('throttle:30,1')
+        ->name('chat.send');
 
     // Tebak Harga - kirim satu tebakan (final, tidak dapat diubah)
     Route::post('/products/{product}/guess', [PriceGuessController::class, 'store'])->name('products.guess');
@@ -249,6 +307,10 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     // Dashboard Seller
     Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
 
+    // Kotak masuk chat dari pembeli. Membuka satu utasnya memakai rute
+    // `chat.show` yang sama dengan sisi pembeli.
+    Route::get('/chat', [ChatController::class, 'sellerIndex'])->name('chat.index');
+
     // Edit Toko
     Route::get('/store/edit', [StoreController::class, 'edit'])->name('store.edit');
     Route::post('/store/update', [StoreController::class, 'update'])->name('store.update');
@@ -267,6 +329,10 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::post('/tukar-tambah/{tradeIn}/accept', [TradeInController::class, 'accept'])->name('trade-in.accept');
     Route::post('/tukar-tambah/{tradeIn}/reject', [TradeInController::class, 'reject'])->name('trade-in.reject');
     Route::post('/tukar-tambah/{tradeIn}/cancel', [TradeInController::class, 'cancel'])->name('trade-in.cancel');
+    // Jalan keluar dari tukar tambah yang sudah disetujui tetapi selisihnya
+    // tidak kunjung dibayar. Pembayar boleh kapan saja, pihak lawan setelah
+    // tenggat lewat — keduanya melepaskan kunci kedua produk (temuan V2-01).
+    Route::post('/tukar-tambah/{tradeIn}/cancel-unpaid', [TradeInController::class, 'cancelUnpaid'])->name('trade-in.cancel-unpaid');
     Route::get('/tukar-tambah/{tradeIn}/pay', [TradeInController::class, 'pay'])->name('trade-in.pay');
     Route::get('/tukar-tambah/{tradeIn}/payment-status', [TradeInController::class, 'checkPaymentStatus'])->name('trade-in.payment.status');
     // Pengiriman dua arah: masing-masing seller mengisi resi lalu mengonfirmasi
@@ -291,7 +357,15 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::get('/auctions/{auction}/relist', [AuctionController::class, 'relistForm'])->name('auctions.relist.form');
     Route::post('/auctions/{auction}/relist', [AuctionController::class, 'relist'])->name('auctions.relist');
 
-    // Pencairan saldo seller
+    // Pencairan saldo toko — JALUR WARISAN, tidak dipakai lagi.
+    //
+    // Sejak pencairan berpindah ke pengajuan per pesanan (`orders.payout`),
+    // tidak ada satu pun kode yang menambah `stores.available_balance`, jadi
+    // saldonya permanen nol dan pengajuan lewat rute ini selalu ditolak. Rutenya
+    // sengaja dipertahankan agar pengajuan lama tetap punya pasangan controller
+    // yang utuh, tetapi tidak ada tautan menuju ke sini dari halaman mana pun.
+    // Jangan menautkannya kembali tanpa lebih dulu memutuskan apa yang mengisi
+    // saldo itu (temuan V10-09 / utang teknis 8.1).
     Route::post('/withdrawals', [WithdrawalRequestController::class, 'store'])->name('withdrawals.store');
 
     // Pengajuan pencairan dana per pesanan (Delivered/Completed).
@@ -326,6 +400,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Kelola Users
     Route::resource('users', AdminUserController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    // Tautan reset password yang dibuatkan admin.
+    //
+    // Pemulihan lewat surel belum hidup selama MAIL_MAILER masih 'log', dan
+    // pengguna yang lupa passwordnya tidak bisa masuk — chat bantuan pun tidak
+    // terjangkau olehnya. Ia melapor lewat halaman Kontak yang terbuka untuk
+    // umum, lalu admin membuatkan tautan ini dan menyampaikannya kembali
+    // (temuan V11-03).
+    Route::post('users/{id}/reset-link', [AdminUserController::class, 'passwordResetLink'])
+        ->name('users.reset-link');
 
     // Kelola Sellers
     Route::resource('sellers', AdminSellerController::class)->only(['index', 'edit', 'update', 'destroy']);

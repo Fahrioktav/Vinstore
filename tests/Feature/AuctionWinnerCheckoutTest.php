@@ -346,7 +346,14 @@ class AuctionWinnerCheckoutTest extends TestCase
         $this->assertSame(200_000, $order->deposit_credit);
         $this->assertSame($tagihanPenuh - 200_000, $order->amountDue());
 
-        // Hak seller dihitung dari nilai barang, bukan dari sisa yang dibayar.
-        $this->assertSame(2_500_000 + 4_500, $order->sellerPayoutAmount());
+        // Hak seller dihitung dari nilai barang berikut pekerjaan yang ia
+        // lakukan sendiri — pengemasan dan pengiriman — bukan dari sisa yang
+        // dibayar setelah dipotong deposit. Satu-satunya komponen yang tidak
+        // ikut cair adalah biaya layanan marketplace.
+        $this->assertSame(
+            2_500_000 + 4_500 + 10_000 + 3_000,
+            $order->sellerPayoutAmount()
+        );
+        $this->assertSame($tagihanPenuh - 62_500, $order->sellerPayoutAmount());
     }
 }

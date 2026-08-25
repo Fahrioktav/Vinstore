@@ -10,8 +10,16 @@
  * bukan `TrendingUpIcon`. Nama bentuk membuat pemanggilnya ikut terkunci pada
  * gambar tertentu.
  *
- * Ukuran default sengaja tidak dipasang di sini — pemanggil menentukannya lewat
- * className, mengikuti kebiasaan Tailwind di project ini (`h-5 w-5`).
+ * Setiap ikon punya UKURAN DEFAULT `h-5 w-5`, dan pemanggil boleh menimpanya
+ * lewat className seperti biasa (`h-4 w-4`, `h-7 w-7`) — penimpaannya ditangani
+ * `cn()` yang memakai tailwind-merge, jadi kelas terakhirlah yang menang.
+ *
+ * Dulu ukurannya sengaja tidak dipasang di sini, dengan alasan pemanggil yang
+ * menentukan. Akibatnya satu pemanggil yang lupa menulis kelas ukuran
+ * menghasilkan SVG tanpa lebar dan tinggi — dan SVG semacam itu memuai
+ * memenuhi wadahnya, bukan mengecil. Ikon "Edit Photo" di halaman profil dan
+ * tombol simpan di halaman edit toko sempat sebesar setengah layar karenanya.
+ * Default ini membuat kelalaian itu tidak lagi merusak tata letak.
  */
 
 import {
@@ -92,105 +100,119 @@ import {
   ExclamationCircleIcon as SolidExclamationCircleIcon,
 } from '@heroicons/react/24/solid';
 
+import { cn } from '@/lib/utils';
+
+/**
+ * Bungkus ikon heroicons dengan ukuran default.
+ *
+ * `cn()` memakai tailwind-merge, sehingga className dari pemanggil menimpa
+ * ukuran default alih-alih bertabrakan dengannya.
+ */
+function ikon(Icon) {
+  return function VinstoreIcon({ className, ...props }) {
+    return <Icon className={cn('h-5 w-5', className)} {...props} />;
+  };
+}
+
 /* ===================== Navigasi & identitas ===================== */
 
-export const MenuIcon = Bars3Icon;
-export const UserIcon = HeroUserIcon;
-export const ProfileIcon = UserCircleIcon;
-export const UsersIcon = UserGroupIcon;
-export const LogoutIcon = ArrowRightStartOnRectangleIcon;
-export const HelpIcon = QuestionMarkCircleIcon;
-export const NotificationIcon = BellIcon;
-export const ViewIcon = EyeIcon;
-export const LockIcon = LockClosedIcon;
+export const MenuIcon = ikon(Bars3Icon);
+export const UserIcon = ikon(HeroUserIcon);
+export const ProfileIcon = ikon(UserCircleIcon);
+export const UsersIcon = ikon(UserGroupIcon);
+export const LogoutIcon = ikon(ArrowRightStartOnRectangleIcon);
+export const HelpIcon = ikon(QuestionMarkCircleIcon);
+export const NotificationIcon = ikon(BellIcon);
+export const ViewIcon = ikon(EyeIcon);
+export const LockIcon = ikon(LockClosedIcon);
 
 /* ===================== Belanja & uang ===================== */
 
-export const CartIcon = ShoppingCartIcon;
-export const OrderIcon = ShoppingBagIcon;
-export const MoneyIcon = BanknotesIcon;
-export const PaymentIcon = CreditCardIcon;
-export const InvoiceIcon = ReceiptPercentIcon;
-export const ShippingIcon = TruckIcon;
-export const StoreIcon = BuildingStorefrontIcon;
-export const StatsIcon = ChartBarIcon;
+export const CartIcon = ikon(ShoppingCartIcon);
+export const OrderIcon = ikon(ShoppingBagIcon);
+export const MoneyIcon = ikon(BanknotesIcon);
+export const PaymentIcon = ikon(CreditCardIcon);
+export const InvoiceIcon = ikon(ReceiptPercentIcon);
+export const ShippingIcon = ikon(TruckIcon);
+export const StoreIcon = ikon(BuildingStorefrontIcon);
+export const StatsIcon = ikon(ChartBarIcon);
 
 /* ===================== Barang & kategori ===================== */
 
-export const ProductIcon = CubeIcon;
-export const CategoryIcon = Squares2X2Icon;
-export const CategoryFolderIcon = FolderIcon;
-export const StockIcon = RectangleStackIcon;
-export const WeightIcon = ScaleIcon;
-export const PriceTagIcon = TagIcon;
+export const ProductIcon = ikon(CubeIcon);
+export const CategoryIcon = ikon(Squares2X2Icon);
+export const CategoryFolderIcon = ikon(FolderIcon);
+export const StockIcon = ikon(RectangleStackIcon);
+export const WeightIcon = ikon(ScaleIcon);
+export const PriceTagIcon = ikon(TagIcon);
 
 /**
  * Jenis pengemasan. Peti kayu memakai ikon peti tertutup, pengemasan standar
  * memakai ikon kardus — dua bentuk yang jelas berbeda sekilas pandang.
  */
-export const PackagingStandardIcon = CubeIcon;
-export const PackagingWoodIcon = ArchiveBoxIcon;
+export const PackagingStandardIcon = ikon(CubeIcon);
+export const PackagingWoodIcon = ikon(ArchiveBoxIcon);
 
 /* ===================== Lokasi ===================== */
 
-export const LocationIcon = MapPinIcon;
-export const MapViewIcon = MapIcon;
-export const DistanceIcon = ArrowsPointingOutIcon;
+export const LocationIcon = ikon(MapPinIcon);
+export const MapViewIcon = ikon(MapIcon);
+export const DistanceIcon = ikon(ArrowsPointingOutIcon);
 
 /* ===================== Aksi ===================== */
 
-export const SearchIcon = MagnifyingGlassIcon;
-export const EditIcon = PencilSquareIcon;
-export const DeleteIcon = TrashIcon;
-export const SaveIcon = ArrowDownTrayIcon;
-export const RefreshIcon = ArrowPathIcon;
-export const PrintIcon = PrinterIcon;
-export const AddIcon = PlusIcon;
-export const CloseIcon = XMarkIcon;
+export const SearchIcon = ikon(MagnifyingGlassIcon);
+export const EditIcon = ikon(PencilSquareIcon);
+export const DeleteIcon = ikon(TrashIcon);
+export const SaveIcon = ikon(ArrowDownTrayIcon);
+export const RefreshIcon = ikon(ArrowPathIcon);
+export const PrintIcon = ikon(PrinterIcon);
+export const AddIcon = ikon(PlusIcon);
+export const CloseIcon = ikon(XMarkIcon);
 
 /* ===================== Status ===================== */
 
-export const CheckIcon = HeroCheckIcon;
-export const SuccessIcon = CheckCircleIcon;
-export const FailIcon = XCircleIcon;
-export const WarningIcon = ExclamationTriangleIcon;
-export const BlockedIcon = NoSymbolIcon;
-export const PendingIcon = ClockIcon;
-export const WinnerIcon = TrophyIcon;
-export const CelebrateIcon = SparklesIcon;
+export const CheckIcon = ikon(HeroCheckIcon);
+export const SuccessIcon = ikon(CheckCircleIcon);
+export const FailIcon = ikon(XCircleIcon);
+export const WarningIcon = ikon(ExclamationTriangleIcon);
+export const BlockedIcon = ikon(NoSymbolIcon);
+export const PendingIcon = ikon(ClockIcon);
+export const WinnerIcon = ikon(TrophyIcon);
+export const CelebrateIcon = ikon(SparklesIcon);
 
 /* ===================== Fitur khas Vinstore ===================== */
 
 /** Tukar Tambah: panah dua arah, menggantikan karakter ⇄ yang dulu dipakai. */
-export const TradeInIcon = ArrowsRightLeftIcon;
+export const TradeInIcon = ikon(ArrowsRightLeftIcon);
 
 /** Lelang: harga yang terus naik. Heroicons tidak punya ikon palu lelang. */
-export const AuctionIcon = ArrowTrendingUpIcon;
+export const AuctionIcon = ikon(ArrowTrendingUpIcon);
 
 /** Tebak harga: bola lampu, sebuah tebakan. */
-export const GuessIcon = LightBulbIcon;
+export const GuessIcon = ikon(LightBulbIcon);
 
 /** Tanda produk sudah divalidasi keasliannya. */
-export const BadgeIcon = SolidCheckBadgeIcon;
+export const BadgeIcon = ikon(SolidCheckBadgeIcon);
 
 /* ===================== Dokumen & media ===================== */
 
-export const CertificateIcon = DocumentTextIcon;
-export const DocumentIcon = DocumentTextIcon;
-export const ListIcon = ClipboardDocumentListIcon;
-export const CameraIcon = HeroCameraIcon;
-export const VideoIcon = VideoCameraIcon;
-export const ImageIcon = PhotoIcon;
-export const EmptyInboxIcon = InboxIcon;
+export const CertificateIcon = ikon(DocumentTextIcon);
+export const DocumentIcon = ikon(DocumentTextIcon);
+export const ListIcon = ikon(ClipboardDocumentListIcon);
+export const CameraIcon = ikon(HeroCameraIcon);
+export const VideoIcon = ikon(VideoCameraIcon);
+export const ImageIcon = ikon(PhotoIcon);
+export const EmptyInboxIcon = ikon(InboxIcon);
 
 /** Dipakai pada tombol ganti foto profil/toko. */
-export const EditPhotoIcon = HeroCameraIcon;
+export const EditPhotoIcon = ikon(HeroCameraIcon);
 
 /* ===================== Komunikasi ===================== */
 
-export const MailIcon = EnvelopeIcon;
-export const PhoneIcon = HeroPhoneIcon;
-export const ChatIcon = ChatBubbleLeftRightIcon;
+export const MailIcon = ikon(EnvelopeIcon);
+export const PhoneIcon = ikon(HeroPhoneIcon);
+export const ChatIcon = ikon(ChatBubbleLeftRightIcon);
 
 /* ===================== Bentuk khusus ===================== */
 
@@ -198,7 +220,7 @@ export const ChatIcon = ChatBubbleLeftRightIcon;
  * Ikon galat berbentuk solid. Sengaja solid, bukan outline: pesan kesalahan
  * harus lebih dulu tertangkap mata daripada ikon di sekitarnya.
  */
-export const ErrorIcon = SolidExclamationCircleIcon;
+export const ErrorIcon = ikon(SolidExclamationCircleIcon);
 
 /**
  * Penanda "sedang memproses".
@@ -207,12 +229,17 @@ export const ErrorIcon = SolidExclamationCircleIcon;
  * diberi animasi. `animate-spin` sudah menempel di sini supaya tiap pemanggil
  * tidak perlu mengingatnya.
  */
-export function SpinnerIcon({ className = '' }) {
-  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+export function SpinnerIcon({ className = '', ...props }) {
+  return (
+    <ArrowPathIcon
+      className={cn('h-5 w-5 animate-spin', className)}
+      {...props}
+    />
+  );
 }
 
 /**
  * Keadaan kosong: tidak ada data untuk ditampilkan.
  * Dipakai menggantikan emoji 🕯️ dan 📭 pada daftar yang kosong.
  */
-export const EmptyStateIcon = InboxIcon;
+export const EmptyStateIcon = ikon(InboxIcon);

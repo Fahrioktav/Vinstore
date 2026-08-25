@@ -121,7 +121,7 @@ export default function SellerCreateProductPage() {
                       <CurrencyInput
                         id="price"
                         name="price"
-                        min={0}
+                        min={1}
                         required
                         defaultValue="0"
                       />

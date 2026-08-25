@@ -99,6 +99,73 @@ function ShippingCountdown({ deadlineAt, iShipped }) {
   );
 }
 
+/**
+ * Tenggat pembayaran selisih, berikut jalan keluarnya.
+ *
+ * Ditampilkan ke kedua pihak. Pembayar melihat kapan tagihannya hangus;
+ * pihak lawan melihat kapan ia boleh melepaskan produknya kembali. Tanpa
+ * keduanya, tahap ini adalah satu-satunya tahap yang menahan barang tanpa
+ * batas waktu dan tanpa tombol apa pun (temuan V2-01).
+ */
+function PaymentDeadlineNotice({ req }) {
+  const cancelUnpaid = (publicId) => {
+    if (
+      !window.confirm(
+        'Batalkan tukar tambah ini? Kedua produk akan kembali dapat dijual dan selisihnya tidak jadi ditagih.'
+      )
+    ) {
+      return;
+    }
+
+    router.post(
+      `/seller/tukar-tambah/${publicId}/cancel-unpaid`,
+      {},
+      { preserveScroll: true }
+    );
+  };
+
+  const deadlineAt = req.payment_deadline_at;
+  const overdue = deadlineAt
+    ? new Date(deadlineAt).getTime() <= Date.now()
+    : false;
+
+  return (
+    <div className="max-w-xs text-right">
+      {deadlineAt && (
+        <p
+          className={`mb-2 rounded-md border px-3 py-2 text-xs ${
+            overdue
+              ? 'border-red-300 bg-red-50 text-red-800'
+              : 'border-amber-300 bg-amber-50 text-amber-900'
+          }`}
+        >
+          {overdue
+            ? 'Tenggat pembayaran sudah lewat.'
+            : `Batas pembayaran: ${new Date(deadlineAt).toLocaleString('id-ID')}`}
+        </p>
+      )}
+
+      {req.can_cancel_unpaid ? (
+        <button
+          type="button"
+          onClick={() => cancelUnpaid(req.public_id)}
+          className="rounded-md border border-red-300 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+        >
+          {req.is_payer
+            ? 'Batalkan & Lepas Kunci Produk'
+            : 'Batalkan (Tidak Dibayar)'}
+        </button>
+      ) : (
+        req.cancel_block_reason && (
+          <p className="text-xs text-gray-500 italic">
+            {req.cancel_block_reason}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
 function ShipmentPanel({ req, role }) {
   const counterpart = role === 'requester' ? 'responder' : 'requester';
 
@@ -277,8 +344,14 @@ export default function SellerTradeInPage() {
   const [tab, setTab] = useState('available');
   const [target, setTarget] = useState(null); // produk seller lain yang ingin ditukar tambah
 
-  const pendingIncoming = incomingRequests.filter(
-    (r) => r.status === 'pending'
+  // Yang dihitung adalah permintaan yang MASIH BERJALAN, bukan hanya yang
+  // belum dijawab. Sebelumnya angkanya hanya menghitung status `pending`,
+  // sehingga begitu sebuah tukar tambah disetujui, tabnya kembali menjadi
+  // "Permintaan Masuk (0)" — padahal di dalamnya masih ada pekerjaan seller:
+  // mengisi nomor resi dan mengonfirmasi barang diterima. Isi tabnya memang
+  // tetap lengkap, tetapi tidak ada yang menyangka perlu membukanya.
+  const incomingBerjalan = incomingRequests.filter(
+    (r) => !['completed', 'rejected', 'cancelled'].includes(r.status)
   );
 
   return (
@@ -302,13 +375,19 @@ export default function SellerTradeInPage() {
           active={tab === 'incoming'}
           onClick={() => setTab('incoming')}
         >
-          Permintaan Masuk ({pendingIncoming.length})
+          Permintaan Masuk ({incomingBerjalan.length})
         </TabButton>
         <TabButton
           active={tab === 'outgoing'}
           onClick={() => setTab('outgoing')}
         >
-          Permintaan Saya ({outgoingRequests.length})
+          Permintaan Saya (
+          {
+            outgoingRequests.filter(
+              (r) => !['completed', 'rejected', 'cancelled'].includes(r.status)
+            ).length
+          }
+          )
         </TabButton>
       </div>
 
@@ -492,13 +571,16 @@ function TradeInActions({ req, role, bankPrefill }) {
 
   if (req.can_pay) {
     return (
-      <button
-        onClick={() => pay(req.public_id)}
-        className="inline-flex animate-pulse items-center gap-2 rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
-      >
-        <PaymentIcon className="h-5 w-5" />
-        Bayar Sekarang
-      </button>
+      <div className="flex flex-col items-end gap-2">
+        <button
+          onClick={() => pay(req.public_id)}
+          className="inline-flex animate-pulse items-center gap-2 rounded-md bg-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-green-700"
+        >
+          <PaymentIcon className="h-5 w-5" />
+          Bayar Sekarang
+        </button>
+        <PaymentDeadlineNotice req={req} />
+      </div>
     );
   }
 
@@ -506,12 +588,15 @@ function TradeInActions({ req, role, bankPrefill }) {
   // seperti tukar tambah yang macet tanpa sebab.
   if (req.status === 'accepted' && req.payment_status === 'pending') {
     return (
-      <div className="max-w-xs text-right">
-        <StatusBadge status={req.status} />
-        <p className="mt-2 text-xs text-gray-500 italic">
-          Menunggu {req.payer_label ?? 'pihak lawan'} membayar selisih harga
-          sebelum barang dikirim.
-        </p>
+      <div className="flex flex-col items-end gap-2">
+        <div className="max-w-xs text-right">
+          <StatusBadge status={req.status} />
+          <p className="mt-2 text-xs text-gray-500 italic">
+            Menunggu {req.payer_label ?? 'pihak lawan'} membayar selisih harga
+            sebelum barang dikirim.
+          </p>
+        </div>
+        <PaymentDeadlineNotice req={req} />
       </div>
     );
   }

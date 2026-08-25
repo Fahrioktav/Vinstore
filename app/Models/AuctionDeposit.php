@@ -375,6 +375,48 @@ class AuctionDeposit extends Model
      * pernah diproses tidak akan menghasilkan baris pendapatan kedua, dijamin
      * kunci unik (order_id, source) pada platform_revenues.
      */
+    /**
+     * Kembalikan jaminan yang sudah menjadi uang muka, karena pesanannya
+     * dibatalkan lewat pengembalian dana.
+     *
+     * Tanpa ini jaminan itu tertinggal berstatus `applied` — "sudah dipakai
+     * sebagai uang muka pesanan" — padahal pesanannya sendiri sudah tidak ada.
+     * Pemiliknya tidak bisa memintanya kembali (jalur pengembalian jaminan
+     * hanya menerima status `paid`), dan admin yang mentransfer balik harus
+     * menjumlahkan sendiri berapa yang sebenarnya diterima marketplace: sebagian
+     * lewat checkout, sebagian lewat jaminan (temuan V11-02).
+     *
+     * Nominalnya sudah tercakup dalam `orders.price`, jadi tidak ada uang
+     * tambahan yang harus dihitung ulang — yang dibereskan di sini adalah
+     * catatannya, supaya jaminan itu tidak menggantung tanpa pemilik.
+     *
+     * Idempoten: jaminan yang sudah `refunded` dilewati begitu saja.
+     */
+    public static function returnForRefundedOrder(Order $order, ?string $catatan = null): ?self
+    {
+        if ($order->auction_id === null) {
+            return null;
+        }
+
+        $deposit = self::where('auction_id', $order->auction_id)
+            ->where('user_id', $order->user_id)
+            ->whereIn('status', [self::STATUS_APPLIED, self::STATUS_PAID])
+            ->lockForUpdate()
+            ->first();
+
+        if (! $deposit) {
+            return null;
+        }
+
+        $deposit->forceFill([
+            'status' => self::STATUS_REFUNDED,
+            'refunded_at' => now(),
+            'admin_note' => $catatan ?? 'Dikembalikan bersama pengembalian dana pesanan '.$order->public_id.'.',
+        ])->save();
+
+        return $deposit;
+    }
+
     public static function forfeitForAbandonedOrder(Order $order): ?self
     {
         if ($order->auction_id === null) {

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuctionDeposit;
 use App\Models\Order;
 use App\Models\PlatformRevenue;
-use App\Models\Product;
 use App\Models\RefundRequest;
 use App\Models\TradeInRequest;
 use Illuminate\Http\Request;
@@ -30,12 +30,31 @@ class RefundRequestController extends Controller
             return back()->with('error', 'Refund hanya bisa diajukan untuk pesanan yang sudah dibayar.');
         }
 
-        if (! in_array($order->status, ['Delivered', 'Completed'], true)) {
-            return back()->with('error', 'Refund hanya bisa diajukan setelah pesanan diterima/selesai.');
+        // Syaratnya adalah UANGNYA sudah masuk, bukan barangnya sudah sampai.
+        // Dulu hanya `Delivered` dan `Completed` yang diterima, sehingga
+        // pesanan lunas yang belum dikirim — atau yang telanjur dibatalkan
+        // sebelum penjagaan V10-01 dipasang — tidak punya jalur pengembalian
+        // sama sekali. Keputusannya tetap di admin, yang bisa melihat status
+        // pengiriman sebelum memutuskan (temuan V10-01).
+        if ($order->seller_released_at !== null) {
+            return back()->with(
+                'error',
+                'Dana pesanan ini sudah dicairkan ke penjual, sehingga pengembaliannya tidak dapat diproses otomatis. '
+                .'Hubungi admin lewat menu Bantuan.'
+            );
         }
 
-        if ($order->refundRequest) {
-            return back()->with('error', 'Refund untuk pesanan ini sudah pernah diajukan.');
+        // Yang menutup pintu adalah pengajuan yang MASIH hidup, bukan yang
+        // pernah ada. Pengajuan yang sudah ditolak admin tidak boleh mengunci
+        // pesanan itu selamanya: keadaan bisa berubah — barang yang semula
+        // ditunggu ternyata datang rusak — dan pembeli berhak mengajukannya
+        // lagi dengan alasan yang baru.
+        $adaPengajuanHidup = RefundRequest::where('order_id', $order->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
+
+        if ($adaPengajuanHidup) {
+            return back()->with('error', 'Pengajuan refund untuk pesanan ini sedang diproses atau sudah disetujui.');
         }
 
         $proofImagePath = null;
@@ -217,6 +236,25 @@ class RefundRequestController extends Controller
                         'payment_status' => 'refunded',
                     ]);
 
+                    // Pesanan yang uangnya dikembalikan sebelum barangnya
+                    // sampai tidak boleh tetap berdiri sebagai pesanan
+                    // berjalan: seller masih akan melihatnya di daftar "perlu
+                    // dikirim" dan mengirimkan barang yang sudah tidak dibayar.
+                    // Stoknya ikut dikembalikan, sebab unit itu tidak jadi
+                    // berpindah tangan.
+                    if (in_array($order->status, ['Waiting', 'On The Way'], true)) {
+                        $order->forceFill(['status' => 'Cancelled'])->save();
+                        $order->returnCommittedStock();
+                    }
+
+                    // Pesanan lelang membawa jaminan yang sudah berubah menjadi
+                    // uang muka. Pesanannya dikembalikan, jadi jaminannya ikut
+                    // dinyatakan kembali — kalau tidak, ia tertinggal berstatus
+                    // "dipakai sebagai uang muka" atas pesanan yang sudah tidak
+                    // ada, dan pemiliknya kehilangan jalur untuk memintanya
+                    // (temuan V11-02).
+                    AuctionDeposit::returnForRefundedOrder($order);
+
                     // Uangnya dikembalikan ke pembeli, jadi biaya layanan atas
                     // pesanan ini tidak lagi menjadi pendapatan marketplace.
                     // Dicatat sebagai baris pembalikan, bukan dengan menghapus
@@ -272,8 +310,7 @@ class RefundRequestController extends Controller
 
         $tradeIn->forceFill($updates)->save();
 
-        Product::where('locked_for_trade_in_id', $tradeIn->id)
-            ->update(['locked_for_trade_in_id' => null]);
+        $tradeIn->releaseProductLocks();
     }
 
     public function reject(Request $request, RefundRequest $refund)

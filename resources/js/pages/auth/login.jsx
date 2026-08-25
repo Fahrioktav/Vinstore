@@ -1,5 +1,5 @@
 import FormLayout from '@/layouts/form-layout';
-import { Form, Link } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/components/auth/auth-layout';
 
 export default function LoginPage() {
+  const { passwordResetByEmail } = usePage().props;
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -55,24 +56,26 @@ export default function LoginPage() {
                     Password
                   </AuthLabel>
                   {/*
-                    Tautan lupa password disembunyikan sementara.
+                    Ke mana tautan ini menunjuk ditentukan server, bukan
+                    ditebak di sini: selama MAIL_MAILER masih `log`, tautan
+                    reset hanya ditulis ke storage/logs dan tidak pernah sampai
+                    ke kotak masuk siapa pun.
 
-                    Alurnya sendiri sudah benar (ForgotPasswordController +
-                    ResetPasswordController), tetapi MAIL_MAILER masih 'log'
-                    sehingga email reset hanya ditulis ke storage/logs dan tidak
-                    pernah sampai ke kotak masuk pengguna.
-
-                    Kembalikan tautan ini setelah MAIL_MAILER diarahkan ke SMTP
-                    sungguhan di .env — tidak ada perubahan kode lain yang
-                    diperlukan. Route password.request/password.email masih
-                    terdaftar di routes/web.php.
+                    Yang TIDAK boleh terjadi adalah pengguna yang lupa
+                    passwordnya berdiri tanpa jalan keluar sama sekali: ia tidak
+                    bisa masuk, sehingga chat bantuan pun tidak terjangkau
+                    olehnya. Halaman Kontak terbuka untuk umum dan pesannya
+                    masuk ke panel admin, yang bisa membuatkan tautan reset
+                    sekali pakai (temuan V11-03).
                   */}
-                  {/* <Link
-                    href="/forgot-password"
+                  <Link
+                    href={
+                      passwordResetByEmail ? '/forgot-password' : '/contact'
+                    }
                     className="text-xs text-[#B77C4C] hover:underline"
                   >
                     Lupa Password?
-                  </Link> */}
+                  </Link>
                 </div>
                 <div className="relative">
                   <AuthInput

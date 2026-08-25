@@ -14,6 +14,7 @@ import {
   CategoryIcon,
   CelebrateIcon,
   CertificateIcon,
+  ChatIcon,
   FailIcon,
   GuessIcon,
   LocationIcon,
@@ -31,7 +32,7 @@ const guessStatusLabel = {
 };
 
 export default function ProductDetailPage() {
-  const { product, tebakHarga, flash } = usePage().props;
+  const { product, tebakHarga, flash, canChatSeller } = usePage().props;
 
   // Gabungkan gambar utama + galeri foto tambahan
   const gallery = [
@@ -297,6 +298,16 @@ export default function ProductDetailPage() {
         <TebakHargaSection product={product} tebakHarga={tebakHarga} />
       ) : (
         <NormalPurchaseActions product={product} />
+      )}
+
+      {canChatSeller && (
+        <Link
+          href={`/chat/produk/${product.public_id}`}
+          className="mt-3 inline-flex items-center gap-2 rounded-md border-2 border-[#53685B] px-6 py-2 font-semibold text-[#53685B] transition hover:bg-[#53685B] hover:text-white"
+        >
+          <ChatIcon className="h-5 w-5" />
+          Chat Penjual
+        </Link>
       )}
     </div>
   );
